@@ -52,6 +52,42 @@ clight = speed_of_light * 1e-3  # km/s
 __DLL_DICT__ = {}
 __DLL_IDS__ = {}
 
+
+def _compute_almax_lineinfo_for_sme(sub_sme):
+    """Worker for ALMAX/range preselection on a sub-linelist."""
+    synth = Synthesizer()
+    dll = synth.get_dll()
+    dll.SetLibraryPath()
+    line_ion_mask = dll.InputLineList(sub_sme.linelist)
+    sub_sme.line_ion_mask = line_ion_mask
+
+    sub_sme = synth.get_atmosphere(sub_sme)
+    dll.InputModel(sub_sme.teff, sub_sme.logg, sub_sme.vmic, sub_sme.atmo)
+    dll.InputAbund(sub_sme.abund)
+    dll.Ionization(0)
+    dll.SetVWscale(sub_sme.gam6)
+    dll.SetH2broad(sub_sme.h2broad)
+
+    wran = np.asarray(sub_sme.wran, dtype=float)
+    if wran.ndim == 1:
+        wbeg = float(wran[0])
+        wend = float(wran[1])
+    else:
+        wbeg = float(np.min(wran[:, 0]))
+        wend = float(np.max(wran[:, 1]))
+    dll.InputWaveRange(wbeg - 2.0, wend + 2.0)
+    dll.Opacity()
+
+    accrt = getattr(sub_sme, "line_select_almax_threshold", None)
+    if accrt is None:
+        accrt = sub_sme.accrt
+    almax, line_range = dll.ALMAXRange(accrt=float(accrt))
+    return {
+        "almax": np.asarray(almax, dtype=np.float64),
+        "line_range": np.asarray(line_range, dtype=np.float64),
+        "line_ion_mask": np.asarray(line_ion_mask, dtype=bool),
+    }
+
 def _extract_params_from_fname(fname):
     match = re.match(r'teff([0-9.]+)_logg([0-9.]+)_monh([-0-9.]+)_vmic([0-9.]+)\.npz', fname)
     if match:
@@ -587,6 +623,254 @@ class Synthesizer:
             return __DLL_DICT__[dll_id]
         else:
             return dll_id
+
+    def _resolve_line_select_config(
+        self, sme, linelist_mode, smelib_lineinfo_mode, cdr_database
+    ):
+        method = str(getattr(sme, "line_select_method", "internal")).lower()
+        policy = str(getattr(sme, "line_select_policy", "auto")).lower()
+        recompute = str(getattr(sme, "line_select_recompute", "if_stale")).lower()
+        reuse = str(getattr(sme, "line_select_reuse", "none")).lower()
+
+        if linelist_mode == "auto":
+            linelist_mode = "dynamic"
+        if linelist_mode not in ("all", "dynamic"):
+            raise ValueError("linelist_mode must be one of: 'all', 'dynamic'")
+
+        if method not in ("internal", "cdr", "almax"):
+            raise ValueError("line_select_method must be one of: 'internal', 'cdr', 'almax'")
+        if policy not in ("auto", "strict"):
+            raise ValueError("line_select_policy must be 'auto' or 'strict'")
+        if recompute not in ("if_stale", "always", "never"):
+            raise ValueError("line_select_recompute must be one of: 'if_stale', 'always', 'never'")
+        if reuse not in ("none", "once", "always"):
+            raise ValueError("line_select_reuse must be one of: 'none', 'once', 'always'")
+        if linelist_mode == "dynamic" and method == "internal":
+            raise ValueError("linelist_mode='dynamic' requires line_select_method 'cdr' or 'almax'")
+
+        chunk_size = int(
+            max(
+                1,
+                getattr(
+                    sme,
+                    "line_select_chunk_size",
+                    getattr(sme, "cdr_N_line_chunk", 2000),
+                ),
+            )
+        )
+        parallel = bool(getattr(sme, "line_select_parallel", False))
+        n_jobs = getattr(sme, "line_select_n_jobs", None)
+        if n_jobs is None:
+            if parallel:
+                n_lines = max(1, len(sme.linelist))
+                n_jobs = int(
+                    min(
+                        os.cpu_count() or 1,
+                        int(np.ceil(n_lines / chunk_size)),
+                    )
+                )
+            else:
+                n_jobs = 1
+        n_jobs = int(max(1, n_jobs))
+
+        if parallel and n_jobs < 2:
+            parallel = False
+
+        stale_thres = getattr(sme, "line_select_stale_thres", None)
+        if not isinstance(stale_thres, dict):
+            stale_thres = {
+                "teff": 250.0,
+                "logg": 0.5,
+                "monh": 0.5,
+                "vmic": 1.0,
+                "accrt": 0.0,
+            }
+
+        cdr_strength = float(
+            getattr(
+                sme,
+                "line_select_cdr_strength_thres",
+                getattr(sme, "strong_depth_thres", 0.001),
+            )
+        )
+        cdr_bin_width = float(
+            getattr(
+                sme,
+                "line_select_cdr_bin_width",
+                getattr(sme, "strong_bin_width", 0.2),
+            )
+        )
+        cdr_database_eff = (
+            cdr_database
+            if cdr_database is not None
+            else getattr(sme, "line_select_cdr_database", None)
+        )
+        almax_threshold = getattr(sme, "line_select_almax_threshold", None)
+        if almax_threshold is None:
+            almax_threshold = sme.accrt
+        almax_threshold = float(almax_threshold)
+
+        # Backward compatibility: explicit legacy mode takes precedence.
+        if smelib_lineinfo_mode in (1, 2):
+            lineinfo_mode = int(smelib_lineinfo_mode)
+        elif method == "internal":
+            lineinfo_mode = 0
+        else:
+            lineinfo_mode = 2 if policy == "strict" else 1
+
+        return {
+            "linelist_mode": linelist_mode,
+            "method": method,
+            "policy": policy,
+            "lineinfo_mode": lineinfo_mode,
+            "parallel": parallel,
+            "n_jobs": n_jobs,
+            "chunk_size": chunk_size,
+            "recompute": recompute,
+            "reuse": reuse,
+            "stale_thres": stale_thres,
+            "cdr_strength": cdr_strength,
+            "cdr_bin_width": cdr_bin_width,
+            "cdr_database": cdr_database_eff,
+            "almax_threshold": almax_threshold,
+        }
+
+    def update_almax(self, sme, threshold=None, show_progress_bars=show_progress_bars):
+        """
+        Compute ALMAX/range preselection for the full linelist and update columns:
+        'almax_ratio', 'strong', 'line_range_s', 'line_range_e'.
+        """
+
+        chunk_size = int(
+            max(
+                1,
+                getattr(
+                    sme,
+                    "line_select_chunk_size",
+                    getattr(sme, "cdr_N_line_chunk", 2000),
+                ),
+            )
+        )
+        parallel = bool(getattr(sme, "line_select_parallel", False))
+        n_jobs = getattr(sme, "line_select_n_jobs", None)
+        if n_jobs is None:
+            n_jobs = int(
+                min(
+                    os.cpu_count() or 1,
+                    int(np.ceil(max(1, len(sme.linelist)) / chunk_size)),
+                )
+            )
+        n_jobs = int(max(1, n_jobs))
+        if n_jobs < 2:
+            parallel = False
+
+        if threshold is None:
+            threshold = getattr(sme, "line_select_almax_threshold", None)
+            if threshold is None:
+                threshold = sme.accrt
+        threshold = float(threshold)
+
+        n_chunk = int(np.ceil(len(sme.linelist) / chunk_size))
+        sub_linelist = [
+            sme.linelist[chunk_size * i : chunk_size * (i + 1)] for i in range(n_chunk)
+        ]
+
+        # Copy a lightweight template SME for chunk workers.
+        sub_sme_init = SME_Structure()
+        exclude_keys = [
+            "_wave",
+            "_synth",
+            "_spec",
+            "_uncs",
+            "_mask",
+            "_SME_Structure__wran",
+            "_normalize_by_continuum",
+            "_specific_intensities_only",
+            "_telluric",
+            "__cont",
+            "_linelist",
+            "_fitparameters",
+            "_fitresults",
+        ]
+        for key, value in sme.__dict__.items():
+            if key not in exclude_keys and "cscale" not in key and "vrad" not in key:
+                setattr(sub_sme_init, key, deepcopy(value))
+        sub_sme_init.wave = np.arange(5000, 5010, 1)
+        sub_sme_init.line_select_almax_threshold = threshold
+
+        results = []
+        if parallel:
+            sub_sme = []
+            for i in range(n_chunk):
+                one = deepcopy(sub_sme_init)
+                one.linelist = sub_linelist[i]
+                sub_sme.append(one)
+
+            if getattr(sme, "cdr_pysme_out", False):
+                results = pqdm(
+                    sub_sme,
+                    _compute_almax_lineinfo_for_sme,
+                    n_jobs=n_jobs,
+                    disable=not show_progress_bars,
+                )
+            else:
+                with redirect_stdout(open("/dev/null", "w")):
+                    results = pqdm(
+                        sub_sme,
+                        _compute_almax_lineinfo_for_sme,
+                        n_jobs=n_jobs,
+                        disable=not show_progress_bars,
+                    )
+        else:
+            for i in tqdm(range(n_chunk), disable=not show_progress_bars):
+                one = deepcopy(sub_sme_init)
+                one.linelist = sub_linelist[i]
+                results.append(_compute_almax_lineinfo_for_sme(one))
+
+        # Merge results in original order.
+        almax_list = []
+        range_s_list = []
+        range_e_list = []
+        strong_list = []
+        for i in range(n_chunk):
+            out = results[i]
+            almax = np.asarray(out["almax"], dtype=np.float64)
+            line_range = np.asarray(out["line_range"], dtype=np.float64)
+            line_ion_mask = np.asarray(out["line_ion_mask"], dtype=bool)
+
+            strong = np.zeros(almax.size, dtype=bool)
+            valid = ~line_ion_mask
+            strong[valid] = almax[valid] >= threshold
+
+            range_s = np.full(almax.size, np.nan, dtype=np.float64)
+            range_e = np.full(almax.size, np.nan, dtype=np.float64)
+            range_s[valid] = line_range[valid, 0]
+            range_e[valid] = line_range[valid, 1]
+
+            almax_list.append(almax)
+            strong_list.append(strong)
+            range_s_list.append(range_s)
+            range_e_list.append(range_e)
+
+        almax_all = np.concatenate(almax_list)
+        strong_all = np.concatenate(strong_list)
+        range_s_all = np.concatenate(range_s_list)
+        range_e_all = np.concatenate(range_e_list)
+
+        if len(almax_all) != len(sme.linelist):
+            raise ValueError("ALMAX preselection merge failed: line count mismatch.")
+
+        sme.linelist._lines["almax_ratio"] = almax_all
+        sme.linelist._lines["strong"] = strong_all
+        sme.linelist._lines["line_range_s"] = range_s_all
+        sme.linelist._lines["line_range_e"] = range_e_all
+
+        # Metadata for stale detection.
+        sme.linelist.almax_paras = np.array(
+            [sme.teff, sme.logg, sme.monh, sme.vmic, sme.accrt, threshold]
+        )
+        sme.linelist.almax_paras_thres = getattr(sme, "line_select_stale_thres", {}).copy()
+        return sme
     
     # @profile
     def synthesize_spectrum(
@@ -693,32 +977,69 @@ class Synthesizer:
             wave = [w for w in sme.wave]
 
         dll = self.get_dll(dll_id)
-        dll.SetLineInfoMode(int(smelib_lineinfo_mode))
-
-        # "dynamic" is the preferred name in publications; keep "auto" as compatibility alias.
         if linelist_mode == "auto":
             warnings.warn(
                 "'linelist_mode=\"auto\"' is deprecated; use 'linelist_mode=\"dynamic\"' instead.",
                 DeprecationWarning,
                 stacklevel=2,
             )
-            linelist_mode = "dynamic"
-        elif linelist_mode not in ("all", "dynamic"):
-            raise ValueError("linelist_mode must be one of: 'all', 'dynamic'")
+        ls_cfg = self._resolve_line_select_config(
+            sme, linelist_mode, smelib_lineinfo_mode, cdr_database
+        )
+        linelist_mode = ls_cfg["linelist_mode"]
+        line_select_method = ls_cfg["method"]
+        lineinfo_mode = ls_cfg["lineinfo_mode"]
+        cdr_database = ls_cfg["cdr_database"]
 
-        # Calculate line properties and strong-line flags if necessary.
-        if linelist_mode == 'dynamic':
-            # logger.info(f'linelist mode: {linelist_mode}')
-            need_update_cdr = (
-                sme.linelist.cdr_paras is None
-                or not {'central_depth', 'line_range_s', 'line_range_e'}.issubset(sme.linelist._lines.columns)
-                or np.abs(sme.linelist.cdr_paras[0] - sme.teff) >= sme.linelist.cdr_paras_thres['teff']
-                or np.abs(sme.linelist.cdr_paras[1] - sme.logg) >= sme.linelist.cdr_paras_thres['logg']
-                or np.abs(sme.linelist.cdr_paras[2] - sme.monh) >= sme.linelist.cdr_paras_thres['monh']
-                or cdr_create
+        # Re-entrancy guard: update_cdr internally calls synthesize_spectrum on
+        # chunked sub-SME objects to compute line information. Those internal
+        # calls must not re-enter CDR preselection again.
+        if self.update_cdr_switch and line_select_method == "cdr":
+            line_select_method = "internal"
+            lineinfo_mode = 0
+
+        # Sync CDR thresholds with unified names.
+        sme.strong_depth_thres = ls_cfg["cdr_strength"]
+        sme.strong_bin_width = ls_cfg["cdr_bin_width"]
+        sme.cdr_parallel = ls_cfg["parallel"]
+        sme.cdr_n_jobs = ls_cfg["n_jobs"]
+        sme.cdr_N_line_chunk = ls_cfg["chunk_size"]
+        dll.SetLineInfoMode(int(lineinfo_mode))
+
+        # Method-specific line-selection precompute.
+        if line_select_method == "cdr":
+            stale = ls_cfg["stale_thres"]
+            teff_th = float(stale.get("teff", sme.linelist.cdr_paras_thres.get("teff", 250)))
+            logg_th = float(stale.get("logg", sme.linelist.cdr_paras_thres.get("logg", 0.5)))
+            monh_th = float(stale.get("monh", sme.linelist.cdr_paras_thres.get("monh", 0.5)))
+            vmic_th = float(stale.get("vmic", sme.linelist.cdr_paras_thres.get("vmic", 1.0)))
+
+            cdr_paras = getattr(sme.linelist, "cdr_paras", None)
+            has_cols = {"central_depth", "line_range_s", "line_range_e"}.issubset(
+                sme.linelist._lines.columns
             )
+            stale_model = True
+            if cdr_paras is not None:
+                cdr_paras = np.asarray(cdr_paras, dtype=float).ravel()
+                stale_model = False
+                if cdr_paras.size > 0 and np.abs(cdr_paras[0] - sme.teff) >= teff_th:
+                    stale_model = True
+                if cdr_paras.size > 1 and np.abs(cdr_paras[1] - sme.logg) >= logg_th:
+                    stale_model = True
+                if cdr_paras.size > 2 and np.abs(cdr_paras[2] - sme.monh) >= monh_th:
+                    stale_model = True
+                if cdr_paras.size > 3 and np.abs(cdr_paras[3] - sme.vmic) >= vmic_th:
+                    stale_model = True
+            need_update_cdr = (not has_cols) or stale_model or cdr_create
+            if ls_cfg["recompute"] == "always":
+                need_update_cdr = True
+            elif ls_cfg["recompute"] == "never" and need_update_cdr:
+                raise ValueError(
+                    "line_select_recompute='never' but CDR line-info is missing/stale."
+                )
+
             if need_update_cdr:
-                logger.info('Updating linelist central depth and line range.')
+                logger.info("Updating linelist central depth and line range.")
                 sme = self.update_cdr(
                     sme,
                     cdr_database=cdr_database,
@@ -726,8 +1047,8 @@ class Synthesizer:
                     show_progress_bars=show_progress_bars,
                 )
 
-            strong_depth_prev = sme.linelist.cdr_paras_thres.get('strong_depth')
-            strong_bin_width_prev = sme.linelist.cdr_paras_thres.get('strong_bin_width')
+            strong_depth_prev = sme.linelist.cdr_paras_thres.get("strong_depth")
+            strong_bin_width_prev = sme.linelist.cdr_paras_thres.get("strong_bin_width")
             strong_depth_matches = (
                 strong_depth_prev is not None
                 and np.isclose(float(strong_depth_prev), float(sme.strong_depth_thres))
@@ -738,27 +1059,76 @@ class Synthesizer:
             )
             need_update_strong = (
                 need_update_cdr
-                or 'strong' not in sme.linelist._lines.columns
+                or "strong" not in sme.linelist._lines.columns
                 or not strong_depth_matches
                 or not strong_bin_width_matches
             )
+            if ls_cfg["recompute"] == "always":
+                need_update_strong = True
 
             if need_update_strong:
                 strong_mask = self.flag_strong_lines_by_bins(
-                    sme.linelist['wlcent'],
-                    sme.linelist['central_depth'],
+                    sme.linelist["wlcent"],
+                    sme.linelist["central_depth"],
                     bin_width=sme.strong_bin_width,
                     threshold=sme.strong_depth_thres,
                 )
-                sme.linelist._lines['strong'] = np.asarray(strong_mask, dtype=bool)
-                sme.linelist.cdr_paras_thres['strong_depth'] = float(sme.strong_depth_thres)
-                sme.linelist.cdr_paras_thres['strong_bin_width'] = float(sme.strong_bin_width)
+                sme.linelist._lines["strong"] = np.asarray(strong_mask, dtype=bool)
+                sme.linelist.cdr_paras_thres["strong_depth"] = float(sme.strong_depth_thres)
+                sme.linelist.cdr_paras_thres["strong_bin_width"] = float(sme.strong_bin_width)
+
+        elif line_select_method == "almax":
+            stale = ls_cfg["stale_thres"]
+            teff_th = float(stale.get("teff", 250.0))
+            logg_th = float(stale.get("logg", 0.5))
+            monh_th = float(stale.get("monh", 0.5))
+            vmic_th = float(stale.get("vmic", 1.0))
+            accrt_th = float(stale.get("accrt", 0.0))
+
+            almax_paras = getattr(sme.linelist, "almax_paras", None)
+            has_cols = {"almax_ratio", "line_range_s", "line_range_e", "strong"}.issubset(
+                sme.linelist._lines.columns
+            )
+            stale_model = True
+            if almax_paras is not None:
+                almax_paras = np.asarray(almax_paras, dtype=float).ravel()
+                stale_model = False
+                if almax_paras.size > 0 and np.abs(almax_paras[0] - sme.teff) >= teff_th:
+                    stale_model = True
+                if almax_paras.size > 1 and np.abs(almax_paras[1] - sme.logg) >= logg_th:
+                    stale_model = True
+                if almax_paras.size > 2 and np.abs(almax_paras[2] - sme.monh) >= monh_th:
+                    stale_model = True
+                if almax_paras.size > 3 and np.abs(almax_paras[3] - sme.vmic) >= vmic_th:
+                    stale_model = True
+                if almax_paras.size > 4 and np.abs(almax_paras[4] - sme.accrt) > accrt_th:
+                    stale_model = True
+                if (
+                    almax_paras.size > 5
+                    and not np.isclose(almax_paras[5], ls_cfg["almax_threshold"])
+                ):
+                    stale_model = True
+            need_update_almax = (not has_cols) or stale_model or cdr_create
+            if ls_cfg["recompute"] == "always":
+                need_update_almax = True
+            elif ls_cfg["recompute"] == "never" and need_update_almax:
+                raise ValueError(
+                    "line_select_recompute='never' but ALMAX line-info is missing/stale."
+                )
+
+            if need_update_almax:
+                logger.info("Updating linelist ALMAX and line range.")
+                sme = self.update_almax(
+                    sme,
+                    threshold=ls_cfg["almax_threshold"],
+                    show_progress_bars=show_progress_bars,
+                )
 
         # Input Model data to C library
         dll.SetLibraryPath()
         if passLineList:
             linelist_for_smelib = sme.linelist
-            if linelist_mode == 'dynamic':
+            if linelist_mode == "dynamic":
                 line_indices = sme.linelist['wlcent'] < 0
                 v_broad = np.sqrt(sme.vmac**2 + sme.vsini**2 + (clight/sme.ipres)**2)
                 for i in range(sme.nseg):
@@ -769,7 +1139,7 @@ class Synthesizer:
             line_ion_mask = dll.InputLineList(linelist_for_smelib)
             sme.line_ion_mask = line_ion_mask
 
-            if smelib_lineinfo_mode in (1, 2):
+            if lineinfo_mode in (1, 2):
                 cols = set(linelist_for_smelib._lines.columns)
                 required_cols = {"line_range_s", "line_range_e"}
                 missing_cols = sorted(required_cols - cols)
@@ -782,8 +1152,8 @@ class Synthesizer:
                         self.flag_strong_lines_by_bins(
                             linelist_for_smelib["wlcent"],
                             linelist_for_smelib["central_depth"],
-                            bin_width=sme.strong_bin_width,
-                            threshold=sme.strong_depth_thres,
+                            bin_width=ls_cfg["cdr_bin_width"],
+                            threshold=ls_cfg["cdr_strength"],
                         ),
                         dtype=np.uint8,
                     )
@@ -795,10 +1165,10 @@ class Synthesizer:
 
                 if missing_cols:
                     msg = (
-                        f"SMElib lineinfo mode={smelib_lineinfo_mode} requested but missing "
+                        f"SMElib lineinfo mode={lineinfo_mode} requested but missing "
                         f"precomputed columns: {', '.join(missing_cols)}"
                     )
-                    if smelib_lineinfo_mode == 2:
+                    if lineinfo_mode == 2:
                         raise ValueError(msg)
                     logger.warning("%s. Falling back to mode 0.", msg)
                     dll.SetLineInfoMode(0)
@@ -831,6 +1201,10 @@ class Synthesizer:
         #   Calculate spectral synthesis for each
         #   Interpolate onto geomspaced wavelength grid
         #   Apply instrumental and turbulence broadening
+        keep_line_opacity_eff = keep_line_opacity
+        if line_select_method in ("cdr", "almax") and ls_cfg["reuse"] != "none":
+            keep_line_opacity_eff = True
+        compute_lineinfo = bool(self.update_cdr_switch)
         sme.first_segment = True
         for il in tqdm(segments, desc="Segments", leave=True, disable=not show_progress_bars):
             wmod[il], smod[il], cmod[il], central_depth[il], line_range[il], opacity[il] = self.synthesize_segment(
@@ -839,8 +1213,9 @@ class Synthesizer:
                 reuse_wavelength_grid,
                 dll_id=dll_id,
                 get_opacity=get_opacity,
-                keep_line_opacity=keep_line_opacity,
-                contribution_function=contribution_function
+                keep_line_opacity=keep_line_opacity_eff,
+                contribution_function=contribution_function,
+                compute_lineinfo=compute_lineinfo,
             )
         for il in segments:
             if "wave" not in sme or len(sme.wave[il]) == 0:
@@ -903,7 +1278,7 @@ class Synthesizer:
                 # sme.line_range[s] = line_range[s]
 
 
-            if passLineList and (self.update_cdr_switch or linelist_mode == 'all'):
+            if passLineList and self.update_cdr_switch:
                 s = 0
                 if len(central_depth[s]) > 0:
                     sme.linelist._lines.loc[~sme.line_ion_mask, 'central_depth'] = central_depth[s]
@@ -958,7 +1333,8 @@ class Synthesizer:
         keep_line_opacity=False,
         dll_id=None,
         get_opacity=False,
-        contribution_function=False
+        contribution_function=False,
+        compute_lineinfo=True,
     ):
         """Create the synthetic spectrum of a single segment
 
@@ -1110,9 +1486,13 @@ class Synthesizer:
         if sme.normalize_by_continuum:
             sint /= cint
 
-        # Mingjie: run CentralDepth
-        central_depth = dll.CentralDepth(sme.mu, sme.accrt)
-        line_range = dll.GetLineRange()
+        # Line info is only needed for update_cdr workflow.
+        if compute_lineinfo:
+            central_depth = dll.CentralDepth(sme.mu, sme.accrt)
+            line_range = dll.GetLineRange()
+        else:
+            central_depth = []
+            line_range = []
         if get_opacity:
             opacity = []
             for wave_single in sme.wave[segment]:
@@ -1162,6 +1542,11 @@ class Synthesizer:
                 if key not in exclude_keys and 'cscale' not in key and 'vrad' not in key:
                     setattr(sub_sme_init, key, deepcopy(value))
             sub_sme_init.wave = np.arange(5000, 5010, 1)
+            # Force internal line selection for nested calls to avoid
+            # update_cdr -> synthesize_spectrum -> update_cdr recursion.
+            sub_sme_init.line_select_method = "internal"
+            sub_sme_init.line_select_policy = "auto"
+            sub_sme_init.line_select_recompute = "if_stale"
 
             if not parallel:
                 for i in tqdm(range(N_chunk), disable=not show_progress_bars):

@@ -303,6 +303,25 @@ class SME_Structure(Parameters):
         self.cdr_pysme_out = False
         self.strong_depth_thres = 0.001
         self.strong_bin_width = 0.2
+        # Unified line-selection controls (preferred over legacy cdr_* knobs).
+        self.line_select_method = "internal"  # internal | cdr | almax
+        self.line_select_policy = "auto"      # auto | strict
+        self.line_select_parallel = False
+        self.line_select_n_jobs = None
+        self.line_select_chunk_size = 2000
+        self.line_select_recompute = "if_stale"  # if_stale | always | never
+        self.line_select_stale_thres = {
+            "teff": 250.0,
+            "logg": 0.5,
+            "monh": 0.5,
+            "vmic": 1.0,
+            "accrt": 0.0,
+        }
+        self.line_select_reuse = "none"  # none | once | always
+        self.line_select_cdr_bin_width = 0.2
+        self.line_select_cdr_strength_thres = 0.001
+        self.line_select_cdr_database = None
+        self.line_select_almax_threshold = None
         self.tdnlte_H = False
         # self.tdnlte_H_new = False
 
