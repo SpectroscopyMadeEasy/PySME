@@ -1327,6 +1327,60 @@ fail:
     return NULL;
 }
 
+static char smelib_ALMAXRange_docstring[] = "Compute first-stage ALMAX and line range";
+static PyObject *smelib_ALMAXRange(PyObject *self, PyObject *args, PyObject *kwds)
+{
+    const int n = 4;
+    void *args_c[n];
+    const char *result = NULL;
+    npy_intp dims_almax[1], dims_range[2];
+    int n_lines;
+    double accrt = 1e-4;
+    PyObject *ret_tuple = NULL;
+    PyArrayObject *almax_arr = NULL, *range_arr = NULL;
+
+    static const char *keywords[] = {"accrt", NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|d", const_cast<char **>(keywords), &accrt))
+        return NULL;
+
+    n_lines = GetNLINES();
+    dims_almax[0] = n_lines;
+    dims_range[0] = n_lines;
+    dims_range[1] = 2;
+
+    almax_arr = (PyArrayObject *)PyArray_SimpleNew(1, dims_almax, NPY_DOUBLE);
+    range_arr = (PyArrayObject *)PyArray_SimpleNew(2, dims_range, NPY_DOUBLE);
+    if (almax_arr == NULL || range_arr == NULL)
+        goto fail;
+
+    args_c[0] = PyArray_DATA(almax_arr);
+    args_c[1] = PyArray_DATA(range_arr);
+    args_c[2] = &n_lines;
+    args_c[3] = &accrt;
+    result = ALMAXRange(n, args_c);
+    if (result != NULL && result[0] != OK_response)
+    {
+        PyErr_SetString(PyExc_RuntimeError, result);
+        goto fail;
+    }
+
+    ret_tuple = PyTuple_New(2);
+    if (ret_tuple == NULL)
+        goto fail;
+
+    PyTuple_SET_ITEM(ret_tuple, 0, (PyObject *)almax_arr);
+    almax_arr = NULL;
+    PyTuple_SET_ITEM(ret_tuple, 1, (PyObject *)range_arr);
+    range_arr = NULL;
+    return ret_tuple;
+
+fail:
+    Py_XDECREF(almax_arr);
+    Py_XDECREF(range_arr);
+    Py_XDECREF(ret_tuple);
+    return NULL;
+}
+
 static char smelib_GetLineOpacity_docstring[] = "Returns specific line opacity";
 static PyObject *smelib_GetLineOpacity(PyObject *self, PyObject *args)
 {
@@ -1584,6 +1638,7 @@ static PyMethodDef module_methods[] = {
     {"GetNelec", smelib_GetNelec, METH_NOARGS, smelib_GetNelec_docstring},
     {"Transf", (PyCFunction)(void (*)(void))smelib_Transf, METH_VARARGS | METH_KEYWORDS, smelib_Transf_docstring},
     {"CentralDepth", (PyCFunction)(void (*)(void))smelib_CentralDepth, METH_VARARGS | METH_KEYWORDS, smelib_CentralDepth_docstring},
+    {"ALMAXRange", (PyCFunction)(void (*)(void))smelib_ALMAXRange, METH_VARARGS | METH_KEYWORDS, smelib_ALMAXRange_docstring},
     {"GetLineOpacity", smelib_GetLineOpacity, METH_VARARGS, smelib_GetLineOpacity_docstring},
     {"GetLineRange", smelib_GetLineRange, METH_NOARGS, smelib_GetLineRange_docstring},
     {"GetNLTEflags", smelib_GetNLTEflags, METH_NOARGS, smelib_GetNLTEflags_docstring},
