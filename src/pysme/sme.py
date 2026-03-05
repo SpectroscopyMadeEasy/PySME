@@ -322,6 +322,8 @@ class SME_Structure(Parameters):
         self.line_select_cdr_strength_thres = 0.001
         self.line_select_cdr_database = None
         self.line_select_almax_threshold = None
+        self.line_select_almax_use_bins = False
+        self.line_select_almax_bin_width = 0.2
         self.tdnlte_H = False
         # self.tdnlte_H_new = False
 

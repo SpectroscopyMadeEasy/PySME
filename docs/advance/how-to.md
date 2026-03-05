@@ -279,6 +279,41 @@ Note that the input line list will not change - only the lines being input to ea
 
 Removing the `linelist_mode` variable or changing it to `all` falls back to the default way to perform synthesis, described in the beginning of this section.
 
+## Unified line-selection controls (CDR and ALMAX)
+
+Current PySME exposes a unified interface for external line selection:
+
+- `sme.line_select_method`: `internal | cdr | almax`
+- `sme.line_select_parallel`: enable/disable parallel metadata update
+- `sme.line_select_n_jobs`: worker count for parallel updates
+- `sme.line_select_chunk_size`: chunk size for metadata updates
+- `sme.line_select_recompute`: `if_stale | always | never`
+
+ALMAX mode supports two strong-line rules:
+
+- `sme.line_select_almax_use_bins = False`:
+  - simple cut with `almax_ratio >= sme.line_select_almax_threshold`
+- `sme.line_select_almax_use_bins = True`:
+  - bin-wise cumulative cut with `flag_strong_lines_by_bins(...)`
+
+Both ALMAX rules use the same threshold parameter:
+
+- `sme.line_select_almax_threshold`
+
+If `sme.line_select_almax_threshold` is `None`, it falls back to `sme.accrt`
+to preserve legacy behavior.
+
+Example:
+
+```py
+sme.line_select_method = "almax"
+sme.line_select_almax_threshold = sme.accrt
+sme.line_select_almax_use_bins = True
+sme.line_select_almax_bin_width = 0.2
+
+sme = synthesize_spectrum(sme, linelist_mode="dynamic")
+```
+
 ## How to fit parameter for a long spectra
 
 The vairalbe for such process is as same as the one used in the last section:

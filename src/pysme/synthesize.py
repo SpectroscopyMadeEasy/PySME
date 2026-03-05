@@ -709,6 +709,14 @@ class Synthesizer:
         if almax_threshold is None:
             almax_threshold = sme.accrt
         almax_threshold = float(almax_threshold)
+        almax_use_bins = bool(getattr(sme, "line_select_almax_use_bins", False))
+        almax_bin_width = float(
+            getattr(
+                sme,
+                "line_select_almax_bin_width",
+                getattr(sme, "strong_bin_width", 0.2),
+            )
+        )
 
         # Backward compatibility: explicit legacy mode takes precedence.
         if smelib_lineinfo_mode in (1, 2):
@@ -733,9 +741,18 @@ class Synthesizer:
             "cdr_bin_width": cdr_bin_width,
             "cdr_database": cdr_database_eff,
             "almax_threshold": almax_threshold,
+            "almax_use_bins": almax_use_bins,
+            "almax_bin_width": almax_bin_width,
         }
 
-    def update_almax(self, sme, threshold=None, show_progress_bars=show_progress_bars):
+    def update_almax(
+        self,
+        sme,
+        threshold=None,
+        use_bins=None,
+        bin_width=None,
+        show_progress_bars=show_progress_bars,
+    ):
         """
         Compute ALMAX/range preselection for the full linelist and update columns:
         'almax_ratio', 'strong', 'line_range_s', 'line_range_e'.
@@ -769,6 +786,20 @@ class Synthesizer:
             if threshold is None:
                 threshold = sme.accrt
         threshold = float(threshold)
+        if use_bins is None:
+            use_bins = bool(getattr(sme, "line_select_almax_use_bins", False))
+        else:
+            use_bins = bool(use_bins)
+        if bin_width is None:
+            bin_width = float(
+                getattr(
+                    sme,
+                    "line_select_almax_bin_width",
+                    getattr(sme, "strong_bin_width", 0.2),
+                )
+            )
+        else:
+            bin_width = float(bin_width)
 
         n_chunk = int(np.ceil(len(sme.linelist) / chunk_size))
         sub_linelist = [
@@ -831,16 +862,13 @@ class Synthesizer:
         almax_list = []
         range_s_list = []
         range_e_list = []
-        strong_list = []
+        line_ion_mask_list = []
         for i in range(n_chunk):
             out = results[i]
             almax = np.asarray(out["almax"], dtype=np.float64)
             line_range = np.asarray(out["line_range"], dtype=np.float64)
             line_ion_mask = np.asarray(out["line_ion_mask"], dtype=bool)
-
-            strong = np.zeros(almax.size, dtype=bool)
             valid = ~line_ion_mask
-            strong[valid] = almax[valid] >= threshold
 
             range_s = np.full(almax.size, np.nan, dtype=np.float64)
             range_e = np.full(almax.size, np.nan, dtype=np.float64)
@@ -848,17 +876,31 @@ class Synthesizer:
             range_e[valid] = line_range[valid, 1]
 
             almax_list.append(almax)
-            strong_list.append(strong)
             range_s_list.append(range_s)
             range_e_list.append(range_e)
+            line_ion_mask_list.append(line_ion_mask)
 
         almax_all = np.concatenate(almax_list)
-        strong_all = np.concatenate(strong_list)
         range_s_all = np.concatenate(range_s_list)
         range_e_all = np.concatenate(range_e_list)
+        line_ion_mask_all = np.concatenate(line_ion_mask_list)
 
         if len(almax_all) != len(sme.linelist):
             raise ValueError("ALMAX preselection merge failed: line count mismatch.")
+        valid_all = ~line_ion_mask_all
+        strong_all = np.zeros(almax_all.size, dtype=bool)
+        if np.any(valid_all):
+            if use_bins:
+                wl_all = np.asarray(sme.linelist["wlcent"], dtype=float)
+                strong_valid = self.flag_strong_lines_by_bins(
+                    wl_all[valid_all],
+                    almax_all[valid_all],
+                    bin_width=bin_width,
+                    threshold=threshold,
+                )
+                strong_all[valid_all] = np.asarray(strong_valid, dtype=bool)
+            else:
+                strong_all[valid_all] = almax_all[valid_all] >= threshold
 
         sme.linelist._lines["almax_ratio"] = almax_all
         sme.linelist._lines["strong"] = strong_all
@@ -867,7 +909,16 @@ class Synthesizer:
 
         # Metadata for stale detection.
         sme.linelist.almax_paras = np.array(
-            [sme.teff, sme.logg, sme.monh, sme.vmic, sme.accrt, threshold]
+            [
+                sme.teff,
+                sme.logg,
+                sme.monh,
+                sme.vmic,
+                sme.accrt,
+                threshold,
+                float(use_bins),
+                bin_width,
+            ]
         )
         sme.linelist.almax_paras_thres = getattr(sme, "line_select_stale_thres", {}).copy()
         return sme
@@ -1108,6 +1159,17 @@ class Synthesizer:
                     and not np.isclose(almax_paras[5], ls_cfg["almax_threshold"])
                 ):
                     stale_model = True
+                use_bins_cfg = bool(ls_cfg["almax_use_bins"])
+                if almax_paras.size <= 6 and use_bins_cfg:
+                    stale_model = True
+                elif almax_paras.size > 6 and bool(round(almax_paras[6])) != use_bins_cfg:
+                    stale_model = True
+                if use_bins_cfg:
+                    if (
+                        almax_paras.size <= 7
+                        or not np.isclose(almax_paras[7], ls_cfg["almax_bin_width"])
+                    ):
+                        stale_model = True
             need_update_almax = (not has_cols) or stale_model or cdr_create
             if ls_cfg["recompute"] == "always":
                 need_update_almax = True
@@ -1121,6 +1183,8 @@ class Synthesizer:
                 sme = self.update_almax(
                     sme,
                     threshold=ls_cfg["almax_threshold"],
+                    use_bins=ls_cfg["almax_use_bins"],
+                    bin_width=ls_cfg["almax_bin_width"],
                     show_progress_bars=show_progress_bars,
                 )
 
@@ -1748,44 +1812,43 @@ class Synthesizer:
 
     @staticmethod
     def flag_strong_lines_by_bins(wl, depth, bin_width=0.2, threshold=0.001):
-        wl = np.asarray(wl)
-        depth = np.asarray(depth)
+        wl = np.asarray(wl, dtype=float)
+        depth = np.asarray(depth, dtype=float)
 
-        # 1) 计算 bin_idx
+        # Sanitize invalid/negative depths so they cannot poison cumulative sums.
+        invalid_depth = ~np.isfinite(depth)
+        depth_sanitized = np.where(invalid_depth, 0.0, depth)
+        depth_sanitized = np.where(depth_sanitized > 0, depth_sanitized, 0.0)
+
+        # 1) build bin indices
         wl_min, wl_max = wl.min(), wl.max()
         edges = np.arange(wl_min, wl_max + bin_width, bin_width)
         bin_idx = np.searchsorted(edges, wl, side="right") - 1
-        # 假设 bin_idx ∈ [0, n_bins-1]；若有越界需先 clip
 
-        # 2) 一次性分组排序：先按 bin，再按 depth（升序：弱→强）
-        order = np.lexsort((depth, bin_idx))     # 主键：bin_idx；次键：depth
+        # 2) group sort by (bin, depth asc: weak -> strong)
+        order = np.lexsort((depth_sanitized, bin_idx))
         bin_sorted = bin_idx[order]
-        depth_sorted = depth[order]
+        depth_sorted = depth_sanitized[order]
 
-        # 3) 找到每个 bin 的切片边界
+        # 3) slice boundaries per bin
         starts = np.r_[0, np.flatnonzero(np.diff(bin_sorted)) + 1]
-        ends   = np.r_[starts[1:], len(depth_sorted)]
+        ends = np.r_[starts[1:], len(depth_sorted)]
 
-        # 4) 在“按强度升序”的每个切片内，丢弃前 cut 个（累计和<=threshold）
+        # 4) within each bin, drop weakest lines until cumulative depth > threshold
         keep_sorted = np.empty_like(depth_sorted, dtype=bool)
-        csum = np.cumsum(depth_sorted)  # 全局前缀和，便于O(1)求任一切片的局部cumsum
-
         for s, e in zip(starts, ends):
-            if s == e:  # 空bin（通常不会被lexsort产生，但留作保护）
+            if s == e:
                 continue
-            base = csum[s-1] if s > 0 else 0.0
-            # 该bin内局部累计和
-            local = csum[s:e] - base
-            # 需要丢弃的“最弱”个数
+            local = np.cumsum(depth_sorted[s:e])
             cut = np.searchsorted(local, threshold, side="right")
-            # 弱的前 cut 个 False，其余 True
             keep_sorted[s:e] = True
             if cut > 0:
-                keep_sorted[s:s+cut] = False
+                keep_sorted[s : s + cut] = False
 
-        # 5) 映射回原顺序
+        # 5) map back to original order and force invalid-depth lines to False
         keep = np.empty_like(keep_sorted)
         keep[order] = keep_sorted
+        keep[invalid_depth] = False
         return keep
 
     def flag_strong_lines_by_bins_old(self, df, bin_width=0.2, threshold=0.01, wl_col="wlcent", depth_col="central_depth", out_col="keep_mask", show_progress_bars=show_progress_bars):

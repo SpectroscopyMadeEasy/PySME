@@ -83,7 +83,9 @@ In addition the long format has the following fields
 ### Runtime columns
 
 :`nlte_flag`: Per-line NLTE usage flag written after synthesis. See [NLTE flags in line list](../concepts/nlte.md#nlte-flags-in-line-list).
+:`strong`: Per-line boolean flag used by dynamic line filtering.
 :`central_depth`: Estimated central line depth used for line selection/filtering. See [Line Filtering](../advance/line_filtering.md).
+:`almax_ratio`: Estimated line-center opacity-ratio proxy used in ALMAX-based filtering. See [Line Filtering](../advance/line_filtering.md).
 :`line_range_s`: Start wavelength of the estimated line-contribution range. See [Line Filtering](../advance/line_filtering.md).
 :`line_range_e`: End wavelength of the estimated line-contribution range. See [Line Filtering](../advance/line_filtering.md).
 
