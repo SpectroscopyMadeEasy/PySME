@@ -41,11 +41,16 @@ This can significantly reduce runtime for long or segmented spectra.
 - CDR method controls:
   - `sme.line_select_cdr_strength_thres`
   - `sme.line_select_cdr_bin_width`
-  - `cdr_database` / `cdr_create` (function args)
+  - `line_precompute_database` / `cdr_create` (function args)
 - ALMAX method controls:
   - `sme.line_select_almax_threshold`
   - `sme.line_select_almax_use_bins`
   - `sme.line_select_almax_bin_width`
+
+`line_precompute_database` is a shared on-disk cache for both `cdr` and
+`almax`. Cache entries are isolated by `(method, linelist_hash, stellar params)`,
+so one folder can safely store multiple linelists and both methods together.
+Legacy `cdr_database` is still accepted as an alias.
 
 ### ALMAX strong-line rule
 
@@ -97,7 +102,7 @@ sme = solve(
     sme,
     fit,
     linelist_mode="dynamic",
-    cdr_database="path/to/cdr_grid",     # optional on-disk CDR cache/grid
+    line_precompute_database="path/to/line_precompute_db",
     cdr_create=False,                     # set True to force regeneration
 )
 ```

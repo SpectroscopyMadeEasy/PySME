@@ -320,6 +320,8 @@ class SME_Structure(Parameters):
         self.line_select_reuse = "none"  # none | once | always
         self.line_select_cdr_bin_width = 0.2
         self.line_select_cdr_strength_thres = 0.001
+        self.line_precompute_database = None
+        # Legacy alias kept for backward compatibility.
         self.line_select_cdr_database = None
         self.line_select_almax_threshold = None
         self.line_select_almax_use_bins = False

@@ -6,6 +6,7 @@ import pytest
 
 from pysme.sme import SME_Structure as SME_Struct
 from pysme.solve import solve
+from pysme.synthesize import synthesize_spectrum
 
 
 cwd = dirname(__file__)
@@ -69,3 +70,50 @@ def test_solve_line_select_methods_match_internal_flux():
         flux_interp = np.interp(wave_ref, wave, flux)
         diff = flux_interp - flux_ref
         assert np.max(np.abs(diff)) < 1e-10
+
+
+def test_line_precompute_database_separates_method_and_linelist_hash(tmp_path):
+    db = str(tmp_path)
+
+    sme_cdr = _prepare_sme()
+    sme_cdr.line_select_method = "cdr"
+    sme_cdr.line_select_policy = "strict"
+    sme_cdr.line_select_recompute = "always"
+    sme_cdr.line_select_parallel = False
+    _ = synthesize_spectrum(
+        sme_cdr,
+        linelist_mode="all",
+        line_precompute_database=db,
+    )
+
+    cdr_files = list(tmp_path.glob("cdr_*.npz"))
+    assert len(cdr_files) > 0
+
+    sme_almax = _prepare_sme()
+    sme_almax.line_select_method = "almax"
+    sme_almax.line_select_policy = "strict"
+    sme_almax.line_select_recompute = "always"
+    sme_almax.line_select_parallel = False
+    sme_almax.line_select_almax_threshold = sme_almax.accrt
+    _ = synthesize_spectrum(
+        sme_almax,
+        linelist_mode="all",
+        line_precompute_database=db,
+    )
+
+    almax_files = list(tmp_path.glob("almax_*.npz"))
+    assert len(almax_files) > 0
+
+    # Mismatched linelist (different order/content) should be treated as cache miss.
+    sme_mismatch = _prepare_sme()
+    sme_mismatch.linelist = sme_mismatch.linelist[1:]
+    sme_mismatch.line_select_method = "cdr"
+    sme_mismatch.line_select_policy = "strict"
+    sme_mismatch.line_select_recompute = "never"
+    sme_mismatch.line_select_parallel = False
+    with pytest.raises(ValueError, match="no matching entry"):
+        _ = synthesize_spectrum(
+            sme_mismatch,
+            linelist_mode="all",
+            line_precompute_database=db,
+        )
