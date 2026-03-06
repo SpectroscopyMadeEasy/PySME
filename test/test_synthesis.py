@@ -54,8 +54,12 @@ def test_synthesis_segment(sme_2segments):
 
 
 class _DummyDLL:
-    def __init__(self):
+    def __init__(self, transf_wave=None):
         self.last_wave = "unset"
+        self.transf_wave = transf_wave
+
+    def SetLibraryPath(self):
+        return None
 
     def InputWaveRange(self, *_):
         return None
@@ -63,10 +67,16 @@ class _DummyDLL:
     def Opacity(self):
         return None
 
+    def SetLineInfoMode(self, *_):
+        return None
+
     def Transf(self, mu, accrt, accwi, keep_lineop, wave=None):
         self.last_wave = wave
         if wave is None:
-            wint = np.linspace(5000.0, 5001.0, 5)
+            if self.transf_wave is None:
+                wint = np.linspace(5000.0, 5001.0, 5)
+            else:
+                wint = np.asarray(self.transf_wave, dtype=float)
         else:
             wint = np.asarray(wave, dtype=float)
         sint = np.ones((len(mu), len(wint)), dtype=float)
@@ -130,3 +140,35 @@ def test_synthesize_segment_populates_cache_when_no_wint_available():
     assert dll.last_wave is None
     assert 0 in synth.wint
     assert np.allclose(synth.wint[0], np.linspace(5000.0, 5001.0, 5))
+
+
+def test_specific_intensities_only_updates_sme_and_trims_to_wran():
+    dll = _DummyDLL(transf_wave=np.linspace(4999.5, 5001.5, 9))
+    synth = Synthesizer(dll=dll)
+    sme = _minimal_sme()
+
+    out = synth.synthesize_spectrum(
+        sme,
+        segments=[0],
+        passLineList=False,
+        passAtmosphere=False,
+        passNLTE=False,
+    )
+
+    assert out is sme
+    assert hasattr(sme, "wint")
+    assert hasattr(sme, "sint")
+    assert hasattr(sme, "cint")
+
+    w = np.asarray(sme.wint[0], dtype=float)
+    sint = np.asarray(sme.sint[0], dtype=float)
+    cint = np.asarray(sme.cint[0], dtype=float)
+
+    assert w.size > 0
+    assert sint.size > 0
+    assert cint.size > 0
+    assert np.all(w >= 5000.0)
+    assert np.all(w <= 5001.0)
+    assert w.size < 9
+    assert sint.shape == (len(sme.mu), w.size)
+    assert cint.shape == (len(sme.mu), w.size)

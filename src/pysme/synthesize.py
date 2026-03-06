@@ -1497,7 +1497,35 @@ class Synthesizer:
                 wave[il] = np.concatenate(([wbeg], wmod[il][itrim], [wend]))
 
         if sme.specific_intensities_only:
-            return wmod, smod, cmod, central_depth
+            wint_out = [np.asarray(wmod[i], dtype=float) for i in range(n_segments)]
+            sint_out = [np.asarray(smod[i]) for i in range(n_segments)]
+            cint_out = [np.asarray(cmod[i]) for i in range(n_segments)]
+
+            # Trim specific intensities to each segment wavelength range.
+            for il in segments:
+                wbeg, wend = sme.wran[il]
+                if wint_out[il].size == 0:
+                    continue
+                keep = (wint_out[il] >= wbeg) & (wint_out[il] <= wend)
+                wint_out[il] = wint_out[il][keep]
+                if sint_out[il].ndim == 2:
+                    sint_out[il] = sint_out[il][:, keep]
+                else:
+                    sint_out[il] = sint_out[il][keep]
+                if cint_out[il].ndim == 2:
+                    cint_out[il] = cint_out[il][:, keep]
+                else:
+                    cint_out[il] = cint_out[il][keep]
+
+            # Store intensity-level outputs on sme and return sme.
+            sme.wint = Iliffe_vector(values=wint_out)
+            sme.sint = Iliffe_vector(values=sint_out)
+            sme.cint = Iliffe_vector(values=cint_out)
+            # Keep common fields in sync for callers that read wave/synth/cont.
+            sme.wave = Iliffe_vector(values=wint_out)
+            sme.synth = Iliffe_vector(values=sint_out)
+            sme.cont = Iliffe_vector(values=cint_out)
+            return sme
 
         # For testing wavegrid
         sme.wmod = wmod.copy()
@@ -2416,7 +2444,14 @@ class Synthesizer:
         sme_H_only_res = self.synthesize_spectrum(sme_H_only)
 
         int_3dnlte_H = []
-        interpolator = interp1d(sme_H_only_res[0][0], sme_H_only_res[1][0], kind="linear", fill_value=1, bounds_error=False, assume_sorted=True)
+        interpolator = interp1d(
+            sme_H_only_res.wint[0],
+            sme_H_only_res.sint[0],
+            kind="linear",
+            fill_value=1,
+            bounds_error=False,
+            assume_sorted=True,
+        )
         int_1d_H = interpolator(util.lambda_H_3DNLTE)
         for mu in sme_H_only.mu:
             int_3dnlte_H_mu, in_boundary = interpolate_3DNLTEH_spectrum_RBF(sme_H_only.teff, sme_H_only.logg, sme_H_only.monh, mu, boundary_vertices)

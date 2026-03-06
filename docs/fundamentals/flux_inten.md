@@ -20,7 +20,10 @@ specific intensities or disk-integrated flux:
 
 - `False` (default): integrate specific intensities over the stellar disk and return flux
 - `True`: return specific intensities directly, without flux-level post-processing
-    - Note that in this case, `synthesize_spectrum` will only return the specific intensities, not the `sme` object.
+    - In this mode, `synthesize_spectrum` stores trimmed intensity-level outputs on `sme`:
+      - `sme.wint`: transfer wavelength grid per segment
+      - `sme.sint`: line+continuum specific intensities `(nmu, nwave)`
+      - `sme.cint`: continuum specific intensities `(nmu, nwave)`
 
 This is useful when you want the radiative-transfer output itself (as a function
 of angle), rather than only the final integrated spectrum.
