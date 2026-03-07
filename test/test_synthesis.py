@@ -172,3 +172,60 @@ def test_specific_intensities_only_updates_sme_and_trims_to_wran():
     assert w.size < 9
     assert sint.shape == (len(sme.mu), w.size)
     assert cint.shape == (len(sme.mu), w.size)
+
+
+def _flag_strong_lines_by_bins_reference(wl, depth, bin_width=0.2, threshold=0.001):
+    wl = np.asarray(wl, dtype=float)
+    depth = np.asarray(depth, dtype=float)
+
+    invalid_depth = ~np.isfinite(depth)
+    depth_sanitized = np.where(invalid_depth, 0.0, depth)
+    depth_sanitized = np.where(depth_sanitized > 0, depth_sanitized, 0.0)
+
+    wl_min, wl_max = wl.min(), wl.max()
+    edges = np.arange(wl_min, wl_max + bin_width, bin_width)
+    bin_idx = np.searchsorted(edges, wl, side="right") - 1
+
+    order = np.lexsort((depth_sanitized, bin_idx))
+    bin_sorted = bin_idx[order]
+    depth_sorted = depth_sanitized[order]
+
+    starts = np.r_[0, np.flatnonzero(np.diff(bin_sorted)) + 1]
+    ends = np.r_[starts[1:], len(depth_sorted)]
+
+    keep_sorted = np.empty_like(depth_sorted, dtype=bool)
+    for s, e in zip(starts, ends):
+        if s == e:
+            continue
+        local = np.cumsum(depth_sorted[s:e])
+        cut = np.searchsorted(local, threshold, side="right")
+        keep_sorted[s:e] = True
+        if cut > 0:
+            keep_sorted[s : s + cut] = False
+
+    keep = np.empty_like(keep_sorted)
+    keep[order] = keep_sorted
+    keep[invalid_depth] = False
+    return keep
+
+
+def test_flag_strong_lines_by_bins_matches_reference():
+    rng = np.random.default_rng(42)
+    n = 5000
+    wl = rng.uniform(6000.0, 6030.0, n)
+    depth = rng.uniform(-1e-4, 2e-3, n)
+
+    # Inject special values and repeated wavelengths to stress boundary handling.
+    depth[rng.choice(n, size=300, replace=False)] = 0.0
+    depth[rng.choice(n, size=100, replace=False)] = np.nan
+    wl[:20] = np.linspace(6005.0, 6006.9, 20)
+
+    for bin_width in [0.2, 0.03]:
+        for threshold in [1e-3, 0.0, -1e-4]:
+            got = Synthesizer.flag_strong_lines_by_bins(
+                wl, depth, bin_width=bin_width, threshold=threshold
+            )
+            ref = _flag_strong_lines_by_bins_reference(
+                wl, depth, bin_width=bin_width, threshold=threshold
+            )
+            assert np.array_equal(got, ref)

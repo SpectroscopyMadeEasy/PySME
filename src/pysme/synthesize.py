@@ -2191,18 +2191,16 @@ class Synthesizer:
 
         # 3) slice boundaries per bin
         starts = np.r_[0, np.flatnonzero(np.diff(bin_sorted)) + 1]
-        ends = np.r_[starts[1:], len(depth_sorted)]
+        counts = np.diff(np.r_[starts, depth_sorted.size])
 
         # 4) within each bin, drop weakest lines until cumulative depth > threshold
-        keep_sorted = np.empty_like(depth_sorted, dtype=bool)
-        for s, e in zip(starts, ends):
-            if s == e:
-                continue
-            local = np.cumsum(depth_sorted[s:e])
-            cut = np.searchsorted(local, threshold, side="right")
-            keep_sorted[s:e] = True
-            if cut > 0:
-                keep_sorted[s : s + cut] = False
+        # Equivalent to per-bin searchsorted(cumsum, threshold, side="right"), but vectorized.
+        csum = np.cumsum(depth_sorted)
+        group_start = np.repeat(starts, counts)
+        local = csum.copy()
+        nz = group_start > 0
+        local[nz] -= csum[group_start[nz] - 1]
+        keep_sorted = local > threshold
 
         # 5) map back to original order and force invalid-depth lines to False
         keep = np.empty_like(keep_sorted)
