@@ -254,7 +254,7 @@ class SME_Structure(Parameters):
             "array of size (nseg, 2): beginning and end wavelength points of each segment"),
         ("wint", None, vector, this,
             "Iliffe_vector of shape (nseg, ...): optional wavelength grid passed to SMElib Transf"),
-        ("wave", None, vector, this,
+        ("wave", None, this, this,
             "Iliffe_vector of shape (nseg, ...): wavelength"),
         ("spec", None, vector, this,
             "Iliffe_vector of shape (nseg, ...): observed spectrum"),
@@ -284,6 +284,7 @@ class SME_Structure(Parameters):
 
     def __init__(self, **kwargs):
         wind = kwargs.get("wind", None)
+        self.__dict__["_wave_invalidation_enabled"] = False
 
         atmo = kwargs.pop("atmo", {})
         nlte = kwargs.pop("nlte", {})
@@ -406,6 +407,7 @@ class SME_Structure(Parameters):
         # Apply final conversions from IDL to Python version
         if "wave" in self:
             self.__convert_cscale__()
+        self.__dict__["_wave_invalidation_enabled"] = True
 
     def __getitem__(self, key):
         assert isinstance(key, str), "Key must be of type string"
@@ -437,6 +439,111 @@ class SME_Structure(Parameters):
             super().__setitem__(key, value)
 
     # Additional constraints on fields
+    @staticmethod
+    def _coerce_wave_value(value):
+        if value is None:
+            return None
+        if np.isscalar(value):
+            raise ValueError("Can not set wavelength from single value")
+        if isinstance(value, np.ndarray):
+            value = np.require(value, requirements="W")
+            if value.ndim == 1:
+                return Iliffe_vector([value])
+            return Iliffe_vector(value)
+        if isinstance(value, (list, tuple)):
+            return Iliffe_vector(list(value))
+        if isinstance(value, Iliffe_vector):
+            return value
+        if isinstance(value, FlexExtension):
+            return Iliffe_vector._load(value)
+        if isinstance(value, np.lib.npyio.NpzFile):
+            return Iliffe_vector._load_v1(value)
+        raise TypeError("Input value is of the wrong type")
+
+    @staticmethod
+    def _wave_values_equal(lhs, rhs):
+        if lhs is rhs:
+            return True
+        if lhs is None or rhs is None:
+            return lhs is rhs
+        if lhs.nseg != rhs.nseg:
+            return False
+        if lhs.shape != rhs.shape:
+            return False
+        for i in range(lhs.nseg):
+            a = np.asarray(lhs[i])
+            b = np.asarray(rhs[i])
+            try:
+                if not np.array_equal(a, b, equal_nan=True):
+                    return False
+            except TypeError:
+                if not np.array_equal(a, b):
+                    return False
+        return True
+
+    @staticmethod
+    def _wran_from_wave(wave):
+        if wave is None:
+            return None
+        wran = np.zeros((wave.nseg, 2), dtype=float)
+        for i in range(wave.nseg):
+            seg = wave[i]
+            if seg is None or len(seg) == 0:
+                wran[i] = [np.nan, np.nan]
+            elif len(seg) == 1:
+                wran[i] = [seg[0], seg[0]]
+            else:
+                wran[i] = [seg[0], seg[-1]]
+        return wran
+
+    def _invalidate_wave_dependent_state(self):
+        for name in [
+            "_spec",
+            "_uncs",
+            "_mask",
+            "_synth",
+            "_cont",
+            "_telluric",
+            "_sint",
+            "_cint",
+        ]:
+            if name in self.__dict__:
+                self.__dict__[name] = None
+
+        self.__vrad = None
+        self.__cscale = None
+
+        # Uncertainty arrays are created dynamically after synthesis.
+        if "vrad_unc" in self.__dict__:
+            self.vrad_unc = None
+        if "cscale_unc" in self.__dict__:
+            self.cscale_unc = None
+
+    @property
+    def _wave(self):
+        return self.__dict__.get("_wave", None)
+
+    @_wave.setter
+    def _wave(self, value):
+        old_wave = self.__dict__.get("_wave", None)
+        new_wave = self._coerce_wave_value(value)
+        changed = not self._wave_values_equal(old_wave, new_wave)
+
+        self.__dict__["_wave"] = new_wave
+        self.__wran = self._wran_from_wave(new_wave)
+
+        # Only invalidate on reassignment, not during first initialization.
+        if (
+            changed
+            and old_wave is not None
+            and self.__dict__.get("_wave_invalidation_enabled", True)
+        ):
+            self._invalidate_wave_dependent_state()
+            logger.warning(
+                "Wavelength grid changed; cleared wave-dependent fields "
+                "(spec/uncs/mask/synth/cont/telluric/sint/cint and rv/continuum fit state)."
+            )
+
     @property
     def _wran(self):
         if self.wave is not None:
