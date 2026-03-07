@@ -1518,13 +1518,9 @@ class Synthesizer:
                     cint_out[il] = cint_out[il][keep]
 
             # Store intensity-level outputs on sme and return sme.
-            sme.wint = Iliffe_vector(values=wint_out)
-            sme.sint = Iliffe_vector(values=sint_out)
-            sme.cint = Iliffe_vector(values=cint_out)
-            # Keep common fields in sync for callers that read wave/synth/cont.
-            sme.wave = Iliffe_vector(values=wint_out)
-            sme.synth = Iliffe_vector(values=sint_out)
-            sme.cont = Iliffe_vector(values=cint_out)
+            sme.wint = wint_out
+            sme.sint = sint_out
+            sme.cint = cint_out
             return sme
 
         # For testing wavegrid
