@@ -60,6 +60,24 @@ python -c "import pysme; print('PySME version:', pysme.__version__)"
 
 You should see an output of `PySME version: [version]`.
 
+## Configure data directories (optional)
+
+PySME stores atmosphere/NLTE/cache files under `~/.sme/` by default.
+To use a different location, edit `~/.sme/config.json`:
+
+```json
+{
+  "data.hlineprof": "/path/to/pysme/hlineprof",
+  "data.atmospheres": "/path/to/pysme/atmospheres",
+  "data.nlte_grids": "/path/to/pysme/nlte_grids"
+}
+```
+
+Notes:
+
+- `~` can be used in these paths.
+- Updating paths does not move existing downloaded files automatically.
+
 ## Uninstall 
 
 You can uninstall PySME by:
