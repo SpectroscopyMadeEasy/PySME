@@ -1068,12 +1068,13 @@ class Synthesizer:
             if use_bins:
                 wl_all = np.asarray(sme.linelist["wlcent"], dtype=float)
                 strong_valid = self.flag_strong_lines_by_bins(
-                    wl_all[valid_all],
-                    almax_all[valid_all],
+                    wl_all,
+                    almax_all,
                     bin_width=bin_width,
                     threshold=threshold,
+                    valid_mask=valid_all,
                 )
-                strong_all[valid_all] = np.asarray(strong_valid, dtype=bool)
+                strong_all[:] = np.asarray(strong_valid, dtype=bool)
             else:
                 strong_all[valid_all] = almax_all[valid_all] >= threshold
 
@@ -2170,24 +2171,44 @@ class Synthesizer:
         return ~drop_mask                           # True = keep
 
     @staticmethod
-    def flag_strong_lines_by_bins(wl, depth, bin_width=0.2, threshold=0.001):
+    def flag_strong_lines_by_bins(
+        wl, depth, bin_width=0.2, threshold=0.001, valid_mask=None
+    ):
         wl = np.asarray(wl, dtype=float)
         depth = np.asarray(depth, dtype=float)
+        if wl.shape != depth.shape:
+            raise ValueError("wl and depth must have the same shape")
+
+        if valid_mask is None:
+            valid_mask = np.ones(depth.shape, dtype=bool)
+        else:
+            valid_mask = np.asarray(valid_mask, dtype=bool)
+            if valid_mask.shape != depth.shape:
+                raise ValueError("valid_mask must have the same shape as wl/depth")
 
         # Sanitize invalid/negative depths so they cannot poison cumulative sums.
         invalid_depth = ~np.isfinite(depth)
         depth_sanitized = np.where(invalid_depth, 0.0, depth)
         depth_sanitized = np.where(depth_sanitized > 0, depth_sanitized, 0.0)
 
+        candidate = valid_mask
+
         # 1) build bin indices
-        wl_min, wl_max = wl.min(), wl.max()
+        if not np.any(candidate):
+            return np.zeros(depth.shape, dtype=bool)
+        wl_min = np.min(wl, where=candidate, initial=np.inf)
+        wl_max = np.max(wl, where=candidate, initial=-np.inf)
         edges = np.arange(wl_min, wl_max + bin_width, bin_width)
-        bin_idx = np.searchsorted(edges, wl, side="right") - 1
 
         # 2) group sort by (bin, depth asc: weak -> strong)
-        order = np.lexsort((depth_sanitized, bin_idx))
+        candidate_idx = np.flatnonzero(candidate)
+        wl_candidate = wl[candidate_idx]
+        depth_candidate = depth_sanitized[candidate_idx]
+        bin_idx = np.searchsorted(edges, wl_candidate, side="right") - 1
+
+        order = np.lexsort((depth_candidate, bin_idx))
         bin_sorted = bin_idx[order]
-        depth_sorted = depth_sanitized[order]
+        depth_sorted = depth_candidate[order]
 
         # 3) slice boundaries per bin
         starts = np.r_[0, np.flatnonzero(np.diff(bin_sorted)) + 1]
@@ -2202,9 +2223,9 @@ class Synthesizer:
         local[nz] -= csum[group_start[nz] - 1]
         keep_sorted = local > threshold
 
-        # 5) map back to original order and force invalid-depth lines to False
-        keep = np.empty_like(keep_sorted)
-        keep[order] = keep_sorted
+        # 5) map back to original order and force invalid-depth / invalid-mask lines to False
+        keep = np.zeros(depth.shape, dtype=bool)
+        keep[candidate_idx[order]] = keep_sorted
         keep[invalid_depth] = False
         return keep
 

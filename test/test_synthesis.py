@@ -229,3 +229,30 @@ def test_flag_strong_lines_by_bins_matches_reference():
                 wl, depth, bin_width=bin_width, threshold=threshold
             )
             assert np.array_equal(got, ref)
+
+
+def test_flag_strong_lines_by_bins_valid_mask_matches_sliced_call():
+    rng = np.random.default_rng(7)
+    n = 8000
+    wl = rng.uniform(5000.0, 5100.0, n)
+    depth = rng.uniform(-5e-5, 2e-3, n)
+    depth[rng.choice(n, size=200, replace=False)] = np.nan
+    valid_mask = rng.random(n) > 0.3
+
+    got = Synthesizer.flag_strong_lines_by_bins(
+        wl,
+        depth,
+        bin_width=0.2,
+        threshold=1e-3,
+        valid_mask=valid_mask,
+    )
+    ref_sub = _flag_strong_lines_by_bins_reference(
+        wl[valid_mask],
+        depth[valid_mask],
+        bin_width=0.2,
+        threshold=1e-3,
+    )
+    ref = np.zeros(n, dtype=bool)
+    ref[valid_mask] = ref_sub
+
+    assert np.array_equal(got, ref)
