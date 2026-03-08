@@ -28,15 +28,18 @@ def testcase1():
     cwd = dirname(__file__)
     fname = join(cwd, "testcase1.inp")
     sme = SME_Struct.load(fname)
-    sme = synthesize_spectrum(sme)
+    # Build a 2-segment input first, then synthesize both segments.
+    w0 = np.array(sme.wave[0], copy=True)
+    s0 = np.array(sme.spec[0], copy=True)
+    u0 = np.array(sme.uncs[0], copy=True)
+    m0 = np.array(sme.mask[0], copy=True)
 
-    # Add a second segment (just for testing)
-    sme.spec = [sme.spec[0], sme.spec[0]]
-    sme.wave = [sme.wave[0], sme.wave[0]]
-    sme.synth = [sme.synth[0], sme.synth[0]]
-    sme.mask = [sme.mask[0], sme.mask[0]]
-    sme.uncs = [sme.uncs[0], sme.uncs[0]]
-    # sme.wran = [sme.wran[0], sme.wran[0]]
+    sme.wave = [w0.copy(), w0.copy()]
+    sme.spec = [s0.copy(), s0.copy()]
+    sme.uncs = [u0.copy(), u0.copy()]
+    sme.mask = [m0.copy(), m0.copy()]
+    sme.wran = [[w0[0], w0[-1]], [w0[0], w0[-1]]]
+    sme = synthesize_spectrum(sme)
 
     rv = 10
     x_syn = sme.wave[0] * (1 - rv / c_light)

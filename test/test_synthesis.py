@@ -37,6 +37,7 @@ def test_synthesis_segment(sme_2segments):
     sme2 = synthesize_spectrum(sme, segments=[0])
     assert len(sme2.synth[0]) != 0
     assert len(sme2.synth[1]) == 0
+    assert np.allclose(sme2.wran, np.array([[6550.0, 6560.0], [6560.0, 6574.0]]))
 
     assert len(sme2.wave[0]) != 0
     assert len(sme2.wave[1]) == 0

@@ -482,14 +482,20 @@ class SME_Structure(Parameters):
         return True
 
     @staticmethod
-    def _wran_from_wave(wave):
+    def _wran_from_wave(wave, previous_wran=None):
         if wave is None:
             return None
         wran = np.zeros((wave.nseg, 2), dtype=float)
+        prev = None
+        if previous_wran is not None:
+            prev = np.asarray(previous_wran, dtype=float)
         for i in range(wave.nseg):
             seg = wave[i]
             if seg is None or len(seg) == 0:
-                wran[i] = [np.nan, np.nan]
+                if prev is not None and prev.ndim == 2 and i < prev.shape[0]:
+                    wran[i] = prev[i]
+                else:
+                    wran[i] = [np.nan, np.nan]
             elif len(seg) == 1:
                 wran[i] = [seg[0], seg[0]]
             else:
@@ -525,12 +531,13 @@ class SME_Structure(Parameters):
 
     @_wave.setter
     def _wave(self, value):
+        previous_wran = self.__dict__.get("_SME_Structure__wran", None)
         old_wave = self.__dict__.get("_wave", None)
         new_wave = self._coerce_wave_value(value)
         changed = not self._wave_values_equal(old_wave, new_wave)
 
         self.__dict__["_wave"] = new_wave
-        self.__wran = self._wran_from_wave(new_wave)
+        self.__wran = self._wran_from_wave(new_wave, previous_wran=previous_wran)
 
         # Only invalidate on reassignment, not during first initialization.
         if (

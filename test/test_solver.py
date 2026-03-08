@@ -31,3 +31,29 @@ def test_simple():
 
     assert sme2.fitresults.chisq is not None
     assert sme2.fitresults.chisq != 0
+
+
+def test_solve_requires_wave():
+    sme = SME_Struct()
+    sme.spec = [np.ones(10)]
+    with pytest.raises(ValueError, match="wavelength grid"):
+        solve(sme, ["teff"])
+
+
+def test_solve_requires_spec():
+    sme = SME_Struct()
+    sme.wave = [np.linspace(5000.0, 5001.0, 10)]
+    with pytest.raises(ValueError, match="observed spectrum"):
+        solve(sme, ["teff"])
+
+
+@pytest.mark.parametrize("field_name", ["uncs", "mask"])
+def test_solve_rejects_mismatched_segment_length(field_name):
+    sme = SME_Struct.load(filename)
+    bad = np.ones(max(1, len(sme.wave[0]) - 1))
+    if field_name == "mask":
+        bad = bad.astype(int)
+    setattr(sme, field_name, [bad])
+
+    with pytest.raises(ValueError, match=field_name):
+        solve(sme, ["teff"])

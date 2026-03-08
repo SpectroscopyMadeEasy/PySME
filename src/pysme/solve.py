@@ -647,6 +647,42 @@ class SME_Solver:
                 )
         return param_names
 
+    @staticmethod
+    def _validate_field_against_wave(sme, field_name):
+        """Ensure a segmented field has same nseg and per-segment lengths as wave."""
+        field = getattr(sme, field_name)
+        wave = sme.wave
+
+        try:
+            nseg_wave = int(wave.shape[0])
+        except Exception as exc:
+            raise ValueError("SME Structure has invalid wavelength grid ('wave').") from exc
+
+        try:
+            nseg_field = int(field.shape[0])
+        except Exception:
+            try:
+                nseg_field = len(field)
+            except Exception as exc:
+                raise ValueError(
+                    f"SME Structure field '{field_name}' must be segmented and match 'wave'."
+                ) from exc
+
+        if nseg_field != nseg_wave:
+            raise ValueError(
+                f"SME Structure field '{field_name}' has {nseg_field} segments, "
+                f"but wave has {nseg_wave}."
+            )
+
+        for seg in range(nseg_wave):
+            nw = 0 if wave[seg] is None else len(wave[seg])
+            nf = 0 if field[seg] is None else len(field[seg])
+            if nf != nw:
+                raise ValueError(
+                    f"SME Structure field '{field_name}' does not match wave at segment {seg}: "
+                    f"expected length {nw}, got {nf}."
+                )
+
     def solve(
         self,
         sme,
@@ -683,8 +719,10 @@ class SME_Solver:
             same sme structure with fit results in sme.fitresults, and best fit spectrum in sme.smod
         """
 
-        assert "wave" in sme, "SME Structure has no wavelength"
-        assert "spec" in sme, "SME Structure has no observation"
+        if "wave" not in sme or sme.wave is None:
+            raise ValueError("SME Structure has no wavelength grid ('wave').")
+        if "spec" not in sme or sme.spec is None:
+            raise ValueError("SME Structure has no observed spectrum ('spec').")
 
         if derived_param is not None and dynamic_param is not None and derived_param is not dynamic_param:
             raise ValueError("Specify only one of derived_param or dynamic_param, not both.")
@@ -709,10 +747,16 @@ class SME_Solver:
                 pass
 
         if "uncs" not in sme:
-            sme.uncs = np.ones(sme.spec.size)
+            sme.uncs = [np.ones(len(w), dtype=float) for w in sme.wave]
             logger.warning("SME Structure has no uncertainties, using all ones instead")
         if "mask" not in sme:
-            sme.mask = np.full(sme.wave.size, MASK_VALUES.LINE)
+            sme.mask = [
+                np.full(len(w), MASK_VALUES.LINE, dtype=np.int16) for w in sme.wave
+            ]
+
+        self._validate_field_against_wave(sme, "spec")
+        self._validate_field_against_wave(sme, "uncs")
+        self._validate_field_against_wave(sme, "mask")
 
         segments = Synthesizer.check_segments(sme, segments)
 
