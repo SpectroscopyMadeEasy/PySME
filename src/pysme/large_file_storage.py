@@ -56,18 +56,18 @@ class LargeFileStorage:
         #:dict(fname:hash): points from a filename to the current newest object id, usually a hash
         self.pointers = pointers
         #:Directory: directory of the current data files
-        self.current = Path(storage).expanduser().absolute()
+        cache_path = Path(storage).expanduser().resolve(strict=False)
+        self.current = cache_path
 
         # set the folder to download the data file into
         # need to set environment variable because astropy will put things into home otherwise
-        os.environ['XDG_CACHE_HOME'] = str(Path(storage).absolute())
+        os.environ['XDG_CACHE_HOME'] = str(cache_path)
         # if someone is using astropy along with pysme, it might mess with their astropy file storage
         # not threadsafe, but multiprocessing safe, because threads shares environment variables
         self.PKGNAME = ''
         
-        if not os.path.exists(storage):
+        if not cache_path.exists():
             print('folder to store data file does not exist, creating')
-        cache_path = Path(storage)
         cache_path.mkdir(parents=True, exist_ok=True)
 
     @staticmethod
