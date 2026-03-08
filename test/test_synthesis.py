@@ -37,6 +37,7 @@ def test_synthesis_segment(sme_2segments):
     sme2 = synthesize_spectrum(sme, segments=[0])
     assert len(sme2.synth[0]) != 0
     assert len(sme2.synth[1]) == 0
+    assert np.allclose(sme2.wran, np.array([[6550.0, 6560.0], [6560.0, 6574.0]]))
 
     assert len(sme2.wave[0]) != 0
     assert len(sme2.wave[1]) == 0
@@ -54,8 +55,12 @@ def test_synthesis_segment(sme_2segments):
 
 
 class _DummyDLL:
-    def __init__(self):
+    def __init__(self, transf_wave=None):
         self.last_wave = "unset"
+        self.transf_wave = transf_wave
+
+    def SetLibraryPath(self):
+        return None
 
     def InputWaveRange(self, *_):
         return None
@@ -63,10 +68,16 @@ class _DummyDLL:
     def Opacity(self):
         return None
 
+    def SetLineInfoMode(self, *_):
+        return None
+
     def Transf(self, mu, accrt, accwi, keep_lineop, wave=None):
         self.last_wave = wave
         if wave is None:
-            wint = np.linspace(5000.0, 5001.0, 5)
+            if self.transf_wave is None:
+                wint = np.linspace(5000.0, 5001.0, 5)
+            else:
+                wint = np.asarray(self.transf_wave, dtype=float)
         else:
             wint = np.asarray(wave, dtype=float)
         sint = np.ones((len(mu), len(wint)), dtype=float)
@@ -130,3 +141,119 @@ def test_synthesize_segment_populates_cache_when_no_wint_available():
     assert dll.last_wave is None
     assert 0 in synth.wint
     assert np.allclose(synth.wint[0], np.linspace(5000.0, 5001.0, 5))
+
+
+def test_specific_intensities_only_updates_sme_and_trims_to_wran():
+    dll = _DummyDLL(transf_wave=np.linspace(4999.5, 5001.5, 9))
+    synth = Synthesizer(dll=dll)
+    sme = _minimal_sme()
+
+    out = synth.synthesize_spectrum(
+        sme,
+        segments=[0],
+        passLineList=False,
+        passAtmosphere=False,
+        passNLTE=False,
+    )
+
+    assert out is sme
+    assert hasattr(sme, "wint")
+    assert hasattr(sme, "sint")
+    assert hasattr(sme, "cint")
+
+    w = np.asarray(sme.wint[0], dtype=float)
+    sint = np.asarray(sme.sint[0], dtype=float)
+    cint = np.asarray(sme.cint[0], dtype=float)
+
+    assert w.size > 0
+    assert sint.size > 0
+    assert cint.size > 0
+    assert np.all(w >= 5000.0)
+    assert np.all(w <= 5001.0)
+    assert w.size < 9
+    assert sint.shape == (len(sme.mu), w.size)
+    assert cint.shape == (len(sme.mu), w.size)
+
+
+def _flag_strong_lines_by_bins_reference(wl, depth, bin_width=0.2, threshold=0.001):
+    wl = np.asarray(wl, dtype=float)
+    depth = np.asarray(depth, dtype=float)
+
+    invalid_depth = ~np.isfinite(depth)
+    depth_sanitized = np.where(invalid_depth, 0.0, depth)
+    depth_sanitized = np.where(depth_sanitized > 0, depth_sanitized, 0.0)
+
+    wl_min, wl_max = wl.min(), wl.max()
+    edges = np.arange(wl_min, wl_max + bin_width, bin_width)
+    bin_idx = np.searchsorted(edges, wl, side="right") - 1
+
+    order = np.lexsort((depth_sanitized, bin_idx))
+    bin_sorted = bin_idx[order]
+    depth_sorted = depth_sanitized[order]
+
+    starts = np.r_[0, np.flatnonzero(np.diff(bin_sorted)) + 1]
+    ends = np.r_[starts[1:], len(depth_sorted)]
+
+    keep_sorted = np.empty_like(depth_sorted, dtype=bool)
+    for s, e in zip(starts, ends):
+        if s == e:
+            continue
+        local = np.cumsum(depth_sorted[s:e])
+        cut = np.searchsorted(local, threshold, side="right")
+        keep_sorted[s:e] = True
+        if cut > 0:
+            keep_sorted[s : s + cut] = False
+
+    keep = np.empty_like(keep_sorted)
+    keep[order] = keep_sorted
+    keep[invalid_depth] = False
+    return keep
+
+
+def test_flag_strong_lines_by_bins_matches_reference():
+    rng = np.random.default_rng(42)
+    n = 5000
+    wl = rng.uniform(6000.0, 6030.0, n)
+    depth = rng.uniform(-1e-4, 2e-3, n)
+
+    # Inject special values and repeated wavelengths to stress boundary handling.
+    depth[rng.choice(n, size=300, replace=False)] = 0.0
+    depth[rng.choice(n, size=100, replace=False)] = np.nan
+    wl[:20] = np.linspace(6005.0, 6006.9, 20)
+
+    for bin_width in [0.2, 0.03]:
+        for threshold in [1e-3, 0.0, -1e-4]:
+            got = Synthesizer.flag_strong_lines_by_bins(
+                wl, depth, bin_width=bin_width, threshold=threshold
+            )
+            ref = _flag_strong_lines_by_bins_reference(
+                wl, depth, bin_width=bin_width, threshold=threshold
+            )
+            assert np.array_equal(got, ref)
+
+
+def test_flag_strong_lines_by_bins_valid_mask_matches_sliced_call():
+    rng = np.random.default_rng(7)
+    n = 8000
+    wl = rng.uniform(5000.0, 5100.0, n)
+    depth = rng.uniform(-5e-5, 2e-3, n)
+    depth[rng.choice(n, size=200, replace=False)] = np.nan
+    valid_mask = rng.random(n) > 0.3
+
+    got = Synthesizer.flag_strong_lines_by_bins(
+        wl,
+        depth,
+        bin_width=0.2,
+        threshold=1e-3,
+        valid_mask=valid_mask,
+    )
+    ref_sub = _flag_strong_lines_by_bins_reference(
+        wl[valid_mask],
+        depth[valid_mask],
+        bin_width=0.2,
+        threshold=1e-3,
+    )
+    ref = np.zeros(n, dtype=bool)
+    ref[valid_mask] = ref_sub
+
+    assert np.array_equal(got, ref)

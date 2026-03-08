@@ -165,3 +165,57 @@ def test_wint_multi_segment_list_input():
     assert sme.wint.nseg == 2
     assert np.allclose(sme.wint[0], wint0)
     assert np.allclose(sme.wint[1], wint1)
+
+
+def test_wave_reassignment_is_not_silently_truncated():
+    sme = SME_Struct()
+    short = np.arange(3700.0, 3700.012, 0.002)
+    long = np.arange(3700.0, 3970.505, 0.0002)
+
+    sme.wave = short
+    sme.wave = long
+
+    assert sme.wave.nseg == 1
+    assert len(sme.wave[0]) == len(long)
+    assert np.allclose(sme.wave[0], long)
+
+
+def test_wave_reassignment_invalidates_wave_dependent_state():
+    sme = SME_Struct()
+    old_wave = np.linspace(5000.0, 5001.0, 11)
+    new_wave = np.linspace(6000.0, 6002.0, 21)
+
+    sme.wave = old_wave
+    sme.spec = old_wave.copy()
+    sme.uncs = np.ones_like(old_wave)
+    sme.mask = np.ones_like(old_wave, dtype=np.int32)
+    sme.synth = np.ones_like(old_wave) * 0.9
+    sme.cont = np.ones_like(old_wave)
+    sme.telluric = np.ones_like(old_wave)
+    sme.sint = [np.ones((3, old_wave.size))]
+    sme.cint = [np.ones((3, old_wave.size))]
+
+    sme.vrad_flag = "fix"
+    sme.vrad = np.array([12.0])
+    sme.vrad_unc = np.array([[0.1, 0.2]])
+    sme.cscale_flag = "linear"
+    sme.cscale = np.array([[0.0, 1.0]])
+    sme.cscale_unc = np.zeros((1, 2, 2))
+
+    sme.wave = new_wave
+
+    assert len(sme.wave[0]) == len(new_wave)
+    assert sme.spec is None
+    assert sme.uncs is None
+    assert sme.mask is None
+    assert sme.synth is None
+    assert sme.cont is None
+    assert sme.telluric is None
+    assert sme.sint is None
+    assert sme.cint is None
+
+    # vrad/cscale are reset to defaults for the new segment layout.
+    assert np.allclose(sme.vrad, [0.0])
+    assert np.allclose(sme.cscale, [[0.0, 1.0]])
+    assert sme.vrad_unc is None
+    assert sme.cscale_unc is None

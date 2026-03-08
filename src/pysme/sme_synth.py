@@ -588,6 +588,23 @@ class SME_DLL:
 
         return _smelib.CentralDepth(mu, accrt)
 
+    def ALMAXRange(self, accrt=1e-4):
+        """Compute first-stage ALMAX and line ranges from SMElib preselection logic.
+
+        Parameters
+        ----------
+        accrt : float, optional
+            Opacity-ratio threshold (same role as accrt in Transf preselection).
+
+        Returns
+        -------
+        almax : array of size (nlines,)
+            Line-center opacity-ratio proxy from the first-stage screening.
+        linerange : array of size (nlines, 2)
+            Preselection range for each line.
+        """
+        return _smelib.ALMAXRange(accrt=accrt)
+
     def GetLineOpacity(self, wave):
         """
         Retrieve line opacity data from the C library

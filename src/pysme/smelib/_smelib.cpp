@@ -1150,7 +1150,7 @@ static PyObject *smelib_Transf(PyObject *self, PyObject *args, PyObject *kwds)
     npy_intp dims2[2];
 
     PyObject *mu_obj = NULL, *wave_obj = NULL;
-    PyObject *return_tuple = NULL;
+    PyObject *return_tuple = NULL, *nw_obj = NULL;
 
     PyArrayObject *mu_arr = NULL, *cint_arr = NULL, *cintr_arr = NULL;
     PyArrayObject *wave_arr = NULL, *sint_arr = NULL;
@@ -1192,17 +1192,23 @@ static PyObject *smelib_Transf(PyObject *self, PyObject *args, PyObject *kwds)
         nw = 0;
         dims[0] = nwmax;
         wave_arr = (PyArrayObject *)PyArray_SimpleNew(1, dims, NPY_DOUBLE);
+        if (wave_arr == NULL)
+            goto fail;
     }
 
     nmu = PyArray_DIM(mu_arr, 0);
 
     dims[0] = nmu;
     cintr_arr = (PyArrayObject *)PyArray_SimpleNew(1, dims, NPY_DOUBLE);
+    if (cintr_arr == NULL)
+        goto fail;
 
     dims2[0] = nwmax;
     dims2[1] = nmu;
     cint_arr = (PyArrayObject *)PyArray_SimpleNew(2, dims2, NPY_DOUBLE);
     sint_arr = (PyArrayObject *)PyArray_SimpleNew(2, dims2, NPY_DOUBLE);
+    if (cint_arr == NULL || sint_arr == NULL)
+        goto fail;
 
     args_c[0] = &nmu;
     args_c[1] = PyArray_DATA(mu_arr);
@@ -1225,12 +1231,30 @@ static PyObject *smelib_Transf(PyObject *self, PyObject *args, PyObject *kwds)
         goto fail;
     }
 
-    // we don't need this one
     Py_DECREF(cintr_arr);
+    cintr_arr = NULL;
 
-    // return nw, wave, sint_arr, cint_arr
-    return_tuple = Py_BuildValue("iOOO", nw, (PyObject *)wave_arr,
-                                 (PyObject *)sint_arr, (PyObject *)cint_arr);
+    return_tuple = PyTuple_New(4);
+    if (return_tuple == NULL)
+        goto fail;
+
+    nw_obj = PyLong_FromLong((long)nw);
+    if (nw_obj == NULL)
+        goto fail;
+
+    PyTuple_SET_ITEM(return_tuple, 0, nw_obj);
+    nw_obj = NULL;
+
+    PyTuple_SET_ITEM(return_tuple, 1, (PyObject *)wave_arr);
+    wave_arr = NULL;
+    PyTuple_SET_ITEM(return_tuple, 2, (PyObject *)sint_arr);
+    sint_arr = NULL;
+    PyTuple_SET_ITEM(return_tuple, 3, (PyObject *)cint_arr);
+    cint_arr = NULL;
+
+    Py_DECREF(mu_arr);
+    mu_arr = NULL;
+
     return return_tuple;
 
 fail:
@@ -1239,6 +1263,8 @@ fail:
     Py_XDECREF(cint_arr);
     Py_XDECREF(cintr_arr);
     Py_XDECREF(sint_arr);
+    Py_XDECREF(nw_obj);
+    Py_XDECREF(return_tuple);
     return NULL;
 }
 
@@ -1275,6 +1301,8 @@ static PyObject *smelib_CentralDepth(PyObject *self, PyObject *args, PyObject *k
 
     dims[0] = nwsize;
     table_arr = (PyArrayObject *)PyArray_SimpleNew(1, dims, NPY_FLOAT);
+    if (table_arr == NULL)
+        goto fail;
 
     args_c[0] = &nmu;
     args_c[1] = PyArray_DATA(mu_arr);
@@ -1288,11 +1316,68 @@ static PyObject *smelib_CentralDepth(PyObject *self, PyObject *args, PyObject *k
         PyErr_SetString(PyExc_RuntimeError, result);
         goto fail;
     }
+
+    Py_DECREF(mu_arr);
+    mu_arr = NULL;
     return (PyObject *)table_arr;
 
 fail:
     Py_XDECREF(mu_arr);
     Py_XDECREF(table_arr);
+    return NULL;
+}
+
+static char smelib_ALMAXRange_docstring[] = "Compute first-stage ALMAX and line range";
+static PyObject *smelib_ALMAXRange(PyObject *self, PyObject *args, PyObject *kwds)
+{
+    const int n = 4;
+    void *args_c[n];
+    const char *result = NULL;
+    npy_intp dims_almax[1], dims_range[2];
+    int n_lines;
+    double accrt = 1e-4;
+    PyObject *ret_tuple = NULL;
+    PyArrayObject *almax_arr = NULL, *range_arr = NULL;
+
+    static const char *keywords[] = {"accrt", NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|d", const_cast<char **>(keywords), &accrt))
+        return NULL;
+
+    n_lines = GetNLINES();
+    dims_almax[0] = n_lines;
+    dims_range[0] = n_lines;
+    dims_range[1] = 2;
+
+    almax_arr = (PyArrayObject *)PyArray_SimpleNew(1, dims_almax, NPY_DOUBLE);
+    range_arr = (PyArrayObject *)PyArray_SimpleNew(2, dims_range, NPY_DOUBLE);
+    if (almax_arr == NULL || range_arr == NULL)
+        goto fail;
+
+    args_c[0] = PyArray_DATA(almax_arr);
+    args_c[1] = PyArray_DATA(range_arr);
+    args_c[2] = &n_lines;
+    args_c[3] = &accrt;
+    result = ALMAXRange(n, args_c);
+    if (result != NULL && result[0] != OK_response)
+    {
+        PyErr_SetString(PyExc_RuntimeError, result);
+        goto fail;
+    }
+
+    ret_tuple = PyTuple_New(2);
+    if (ret_tuple == NULL)
+        goto fail;
+
+    PyTuple_SET_ITEM(ret_tuple, 0, (PyObject *)almax_arr);
+    almax_arr = NULL;
+    PyTuple_SET_ITEM(ret_tuple, 1, (PyObject *)range_arr);
+    range_arr = NULL;
+    return ret_tuple;
+
+fail:
+    Py_XDECREF(almax_arr);
+    Py_XDECREF(range_arr);
+    Py_XDECREF(ret_tuple);
     return NULL;
 }
 
@@ -1305,7 +1390,7 @@ static PyObject *smelib_GetLineOpacity(PyObject *self, PyObject *args)
     npy_intp dims[1];
     short depth;
     double wave;
-    PyObject *return_tuple;
+    PyObject *return_tuple = NULL;
     PyArrayObject *lop = NULL, *cop = NULL, *scr = NULL, *tsf = NULL, *csf = NULL;
 
     if (!PyArg_ParseTuple(args, "d", &wave))
@@ -1318,6 +1403,8 @@ static PyObject *smelib_GetLineOpacity(PyObject *self, PyObject *args)
     scr = (PyArrayObject *)PyArray_SimpleNew(1, dims, NPY_DOUBLE);
     tsf = (PyArrayObject *)PyArray_SimpleNew(1, dims, NPY_DOUBLE);
     csf = (PyArrayObject *)PyArray_SimpleNew(1, dims, NPY_DOUBLE);
+    if (lop == NULL || cop == NULL || scr == NULL || tsf == NULL || csf == NULL)
+        goto fail;
 
     // wave, nmu, lop, cop, scr, tsf, csf,
     args_c[0] = &wave;
@@ -1331,18 +1418,35 @@ static PyObject *smelib_GetLineOpacity(PyObject *self, PyObject *args)
 
     if (result != NULL && result[0] != OK_response)
     {
-        Py_DECREF(lop);
-        Py_DECREF(cop);
-        Py_DECREF(scr);
-        Py_DECREF(tsf);
-        Py_DECREF(csf);
         PyErr_SetString(PyExc_RuntimeError, result);
-        return NULL;
+        goto fail;
     }
 
-    return_tuple = Py_BuildValue("OOOOO", (PyObject *)lop, (PyObject *)cop,
-                                 (PyObject *)scr, (PyObject *)tsf, (PyObject *)csf);
+    return_tuple = PyTuple_New(5);
+    if (return_tuple == NULL)
+        goto fail;
+
+    PyTuple_SET_ITEM(return_tuple, 0, (PyObject *)lop);
+    lop = NULL;
+    PyTuple_SET_ITEM(return_tuple, 1, (PyObject *)cop);
+    cop = NULL;
+    PyTuple_SET_ITEM(return_tuple, 2, (PyObject *)scr);
+    scr = NULL;
+    PyTuple_SET_ITEM(return_tuple, 3, (PyObject *)tsf);
+    tsf = NULL;
+    PyTuple_SET_ITEM(return_tuple, 4, (PyObject *)csf);
+    csf = NULL;
+
     return return_tuple;
+
+fail:
+    Py_XDECREF(lop);
+    Py_XDECREF(cop);
+    Py_XDECREF(scr);
+    Py_XDECREF(tsf);
+    Py_XDECREF(csf);
+    Py_XDECREF(return_tuple);
+    return NULL;
 }
 
 static char smelib_GetLineRange_docstring[] = "Get validity range for every line";
@@ -1407,19 +1511,13 @@ static PyObject *smelib_GetNLTEflags(PyObject *self, PyObject *args)
 static char smelib_ContributionFunctions_docstring[] = "Compute contribution functions.";
 static PyObject *smelib_ContributionFunctions(PyObject *self, PyObject *args, PyObject *kwds)
 {
-    /* parse Python arguments here — same signature SME expects:
-       int n_mu, double *mu, int nw_avail, double acc_rt, etc. */
-    
     const int n = 8;
     void *args_c[n];
     const char *result = NULL;
-    
-    /* allocate NumPy arrays for the output */
+
     short nmu, keep_lineop = 1, long_continuum = 1;
     double accrt = 1e-4, accwi = 3e-3;
     int nw = 0, nrhox = GetNRHOX(), nwmax = 40000;
-
-    // npy_intp dims[1], dims2[2], dims3[3];
     npy_intp dims3[3];
 
     PyObject *mu_obj = NULL, *wave_obj = NULL;
@@ -1432,51 +1530,44 @@ static PyObject *smelib_ContributionFunctions(PyObject *self, PyObject *args, Py
     if (!PyArg_ParseTupleAndKeywords(args, kwds, "O|Oiddhh", const_cast<char **>(keywords),
                                      &mu_obj, &wave_obj, &nwmax, &accrt, &accwi, &keep_lineop, &long_continuum))
         return NULL;
-    
+
     mu_arr = (PyArrayObject *)PyArray_FROM_OTF(mu_obj, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY);
     if (mu_arr == NULL)
         goto fail;
 
-    nmu = PyArray_DIM(mu_arr, 0);
-    
     if (PyArray_NDIM(mu_arr) != 1)
     {
         PyErr_SetString(PyExc_ValueError, "Expected mu array of ndim == 1");
         goto fail;
     }
+    nmu = PyArray_DIM(mu_arr, 0);
 
-    if (wave_obj != NULL && wave_obj != Py_None)
+    if (wave_obj == NULL || wave_obj == Py_None)
     {
-        // Reuse wavelength grid
-        wave_arr = (PyArrayObject *)PyArray_FROM_OTF(wave_obj, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY);
-        if (wave_arr == NULL)
-            goto fail;
-
-        if (PyArray_NDIM(wave_arr) != 1)
-        {
-            PyErr_SetString(PyExc_ValueError, "Expected wavelength array of ndim == 1");
-            goto fail;
-        }
-
-        nw = PyArray_DIM(wave_arr, 0);
-        nwmax = nw;
-    }
-    else
-    {
+        PyErr_SetString(PyExc_ValueError, "ContributionFunctions requires an explicit wavelength grid");
         goto fail;
-        // // Create a new wavelength grid
-        // nw = 0;
-        // dims[0] = nwmax;
-        // wave_arr = (PyArrayObject *)PyArray_SimpleNew(1, dims, NPY_DOUBLE);
     }
 
-    // dims2[0] = nw;
-    // dims2[1] = nrhox;
+    wave_arr = (PyArrayObject *)PyArray_FROM_OTF(wave_obj, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY);
+    if (wave_arr == NULL)
+        goto fail;
+
+    if (PyArray_NDIM(wave_arr) != 1)
+    {
+        PyErr_SetString(PyExc_ValueError, "Expected wavelength array of ndim == 1");
+        goto fail;
+    }
+
+    nw = PyArray_DIM(wave_arr, 0);
+    nwmax = nw;
+
     dims3[0] = nwmax;
     dims3[1] = nmu;
     dims3[2] = nrhox;
     table_arr = (PyArrayObject *)PyArray_SimpleNew(3, dims3, NPY_DOUBLE);
     ctable_arr = (PyArrayObject *)PyArray_SimpleNew(3, dims3, NPY_DOUBLE);
+    if (table_arr == NULL || ctable_arr == NULL)
+        goto fail;
 
     args_c[0] = &nmu;
     args_c[1] = PyArray_DATA(mu_arr);
@@ -1486,21 +1577,37 @@ static PyObject *smelib_ContributionFunctions(PyObject *self, PyObject *args, Py
     args_c[5] = PyArray_DATA(table_arr);
     args_c[6] = PyArray_DATA(ctable_arr);
     args_c[7] = &long_continuum;
-    
+
     result = Contribution_functions(n, args_c);
     if (result != NULL && result[0] != OK_response)
     {
         PyErr_SetString(PyExc_RuntimeError, result);
         goto fail;
     }
-    ret_tuple = PyTuple_New(2);
-    PyTuple_SET_ITEM(ret_tuple, 0, (PyObject *)table_arr);
-    PyTuple_SET_ITEM(ret_tuple, 1, (PyObject *)ctable_arr);
-    return ret_tuple;
-    /* return the NumPy arrays in a tuple */
-fail:
-return NULL;
 
+    ret_tuple = PyTuple_New(2);
+    if (ret_tuple == NULL)
+        goto fail;
+
+    PyTuple_SET_ITEM(ret_tuple, 0, (PyObject *)table_arr);
+    table_arr = NULL;
+    PyTuple_SET_ITEM(ret_tuple, 1, (PyObject *)ctable_arr);
+    ctable_arr = NULL;
+
+    Py_DECREF(mu_arr);
+    mu_arr = NULL;
+    Py_DECREF(wave_arr);
+    wave_arr = NULL;
+
+    return ret_tuple;
+
+fail:
+    Py_XDECREF(mu_arr);
+    Py_XDECREF(wave_arr);
+    Py_XDECREF(table_arr);
+    Py_XDECREF(ctable_arr);
+    Py_XDECREF(ret_tuple);
+    return NULL;
 }
 
 static PyMethodDef module_methods[] = {
@@ -1531,6 +1638,7 @@ static PyMethodDef module_methods[] = {
     {"GetNelec", smelib_GetNelec, METH_NOARGS, smelib_GetNelec_docstring},
     {"Transf", (PyCFunction)(void (*)(void))smelib_Transf, METH_VARARGS | METH_KEYWORDS, smelib_Transf_docstring},
     {"CentralDepth", (PyCFunction)(void (*)(void))smelib_CentralDepth, METH_VARARGS | METH_KEYWORDS, smelib_CentralDepth_docstring},
+    {"ALMAXRange", (PyCFunction)(void (*)(void))smelib_ALMAXRange, METH_VARARGS | METH_KEYWORDS, smelib_ALMAXRange_docstring},
     {"GetLineOpacity", smelib_GetLineOpacity, METH_VARARGS, smelib_GetLineOpacity_docstring},
     {"GetLineRange", smelib_GetLineRange, METH_NOARGS, smelib_GetLineRange_docstring},
     {"GetNLTEflags", smelib_GetNLTEflags, METH_NOARGS, smelib_GetNLTEflags_docstring},
