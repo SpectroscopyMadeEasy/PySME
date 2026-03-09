@@ -63,6 +63,30 @@ jobs:
         run: |
           brew install gcc
 
+      - name: Select GNU compilers (macOS)
+        run: |
+          set -euo pipefail
+          BREW_PREFIX="$(brew --prefix)"
+          FVER="$(
+            { ls "$BREW_PREFIX"/bin/gfortran-* 2>/dev/null \
+                | sed -E 's#.*gfortran-##' \
+                | sort -V \
+                | tail -n1; } || true
+          )"
+          if [ -z "${FVER}" ] && [ -x "$BREW_PREFIX/bin/gfortran" ]; then
+            FVER="$("$BREW_PREFIX/bin/gfortran" -dumpversion | cut -d. -f1 || true)"
+          fi
+          [ -n "${FVER}" ] || { echo "No gfortran found"; exit 1; }
+          [ -x "$BREW_PREFIX/bin/gcc-$FVER" ] || { echo "missing gcc-$FVER"; exit 1; }
+          [ -x "$BREW_PREFIX/bin/g++-$FVER" ] || { echo "missing g++-$FVER"; exit 1; }
+          if [ -x "$BREW_PREFIX/bin/gfortran-$FVER" ]; then
+            echo "FC=$BREW_PREFIX/bin/gfortran-$FVER" >> $GITHUB_ENV
+          else
+            echo "FC=$BREW_PREFIX/bin/gfortran" >> $GITHUB_ENV
+          fi
+          echo "CC=$BREW_PREFIX/bin/gcc-$FVER" >> $GITHUB_ENV
+          echo "CXX=$BREW_PREFIX/bin/g++-$FVER" >> $GITHUB_ENV
+
       - name: Install package and test dependencies
         run: |
           python -m pip install --upgrade pip
