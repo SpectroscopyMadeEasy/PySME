@@ -125,7 +125,31 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Build wheels
+      - name: Cache cibuildwheel downloads (macOS)
+        if: matrix.os == 'macos-15'
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Caches/cibuildwheel
+          key: cibw-${{ runner.os }}-${{ hashFiles('pyproject.toml') }}
+          restore-keys: |
+            cibw-${{ runner.os }}-
+
+      - name: Build wheels (Linux)
+        if: matrix.os != 'macos-15'
+        uses: pypa/cibuildwheel@v2.22
+        env:
+          CIBW_BUILD_VERBOSITY: 1
+
+      - name: Build wheels (macOS, first attempt)
+        if: matrix.os == 'macos-15'
+        id: cibw_macos_first
+        continue-on-error: true
+        uses: pypa/cibuildwheel@v2.22
+        env:
+          CIBW_BUILD_VERBOSITY: 1
+
+      - name: Build wheels (macOS, retry once)
+        if: matrix.os == 'macos-15' && steps.cibw_macos_first.outcome == 'failure'
         uses: pypa/cibuildwheel@v2.22
         env:
           CIBW_BUILD_VERBOSITY: 1
