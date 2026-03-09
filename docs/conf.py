@@ -15,6 +15,7 @@
 import os
 import sys
 import importlib.util
+import re
 
 docs_dir = os.path.abspath(os.path.dirname(__file__))
 src_dir = os.path.abspath(os.path.join(docs_dir, ".."))
@@ -51,8 +52,28 @@ def _resolve_release():
         )
 
 
+def _read_pyproject_version():
+    """Read project version from pyproject.toml without extra dependencies."""
+    pyproject = os.path.join(src_dir, "pyproject.toml")
+    try:
+        with open(pyproject, "r", encoding="utf-8") as f:
+            content = f.read()
+        match = re.search(r'^\s*version\s*=\s*"([^"]+)"\s*$', content, re.MULTILINE)
+        if match:
+            return match.group(1)
+    except Exception:
+        pass
+    return None
+
+
 # The full version, including local build metadata (e.g. +g<sha>.dirty)
 release = _resolve_release()
+if release:
+    release_lower = release.lower()
+    if release_lower.startswith("0+untagged") or release_lower.startswith("0+unknown"):
+        pyproject_version = _read_pyproject_version()
+        if pyproject_version:
+            release = pyproject_version
 # The short X.Y version shown by Sphinx.
 short_release = release.split("+")[0]
 version_parts = short_release.split(".")
