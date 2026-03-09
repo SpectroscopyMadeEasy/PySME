@@ -35,7 +35,7 @@ jobs:
       - name: Install package and test dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -e ".[dev]" --no-build-isolation
+          python -m pip install -e ".[dev]"
 
       - name: Run pytest
         run: |
@@ -66,7 +66,7 @@ jobs:
       - name: Install package and test dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -e ".[dev]" --no-build-isolation
+          python -m pip install -e ".[dev]"
 
       - name: Run pytest
         run: |
