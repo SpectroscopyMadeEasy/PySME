@@ -11,34 +11,46 @@ Since SME is the C++/Fortran library for the spectral synthesis part, PySME is d
 1. python package. This is the main interface which the users interact with.
 2. `SMR_DLL` class in `sme_synth.py`. This class perform some necessary manipulation for the input and pass it to the functions inside `_smelib`
 3. `_smelib` compiled in `src/pysme/smelib`. This is the C-extension which attach the python side data and C++ side data.
-4. `libsme.so` pre-compiled in `SMElib` repository. It perform actual synthesis with C++/Fortran.
+4. SMElib core shared library (`sme_synth.*`) which performs the actual synthesis with C++/Fortran.
 
 ## What does PySME do from installation to the first use?
 
-### 1. `pip install pysme-astro`
+Behavior differs by version.
 
-Part 1 and 2 are download and compiled from source. Note that part 3 and 4 are not downloaded nor compiled.
+### `<= v0.6.26` (legacy runtime-fetch flow)
 
-### 2. `import pysme` - part 4
+1. `pip install pysme-astro`: python package is installed.
+2. `import pysme`: PySME may download SMElib binaries at runtime from the SMElib release page.
+3. If `_smelib` is missing/incompatible, PySME may try to compile the interface at runtime.
 
-This triggers the running of `__init__.py`.
-For the first time running, there is no part 4 (the SME library). 
-The code then triggers `libtools.download_libsme()`.
-It downloads the latest version of SME library from the [github repository](https://github.com/MingjieJian/SMElib/releases/latest) to `py_env/lib/python3.10/site-packages/pysme/`, extract to the `lib` folder, and delete the compressed file.
+### `>= v0.6.27` (bundled-wheel flow)
 
-### 3. `import pysme` - part 3
+1. `pip install pysme-astro`: wheel already contains SMElib shared library and `_smelib`.
+2. `import pysme`: PySME loads bundled binaries from the installed package.
+3. No runtime download/compile is expected for normal wheel installs.
 
-The last step is part 3. The code first try to run `from .smelib import _smelib`. 
-If there is an error (no `_smelib` is found), then the code triggers `libtools.compile_interface()`.
+### Source/editable install (`>= v0.6.27`)
 
-The code then goes to `py_env/lib/python3.10/site-packages/pysme/smelib`, run `python3 setup.py build_ext --inplace` and goes back to the initial folder.
+Binary components are built during installation (`pip install -e .` or wheel build), not on first import.
 
 ## How to rebuild  smelib
 
-```py
+### `>= v0.6.27` (recommended)
+
+From the project root:
+
+```bash
+pip install -e . --no-build-isolation
+```
+
+This rebuilds/reinstalls package binaries (including SMElib and `_smelib`) for the active environment.
+
+### `<= v0.6.26` (legacy manual workflow)
+
+```bash
 cd src/pysme/smelib
 python3 setup.py build_ext --inplace
-cp _smelib.cpython-310-x86_64-linux-gnu.so /path/to/anaconda3/envs/astro_py310/lib/python3.10/site-packages/pysme/smelib/      
+cp _smelib.cpython-310-x86_64-linux-gnu.so /path/to/site-packages/pysme/smelib/
 ```
 
 ## Versions in SME/PySME
@@ -58,10 +70,9 @@ There are a few versions in SME/PySME:
 
 ### Version matching between SMElib and PySME
 
-For the convenience of development, most of the PySME version will download the latest version of SMELib in their first run.
-This will allow us to keep the PySME using the latest SMElib, receving new functions and bug fixes on the library side.
-However, when SMElib have breaking updates, the older version of PySME would match with incompatible SMELib in its latest version.
-Before each breaking updates in SMElib, one specific PySME version (usually ) will be connected with a specific SMELib version to maintain the compatibilty of this version.
+For the convenience of development, older PySME versions used runtime SMElib download on first import.
+From `v0.6.27`, wheel builds bundle a fixed SMElib binary, so each PySME wheel has an explicit SMElib pairing.
+This avoids accidental runtime mismatch with a newer upstream SMElib release.
 
 For other versions, we will not solve the future compatibility issue.
 You can download the corresponding SMElib, and override the default library manually.

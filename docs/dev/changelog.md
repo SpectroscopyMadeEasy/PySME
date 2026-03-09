@@ -4,6 +4,7 @@ This page stores the change log for pysme since May 2024.
 
 ## In-development
 
+- (build) from `v0.6.27`, wheel builds bundle SMElib and `_smelib` binaries instead of relying on first-import runtime download/compile.
 - (model) modify the atmosphere geometry to '' for auto desicion instead of 'PP'.
 - (sme structure) add `sme.wint` as a segment-aware optional transfer grid input for synthesis.
 - (synthesize) when `sme.wint` is provided, synthesis now prefers user-provided `wint` over internal cached wavelength grids.
