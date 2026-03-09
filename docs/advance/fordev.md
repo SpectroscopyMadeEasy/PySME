@@ -71,20 +71,22 @@ There are a few versions in SME/PySME:
 ### Version matching between SMElib and PySME
 
 For the convenience of development, older PySME versions used runtime SMElib download on first import.
-From `v0.6.27`, wheel builds bundle a fixed SMElib binary, so each PySME wheel has an explicit SMElib pairing.
+From `v0.7.0`, PySME uses strict one-to-one version matching with SMElib at release time.
+Each PySME release is pinned to one specific SMElib release, and the mapping is recorded explicitly in the table below.
 This avoids accidental runtime mismatch with a newer upstream SMElib release.
 
 For other versions, we will not solve the future compatibility issue.
 You can download the corresponding SMElib, and override the default library manually.
+PySME versions not listed in the table follow the legacy behavior of resolving to the latest available SMElib release, which is not recommended for reproducible use.
 
 The follwing table shows the version matching between SMElib and PySME.
 
 |PySME version|SMElib release version|SMElib version|
 |:--:|:--:|:--:|
-|v0.7.0-|latest (v6.13.x)|6.13 (June 2025)|
-|v0.6.23|v6.13.12 (freezed)|6.13 (June 2025)|
-|v0.4.199|v6.0.6 (freezed)|6.03 (July 2019)|
-|v0.4.167-v0.4.198|v6.0.6 (not freezed)|6.03 (July 2019)|
+|v0.7.0|v6.13.16|6.13 (June 2025)|
+|v0.6.23|v6.13.12|6.13 (June 2025)|
+|v0.4.199|v6.0.6|6.03 (July 2019)|
+|v0.4.167-v0.4.198|v6.0.6|6.03 (July 2019)|
 
 The PySME version range indicate the versions which manually matchting of the SMELib is required, and the single PySME version indicates the one with freezed SMElib (thus only pip install is required before using).
 Note that:

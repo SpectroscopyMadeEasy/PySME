@@ -134,6 +134,14 @@ jobs:
           restore-keys: |
             cibw-${{ runner.os }}-
 
+      - name: Seed cibuildwheel virtualenv (macOS)
+        if: matrix.os == 'macos-15'
+        run: |
+          set -euo pipefail
+          mkdir -p ~/Library/Caches/cibuildwheel
+          cp .github/vendor/virtualenv-20.27.1.pyz \
+             ~/Library/Caches/cibuildwheel/virtualenv-20.27.1.pyz
+
       - name: Build wheels (Linux)
         if: matrix.os != 'macos-15'
         uses: pypa/cibuildwheel@v2.22
