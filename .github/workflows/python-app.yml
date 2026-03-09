@@ -118,7 +118,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-15]
+        os: [ubuntu-latest, macos-14]
 
     steps:
       - uses: actions/checkout@v4
@@ -126,7 +126,7 @@ jobs:
           submodules: recursive
 
       - name: Cache cibuildwheel downloads (macOS)
-        if: matrix.os == 'macos-15'
+        if: matrix.os == 'macos-14'
         uses: actions/cache@v4
         with:
           path: ~/Library/Caches/cibuildwheel
@@ -135,7 +135,7 @@ jobs:
             cibw-${{ runner.os }}-
 
       - name: Seed cibuildwheel virtualenv (macOS)
-        if: matrix.os == 'macos-15'
+        if: matrix.os == 'macos-14'
         run: |
           set -euo pipefail
           mkdir -p ~/Library/Caches/cibuildwheel
@@ -143,13 +143,13 @@ jobs:
              ~/Library/Caches/cibuildwheel/virtualenv-20.27.1.pyz
 
       - name: Build wheels (Linux)
-        if: matrix.os != 'macos-15'
+        if: matrix.os != 'macos-14'
         uses: pypa/cibuildwheel@v2.22
         env:
           CIBW_BUILD_VERBOSITY: 1
 
       - name: Build wheels (macOS, first attempt)
-        if: matrix.os == 'macos-15'
+        if: matrix.os == 'macos-14'
         id: cibw_macos_first
         continue-on-error: true
         uses: pypa/cibuildwheel@v2.22
@@ -157,7 +157,7 @@ jobs:
           CIBW_BUILD_VERBOSITY: 1
 
       - name: Build wheels (macOS, retry once)
-        if: matrix.os == 'macos-15' && steps.cibw_macos_first.outcome == 'failure'
+        if: matrix.os == 'macos-14' && steps.cibw_macos_first.outcome == 'failure'
         uses: pypa/cibuildwheel@v2.22
         env:
           CIBW_BUILD_VERBOSITY: 1
