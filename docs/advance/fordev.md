@@ -33,6 +33,13 @@ Behavior differs by version.
 
 Binary components are built during installation (`pip install -e .` or wheel build), not on first import.
 
+For source installs from GitHub, SMElib is provided via git submodule. Always ensure submodules are initialized and updated:
+
+```bash
+git submodule sync --recursive
+git submodule update --init --recursive
+```
+
 ## How to rebuild  smelib
 
 ### `>= v0.6.27` (recommended)
@@ -44,6 +51,15 @@ pip install -e . --no-build-isolation
 ```
 
 This rebuilds/reinstalls package binaries (including SMElib and `_smelib`) for the active environment.
+
+After pulling new commits, re-run submodule sync/update before reinstalling:
+
+```bash
+git pull
+git submodule sync --recursive
+git submodule update --init --recursive
+pip install -e . --no-build-isolation
+```
 
 ### `<= v0.6.26` (legacy manual workflow)
 
@@ -87,6 +103,10 @@ The follwing table shows the version matching between SMElib and PySME.
 |v0.6.23|v6.13.12|6.13 (June 2025)|
 |v0.4.199|v6.0.6|6.03 (July 2019)|
 |v0.4.167-v0.4.198|v6.0.6|6.03 (July 2019)|
+
+For source installs:
+- `v0.7.0` and newer: use `SpectroscopyMadeEasy/PySME` and checkout the target PySME tag.
+- Older legacy lines: use `SpectroscopyMadeEasy/PySME-legacy` and checkout the historical tag there.
 
 The PySME version range indicate the versions which manually matchting of the SMELib is required, and the single PySME version indicates the one with freezed SMElib (thus only pip install is required before using).
 Note that:

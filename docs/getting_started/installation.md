@@ -1,6 +1,6 @@
 # Installation
 
-PySME can be installed through PyPI (recommended; stable release) or from github (the latest version in `develop` branch) directly.
+PySME can be installed through PyPI (recommended; stable release) or from GitHub source.
 
 ```{admonition} Supported environments:
 - Platforms: Linux, macOS (arm platform)
@@ -36,13 +36,13 @@ source .venv/bin/activate
 pip install pysme-astro
 ```
 
-### From Github
+### From GitHub source (latest)
 
 #### Clone the repository
 
 ```bash
-git clone https://github.com/MingjieJian/SME.git
-cd SME
+git clone --recurse-submodules https://github.com/SpectroscopyMadeEasy/PySME.git
+cd PySME
 ```
 
 #### Install PySME from source
@@ -51,6 +51,38 @@ cd SME
 pip install -U pip
 pip install .
 ```
+
+If you already cloned without submodules, run:
+
+```bash
+git submodule update --init --recursive
+```
+
+### From GitHub source (specific release tag)
+
+Use this for reproducible source installs:
+
+```bash
+git clone --recurse-submodules https://github.com/SpectroscopyMadeEasy/PySME.git
+cd PySME
+git checkout v0.7.1
+git submodule update --init --recursive
+pip install .
+```
+
+### Legacy source versions
+
+For older source versions that predate the new repository layout, use the legacy repository:
+
+```bash
+git clone --recurse-submodules https://github.com/SpectroscopyMadeEasy/PySME-legacy.git
+cd PySME-legacy
+git checkout <old_tag>
+git submodule update --init --recursive
+pip install .
+```
+
+For very old tags, if build metadata is incomplete, follow the historical notes in the legacy docs.
 
 ## Verify installation
 

@@ -1,4 +1,4 @@
-![Python application](https://github.com/MingjieJian/SME/workflows/Python%20application/badge.svg)
+![Python application](https://github.com/SpectroscopyMadeEasy/PySME/workflows/Python%20application/badge.svg)
 [![Documentation Status](https://readthedocs.org/projects/pysme-astro/badge/?version=latest)](https://pysme-astro.readthedocs.io/en/latest/?badge=latest)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.5547527.svg)](https://doi.org/10.5281/zenodo.5547527)
 
