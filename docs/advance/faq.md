@@ -12,14 +12,17 @@ util.start_logging("your_log_file.log")
 
 ## Get output of `A module that was compiled using NumPy 1.x cannot be run in NumPy 2.2.0 as it may crash.`
 
-This is because the `_smelib` (the 3rd part of [PySME components](fordev.md)) is compiled by NumPy 1.x but the numpy is upgraded to 2.x. 
-PySME will autoamtically deal with this error and compile `_smelib` again. 
-If you see similar output like:
+This is an ABI mismatch between your NumPy and the installed `_smelib` binary.
+
+- For `<= v0.6.26`, PySME may attempt a runtime rebuild/download path.
+- For `>= v0.6.27`, the recommended fix is to reinstall PySME in the target environment so binaries are rebuilt/reinstalled consistently.
+
+If you see output like:
 ```
 running build_ext
 building '_smelib' extension
 ```
-then you should be good to use, and no need to restart python etc.
+the extension is being rebuilt.
 
 ## I get an error "Derivatives in the starting point are not finite"
 

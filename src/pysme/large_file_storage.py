@@ -20,7 +20,6 @@ from astropy.utils.data import (
     clear_download_cache,
     download_file,
     import_file_to_cache,
-    is_url_in_cache,
 )
 from tqdm.auto import tqdm
 from tqdm.utils import CallbackIOWrapper
@@ -32,8 +31,6 @@ logger = logging.getLogger(__name__)
 
 # We are lazy and want a simple check if a file is in the Path
 Path.__contains__ = lambda self, key: (self / key).exists()
-
-PKGNAME = "sme"
 
 
 class LargeFileStorage:
@@ -59,7 +56,19 @@ class LargeFileStorage:
         #:dict(fname:hash): points from a filename to the current newest object id, usually a hash
         self.pointers = pointers
         #:Directory: directory of the current data files
-        self.current = Path(storage).expanduser().absolute()
+        cache_path = Path(storage).expanduser().resolve(strict=False)
+        self.current = cache_path
+
+        # set the folder to download the data file into
+        # need to set environment variable because astropy will put things into home otherwise
+        os.environ['XDG_CACHE_HOME'] = str(cache_path)
+        # if someone is using astropy along with pysme, it might mess with their astropy file storage
+        # not threadsafe, but multiprocessing safe, because threads shares environment variables
+        self.PKGNAME = ''
+        
+        if not cache_path.exists():
+            print('folder to store data file does not exist, creating')
+        cache_path.mkdir(parents=True, exist_ok=True)
 
     @staticmethod
     def load_pointers_file(filename):
@@ -96,8 +105,8 @@ class LargeFileStorage:
         # If its a direct file link, pass that directly to
         if url.startswith("file://"):
             return url[7:]
-        
-        fname = download_file(url, cache=True, pkgname=PKGNAME)
+
+        fname = download_file(url, cache=True, pkgname=self.PKGNAME)
 
         compression = self._test_compression(fname)
         if compression is None:
@@ -151,7 +160,7 @@ class LargeFileStorage:
                             f_out.write(chunk)
                         f_out.flush()
                         t.reset()
-            import_file_to_cache(url, f_out.name, pkgname=PKGNAME)
+            import_file_to_cache(url, f_out.name, pkgname=self.PKGNAME)
         finally:
             try:
                 os.remove(f_out.name)
@@ -180,18 +189,18 @@ class LargeFileStorage:
 
     def clean_cache(self):
         """Remove unused cache files (from old versions)"""
-        clear_download_cache(pkgname=PKGNAME)
+        clear_download_cache(pkgname=self.PKGNAME)
 
     def delete_file(self, fname):
         """Delete a file, including the cache file"""
-        clear_download_cache(fname, pkgname=PKGNAME)
+        clear_download_cache(fname, pkgname=self.PKGNAME)
 
     def move_to_cache(self, fname, key=None):
         """Move currently used files into cache directory and use symlinks instead,
         just as if downloaded from a server"""
         if key is None:
             key = basename(fname)
-        import_file_to_cache(key, fname, pkgname=PKGNAME)
+        import_file_to_cache(key, fname, pkgname=self.PKGNAME)
         self.pointers[key] = key
 
 

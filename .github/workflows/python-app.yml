@@ -1,127 +1,217 @@
-# This workflow will install Python dependencies, run tests and lint with a single version of Python
-# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
-
 name: Python application
- 
+
 on:
   push:
-    branches: [master]
+    branches: [develop, master]
+    tags: ["v*"]
   pull_request:
-    branches: [master]
+    branches: [develop, master]
+  workflow_dispatch:
 
 jobs:
-  build:
+  test_pytest:
+    name: Pytest on Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-15]   # macos-15/14=arm64，macos-13=x86_64
-        py: ['3.9','3.10','3.11','3.12','3.13']
-    name: py${{ matrix.py }} on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    # strategy:
-    #   fail-fast: false
-    #   matrix:
-    #     include:
-    #       - name: ubuntu
-    #         runs_on: ubuntu-latest
-    #       - name: macos-intel
-    #         runs_on: macos-13
-    #       - name: macos-apple-silicon
-    #         runs_on: macos-15
-    # runs-on: ${{ matrix.runs_on }}
-    environment: release
-    permissions:
-      contents: write
-      id-token: write  # IMPORTANT: mandatory for trusted publishing
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
 
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
-      # - name: Install autoconf and gfortran (libgfortran) on macOS (GCC route)
-      #   if: ${{ matrix.name == 'macos-intel' || matrix.name == 'macos-apple-silicon' }}
-      #   run: |
-      #     brew update
-      #     # brew install autoconf automake libtool gcc
-      #     # brew link --force gcc
+          submodules: recursive
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.py }}
-        # run: |
-        #   python -V
-        #   python -c "import sys, sysconfig; print(sys.executable); print(sysconfig.get_platform())"
-      - name: Install dependencies
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gfortran
+
+      - name: Install package and test dependencies
         run: |
           python -m pip install --upgrade pip
-          # pip install flake8 pytest
-          python -m pip install .[dev]
-          # python setup.py version
-          pip install .
+          python -m pip install -e ".[dev]"
 
-      - name: Lint with flake8
+      - name: Run pytest
         run: |
-          # stop the build if there are Python syntax errors or undefined names
-          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-          # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+          pytest
 
-      - name: Test with pytest
-        run: pytest
+  test_pytest_macos:
+    name: Pytest on macOS (Python ${{ matrix.python-version }})
+    runs-on: macos-15
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
 
-      - name: GitHub Tag
-        if: github.event_name != 'pull_request' && matrix.os == 'ubuntu-latest' && matrix.py == '3.12'
-        id: tag_release
-        uses: mathieudutour/github-tag-action@v6.2
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-
+    steps:
       - uses: actions/checkout@v4
-        if: github.event_name != 'pull_request' && matrix.os == 'ubuntu-latest' && matrix.py == '3.12'
         with:
-          ref: ${{ steps.tag_release.outputs.new_tag }}
-          clean: false
+          submodules: recursive
 
-      - name: Build Wheel
-        if: matrix.os == 'ubuntu-latest' && matrix.py == '3.12'
-        # run: pip install wheel && python setup.py sdist bdist_wheel
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install build dependencies
         run: |
-          python -m pip install -U pip
-          python -m pip install -U wheel build
-          python -m build
+          brew install gcc
 
-      - name: Zip data
-        if: matrix.os == 'ubuntu-latest' && matrix.py == '3.12'
-        id: zip_data
-        run: zip -r dist dist && echo "::set-output name=filename::dist.zip"
+      - name: Select GNU compilers (macOS)
+        run: |
+          set -euo pipefail
+          BREW_PREFIX="$(brew --prefix)"
+          FVER="$(
+            { ls "$BREW_PREFIX"/bin/gfortran-* 2>/dev/null \
+                | sed -E 's#.*gfortran-##' \
+                | sort -V \
+                | tail -n1; } || true
+          )"
+          if [ -z "${FVER}" ] && [ -x "$BREW_PREFIX/bin/gfortran" ]; then
+            FVER="$("$BREW_PREFIX/bin/gfortran" -dumpversion | cut -d. -f1 || true)"
+          fi
+          [ -n "${FVER}" ] || { echo "No gfortran found"; exit 1; }
+          [ -x "$BREW_PREFIX/bin/gcc-$FVER" ] || { echo "missing gcc-$FVER"; exit 1; }
+          [ -x "$BREW_PREFIX/bin/g++-$FVER" ] || { echo "missing g++-$FVER"; exit 1; }
+          if [ -x "$BREW_PREFIX/bin/gfortran-$FVER" ]; then
+            echo "FC=$BREW_PREFIX/bin/gfortran-$FVER" >> $GITHUB_ENV
+          else
+            echo "FC=$BREW_PREFIX/bin/gfortran" >> $GITHUB_ENV
+          fi
+          echo "CC=$BREW_PREFIX/bin/gcc-$FVER" >> $GITHUB_ENV
+          echo "CXX=$BREW_PREFIX/bin/g++-$FVER" >> $GITHUB_ENV
 
-      - name: Create Release
-        if: github.event_name != 'pull_request' && matrix.os == 'ubuntu-latest' && matrix.py == '3.12'
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
+      - name: Install package and test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+
+      - name: Run pytest
+        run: |
+          pytest
+
+  build_sdist:
+    name: Build source distribution
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
         with:
-          tag_name: ${{ steps.tag_release.outputs.new_tag }}
-          release_name: Release ${{ steps.tag_release.outputs.new_tag }}
-          draft: false
-          prerelease: false
+          submodules: recursive
 
-      - name: Upload Release Asset
-        if: github.event_name != 'pull_request' && matrix.os == 'ubuntu-latest' && matrix.py == '3.12'
-        id: upload-release-asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build sdist
+        run: pipx run build --sdist
+
+      - uses: actions/upload-artifact@v4
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
-          asset_path: ./dist.zip
-          asset_name: dist.zip
-          asset_content_type: application/zip
+          name: sdist
+          path: dist/*.tar.gz
 
-      - name: Publish a Python distribution to PyPI
-        if: github.event_name != 'pull_request' && matrix.os == 'ubuntu-latest' && matrix.py == '3.12'
+  build_wheels:
+    name: Build wheels on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-14]
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Cache cibuildwheel downloads (macOS)
+        if: matrix.os == 'macos-14'
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Caches/cibuildwheel
+          key: cibw-${{ runner.os }}-${{ hashFiles('pyproject.toml') }}
+          restore-keys: |
+            cibw-${{ runner.os }}-
+
+      - name: Seed cibuildwheel virtualenv (macOS)
+        if: matrix.os == 'macos-14'
+        run: |
+          set -euo pipefail
+          mkdir -p ~/Library/Caches/cibuildwheel
+          cp .github/vendor/virtualenv-20.27.1.pyz \
+             ~/Library/Caches/cibuildwheel/virtualenv-20.27.1.pyz
+
+      - name: Build wheels (Linux)
+        if: matrix.os != 'macos-14'
+        uses: pypa/cibuildwheel@v2.22
+        env:
+          CIBW_BUILD_VERBOSITY: 1
+
+      - name: Build wheels (macOS, first attempt)
+        if: matrix.os == 'macos-14'
+        id: cibw_macos_first
+        continue-on-error: true
+        uses: pypa/cibuildwheel@v2.22
+        env:
+          CIBW_BUILD_VERBOSITY: 1
+
+      - name: Build wheels (macOS, retry once)
+        if: matrix.os == 'macos-14' && steps.cibw_macos_first.outcome == 'failure'
+        uses: pypa/cibuildwheel@v2.22
+        env:
+          CIBW_BUILD_VERBOSITY: 1
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.os }}
+          path: ./wheelhouse/*.whl
+
+  publish:
+    name: Publish to PyPI
+    needs: [test_pytest, test_pytest_macos, build_wheels, build_sdist]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    environment: release
+    permissions:
+      id-token: write
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: wheels-*
+          path: dist
+          merge-multiple: true
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: sdist
+          path: dist
+
+      - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
-        # with:
-        #   user: __token__
-        #   password: ${{ secrets.pypi_password }}
+
+  release:
+    name: Create GitHub Release
+    needs: [test_pytest, test_pytest_macos, build_wheels, build_sdist]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: wheels-*
+          path: dist
+          merge-multiple: true
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: sdist
+          path: dist
+
+      - name: Create GitHub Release
+        run: gh release create ${{ github.ref_name }} dist/* --repo ${{ github.repository }} --title "${{ github.ref_name }}"
+        env:
+          GH_TOKEN: ${{ github.token }}

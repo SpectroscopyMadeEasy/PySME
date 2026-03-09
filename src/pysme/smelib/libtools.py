@@ -359,12 +359,23 @@ def get_lib_directory():
 
 
 def get_full_libfile():
-    """Get the full path to the sme C library"""
-    localdir = dirname(dirname(__file__))
-    libfile = get_lib_name()
+    """Get the full path to the sme C library."""
+    libname = get_lib_name()
     dirpath = get_lib_directory()
-    libfile = join(localdir, dirpath, libfile)
-    return libfile
+
+    # Installed wheel/editable location (pysme/lib)
+    localdir = dirname(dirname(__file__))
+    candidate = join(localdir, dirpath, libname)
+    if exists(candidate):
+        return candidate
+
+    # Development fallback for scikit-build-core local builds
+    project_root = dirname(dirname(dirname(localdir)))
+    candidate = join(project_root, "build", libname)
+    if exists(candidate):
+        return candidate
+
+    return join(localdir, dirpath, libname)
 
 
 def load_library(libfile=None):
@@ -402,5 +413,21 @@ def get_full_datadir():
     Get the filepath to the datafiles of the SME library
     """
     localdir = dirname(dirname(__file__))
-    datadir = join(localdir, "share/libsme/")
-    return datadir
+
+    # Installed wheel/editable location (pysme/share/libsme)
+    datadir = join(localdir, "share", "libsme")
+    if exists(datadir):
+        return datadir + os.sep
+
+    # Development fallback to submodule data directory
+    project_root = dirname(dirname(dirname(localdir)))
+    datadir = join(project_root, "smelib", "src", "data")
+    if exists(datadir):
+        return datadir + os.sep
+
+    # Additional local fallback used in this workspace layout
+    datadir = join(project_root, "SMElib", "src", "data")
+    if exists(datadir):
+        return datadir + os.sep
+
+    return join(localdir, "share", "libsme") + os.sep
