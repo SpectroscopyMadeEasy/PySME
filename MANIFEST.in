@@ -9,6 +9,3 @@ include src/pysme/linelist/VALD3_ref.bib
 
 include src/pysme/smelib/_smelib.cpp
 include src/pysme/smelib/sme_synth_faster.h
-
-include versioneer.py
-include src/pysme/_version.py

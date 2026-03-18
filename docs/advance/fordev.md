@@ -124,8 +124,8 @@ For SMElib, setting a new release will based on a tag.
 PySME docs use a tag-driven versioning strategy.
 
 1. Create release tags in `vX.Y.Z` format (for example `v0.6.23`).
-2. `docs/conf.py` resolves `release` from `src/pysme/_version.py` (versioneer), so docs title/version follow git tags.
-3. `.readthedocs.yaml` installs both docs requirements and the project itself, so tag metadata is available during RTD build.
+2. `docs/conf.py` resolves `release` from installed distribution metadata first, then from `git describe` fallback, so docs title/version follow release tags.
+3. `docs/conf.py` keeps docs buildable without importing/installing `pysme`, and falls back to git/env metadata when distribution metadata is unavailable.
 
 RTD project settings must also be configured once (in the RTD web UI):
 

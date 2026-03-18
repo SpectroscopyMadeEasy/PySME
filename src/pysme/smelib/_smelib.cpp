@@ -7,6 +7,10 @@
 // Header of the SME library
 #include "sme_synth_faster.h"
 
+#ifndef PYSME_SMELIB_VERSION_ID
+#define PYSME_SMELIB_VERSION_ID "unknown"
+#endif
+
 // Everything else is considered an error
 const char OK_response = '\0';
 
@@ -20,7 +24,11 @@ static PyObject *smelib_LibraryVersion(PyObject *self, PyObject *args)
     PyObject *ret;
 
     version = SMELibraryVersion(0, NULL);
-    ret = Py_BuildValue("s", version);
+    if (version == NULL)
+        version = "";
+    ret = PyUnicode_FromFormat(
+        "%s [SMElib ref: %s]", version, PYSME_SMELIB_VERSION_ID
+    );
 
     return ret;
 }

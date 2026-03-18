@@ -24,6 +24,26 @@ if(NOT EXISTS "${SMELIB_DIR}/src/sme/sme_synth_faster.cpp")
     message(FATAL_ERROR "Could not find SMElib sources. Run with submodules or provide ../SMElib.")
 endif()
 
+# Resolve a reproducible SMElib source identifier for runtime reporting.
+set(SMELIB_VERSION_ID "unknown")
+execute_process(
+    COMMAND git -C "${SMELIB_DIR}" describe --tags --dirty --always
+    OUTPUT_VARIABLE SMELIB_VERSION_ID
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_QUIET
+    RESULT_VARIABLE SMELIB_DESCRIBE_RC
+)
+if(NOT SMELIB_DESCRIBE_RC EQUAL 0 OR SMELIB_VERSION_ID STREQUAL "")
+    set(SMELIB_VERSION_ID "unknown")
+endif()
+if(SMELIB_VERSION_ID STREQUAL "unknown" AND EXISTS "${SMELIB_DIR}/.version")
+    file(READ "${SMELIB_DIR}/.version" SMELIB_VERSION_FROM_FILE)
+    string(STRIP "${SMELIB_VERSION_FROM_FILE}" SMELIB_VERSION_FROM_FILE)
+    if(NOT SMELIB_VERSION_FROM_FILE STREQUAL "")
+        set(SMELIB_VERSION_ID "${SMELIB_VERSION_FROM_FILE}")
+    endif()
+endif()
+
 set(SMELIB_SOURCES
     ${SMELIB_DIR}/src/sme/sme_synth_faster.cpp
     ${SMELIB_DIR}/src/eos/eos.f
@@ -75,6 +95,9 @@ target_include_directories(_smelib PRIVATE
     ${SMELIB_DIR}/src/sme
     ${CMAKE_CURRENT_SOURCE_DIR}/src/pysme/smelib
     ${Python_NumPy_INCLUDE_DIRS}
+)
+target_compile_definitions(_smelib PRIVATE
+    "PYSME_SMELIB_VERSION_ID=\"${SMELIB_VERSION_ID}\""
 )
 target_link_libraries(_smelib PRIVATE sme)
 

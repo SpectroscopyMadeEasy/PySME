@@ -8,8 +8,40 @@ on:
   workflow_dispatch:
 
 jobs:
+  tag_gate:
+    name: Gate release tags to master only
+    runs-on: ubuntu-latest
+    outputs:
+      allow: ${{ steps.gate.outputs.allow }}
+    steps:
+      - uses: actions/checkout@v4
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+        with:
+          fetch-depth: 0
+
+      - id: gate
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # PR/workflow_dispatch always run. For tag pushes, only allow tags on origin/master.
+          if [[ "${GITHUB_EVENT_NAME}" != "push" || "${GITHUB_REF}" != refs/tags/v* ]]; then
+            echo "allow=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          git fetch --no-tags origin master --depth=1
+          if git merge-base --is-ancestor "${GITHUB_SHA}" "origin/master"; then
+            echo "allow=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "allow=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Skipping workflow: ${GITHUB_REF} is not on origin/master."
+          fi
+
   test_pytest:
-    name: Pytest on Python ${{ matrix.python-version }}
+    name: Pytest on Linux (Python ${{ matrix.python-version }})
+    needs: [tag_gate]
+    if: needs.tag_gate.outputs.allow == 'true' && github.event_name != 'push'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -42,6 +74,8 @@ jobs:
 
   test_pytest_macos:
     name: Pytest on macOS (Python ${{ matrix.python-version }})
+    needs: [tag_gate]
+    if: needs.tag_gate.outputs.allow == 'true' && github.event_name != 'push'
     runs-on: macos-15
     strategy:
       fail-fast: false
@@ -97,6 +131,8 @@ jobs:
 
   build_sdist:
     name: Build source distribution
+    needs: [tag_gate]
+    if: needs.tag_gate.outputs.allow == 'true' && github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -113,6 +149,8 @@ jobs:
 
   build_wheels:
     name: Build wheels on ${{ matrix.os }}
+    needs: [tag_gate]
+    if: needs.tag_gate.outputs.allow == 'true' && github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -168,9 +206,9 @@ jobs:
 
   publish:
     name: Publish to PyPI
-    needs: [test_pytest, test_pytest_macos, build_wheels, build_sdist]
+    needs: [tag_gate, build_wheels, build_sdist]
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    if: needs.tag_gate.outputs.allow == 'true' && github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     environment: release
     permissions:
       id-token: write
@@ -192,9 +230,9 @@ jobs:
 
   release:
     name: Create GitHub Release
-    needs: [test_pytest, test_pytest_macos, build_wheels, build_sdist]
+    needs: [tag_gate, build_wheels, build_sdist]
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    if: needs.tag_gate.outputs.allow == 'true' && github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     permissions:
       contents: write
 
