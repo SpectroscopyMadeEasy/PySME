@@ -1,4 +1,4 @@
-## NLTE correction
+# NLTE correction
 
 The non-Local Thermal Equilibrium (NLTE) correction can be applied to the spectrum by setting the `nlte` attribute of the SME structure, before `synthesize_spectrum` or `solve`:
 ```py
@@ -15,10 +15,6 @@ The current elements with NLTE correction includes:
 - Long format VALD linelist is required for NLTE calculations.
 If only a short format has been given, then the calculations will only be in LTE. (See [](../fundamentals/linelist.md))
 - The NLTE grids are only compatible with the MARCS model atmosphere.
-```
-
-```{warning}
-
 ```
 
 ```{note}
