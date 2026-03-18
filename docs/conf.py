@@ -14,8 +14,13 @@
 #
 import os
 import sys
-import importlib.util
 import re
+import subprocess
+
+try:
+    from importlib.metadata import PackageNotFoundError, version as _dist_version
+except ImportError:  # pragma: no cover
+    from importlib_metadata import PackageNotFoundError, version as _dist_version
 
 docs_dir = os.path.abspath(os.path.dirname(__file__))
 src_dir = os.path.abspath(os.path.join(docs_dir, ".."))
@@ -30,50 +35,61 @@ copyright = "2025, Jeff Valenti, Nikolai Piskunov, Mingjie Jian, Ansgar Wehrhahn
 author = "Jeff Valenti, Nikolai Piskunov, Mingjie Jian, Ansgar Wehrhahn"
 
 def _resolve_release():
-    """Resolve docs version from versioneer without importing pysme package.
+    """Resolve docs version without importing pysme package."""
 
-    Importing ``pysme`` would trigger heavy runtime side effects in ``__init__``.
-    We therefore load ``src/pysme/_version.py`` directly.
-    """
-    version_file = os.path.join(src_dir, "src", "pysme", "_version.py")
+    # Prefer installed distribution metadata when available.
     try:
-        spec = importlib.util.spec_from_file_location("pysme_version", version_file)
-        if spec is None or spec.loader is None:
-            raise RuntimeError(f"Could not load version spec from: {version_file}")
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-        return module.get_versions().get("version", "unknown")
-    except Exception:
-        # Fallbacks keep docs buildable even without full VCS metadata.
-        return (
-            os.environ.get("READTHEDOCS_GIT_IDENTIFIER")
-            or os.environ.get("READTHEDOCS_VERSION")
-            or "unknown"
-        )
-
-
-def _read_pyproject_version():
-    """Read project version from pyproject.toml without extra dependencies."""
-    pyproject = os.path.join(src_dir, "pyproject.toml")
-    try:
-        with open(pyproject, "r", encoding="utf-8") as f:
-            content = f.read()
-        match = re.search(r'^\s*version\s*=\s*"([^"]+)"\s*$', content, re.MULTILINE)
-        if match:
-            return match.group(1)
+        return _dist_version("pysme-astro")
+    except PackageNotFoundError:
+        pass
     except Exception:
         pass
-    return None
 
+    # Fall back to VCS metadata when building from a git checkout.
+    try:
+        describe = subprocess.check_output(
+            [
+                "git",
+                "describe",
+                "--tags",
+                "--dirty",
+                "--always",
+                "--long",
+                "--match",
+                "v*",
+            ],
+            cwd=src_dir,
+            stderr=subprocess.DEVNULL,
+            text=True,
+        ).strip()
 
-# The full version, including local build metadata (e.g. +g<sha>.dirty)
+        # Typical form: vX.Y.Z-N-g<sha>[-dirty]
+        m = re.match(r"^(v[^-]+)-(\d+)-g([0-9a-f]+)(-dirty)?$", describe)
+        if m:
+            tag, distance, sha, dirty = m.groups()
+            base = tag[1:] if tag.startswith("v") else tag
+            if distance == "0" and dirty is None:
+                return base
+            local = f"{distance}.g{sha}"
+            if dirty:
+                local += ".dirty"
+            return f"{base}+{local}"
+
+        if describe.startswith("v"):
+            return describe[1:]
+        if describe:
+            return describe
+    except Exception:
+        pass
+
+    # Last-resort fallback keeps docs buildable even without package/VCS metadata.
+    return (
+        os.environ.get("READTHEDOCS_GIT_IDENTIFIER")
+        or os.environ.get("READTHEDOCS_VERSION")
+        or "unknown"
+    )
+
 release = _resolve_release()
-if release:
-    release_lower = release.lower()
-    if release_lower.startswith("0+untagged") or release_lower.startswith("0+unknown"):
-        pyproject_version = _read_pyproject_version()
-        if pyproject_version:
-            release = pyproject_version
 # The short X.Y version shown by Sphinx.
 short_release = release.split("+")[0]
 version_parts = short_release.split(".")

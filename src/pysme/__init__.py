@@ -1,11 +1,17 @@
 # -*- coding: utf-8 -*-
 __file_ending__ = ".sme"
 
-# Load correct version string
-from ._version import get_versions
+# Resolve installed package version from distribution metadata.
+try:
+    from importlib.metadata import PackageNotFoundError, version as _dist_version
+except ImportError:  # pragma: no cover
+    from importlib_metadata import PackageNotFoundError, version as _dist_version
 
-__version__ = get_versions()["version"]
-del get_versions
+try:
+    __version__ = _dist_version("pysme-astro")
+except PackageNotFoundError:
+    __version__ = "0+unknown"
+del PackageNotFoundError, _dist_version
 
 # Add output to the console
 import logging, os, sys
