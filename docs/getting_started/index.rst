@@ -10,5 +10,3 @@ Start here if you are new to PySME. The goal is to run a full minimal workflow q
    first_spectrum.md
    first_fit.md
    nlte.md
-   .. data_files
-   .. troubleshooting

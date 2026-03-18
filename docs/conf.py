@@ -182,6 +182,7 @@ html_theme_options = {
       "image_dark": "_static/pysme_logo-dark.png",
    }
 }
+html_title = f"PySME {release} documentation"
 html_css_files = ["custom.css"]
 
 # Custom sidebar templates, must be a dictionary that maps document names

@@ -1,10 +1,10 @@
 PySME documentation
 ===================
 
+Version: |release|
+
 More than two decades ago `Valenti & Piskunov (1996) <https://ui.adsabs.harvard.edu/abs/1996A&AS..118..595V>`_ developed SME - Spectroscopy Made Easy, a high-precision stellar-spectra synthesis/analysis engine that has powered hundreds of studies.
 PySME is its modern Python front-end: a wrapper around the original C++/Fortran core that lets you (1) compute accurate, high-resolution synthetic spectra from a linelist + model atmosphere, (2) invert observed spectra to derive stellar parameters, and (3) explore NLTE corrections — all from an interactive notebook or scripted pipeline. The same capabilities make PySME invaluable for exoplanet work, where characterising the host star is essential for understanding its planets.
-
-🎉 PySME (version 0.6.14+) is now fully compatible with the arm64 MacOS! Feel free to try it out. 🎉
 
 .. admonition:: Key features
 
@@ -56,5 +56,5 @@ Indices and tables
 * :ref:`search`
 
 .. rubric:: Quick links
-:GitHub repository: https://github.com/MingjieJian/SME
-:Issue tracker:     https://github.com/MingjieJian/SME/issues
+:GitHub repository: https://github.com/SpectroscopyMadeEasy/PySME
+:Issue tracker:     https://github.com/SpectroscopyMadeEasy/PySME/issues

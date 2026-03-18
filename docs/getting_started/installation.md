@@ -3,8 +3,8 @@
 PySME can be installed through PyPI (recommended; stable release) or from GitHub source.
 
 ```{admonition} Supported environments:
-- Platforms: Linux, macOS (arm platform)
-    - The x86/Intel platform macOS is not supported anymore, but you can still install v0.6.23, the last supported PySME version, or download [SMElib](https://github.com/MingjieJian/SMElib) and compile it manually.
+- Platforms: Linux, macOS (arm platform only)
+    - The x86/Intel platform macOS is not supported anymore, but you can still install v0.6.23, the last supported PySME version, or download [SMElib](https://github.com/SpectroscopyMadeEasy/SMElib) and compile it manually.
 - Windows: supported via WSL2 (install/run PySME inside the Linux subsystem)
 - Python versions: 
     - 3.9–3.13.
@@ -65,7 +65,7 @@ Use this for reproducible source installs:
 ```bash
 git clone --recurse-submodules https://github.com/SpectroscopyMadeEasy/PySME.git
 cd PySME
-git checkout v0.7.1
+git checkout <tag>
 git submodule update --init --recursive
 pip install .
 ```
@@ -125,7 +125,7 @@ They are all list in the output of the pip command, and it is recommended to rem
 The content below to be removed.
 
 ## Running SME
-- An simple minimum example is provided in the [examples directory](https://github.com/MingjieJian/SME/tree/master/examples). Make sure to also download the provided input structure.
+- An simple minimum example is provided in the [examples directory](https://github.com/SpectroscopyMadeEasy/PySME/tree/master/examples). Make sure to also download the provided input structure.
 - You can then run it with: `python minimum.py`
 
 ```{warning}

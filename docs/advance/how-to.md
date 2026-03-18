@@ -13,7 +13,7 @@ sme = SME_Structure()
 # Define stellar parameters
 sme.teff, sme.logg, sme.monh, sme.vmic = 5777, 4.485, 0, 1.46
 # Select atmosphere source; optional, default is MARCS models ('marcs2014.sav')
-# Available options are listed in https://pysme-astro.readthedocs.io/en/latest/usage/lfs.html
+# Available options are listed in https://pysme-astro.readthedocs.io/en/latest/concepts/lfs.html
 sme.atmo.source = 'marcs2014.sav'
 synthesizer = Synthesizer()
 # Interplate the atmopshere
