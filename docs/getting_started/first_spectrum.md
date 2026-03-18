@@ -20,7 +20,7 @@ Here we defined effective temperature `teff`, surface gravity `logg`, metallicit
 For a full list of stellar parameters, see [](../concepts/sme_struct.md).
 
 LineList can be download from [VALD database](https://vald.astro.uu.se/).
-Here we provide an example line list: [sun.lin](https://raw.githubusercontent.com/MingjieJian/PySME/master/examples/sun.lin).
+Here we provide an example line list: [sun.lin](https://raw.githubusercontent.com/SpectroscopyMadeEasy/PySME/master/examples/sun.lin).
 Load the line list using:
 ```py
 from pysme.linelist.vald import ValdFile
