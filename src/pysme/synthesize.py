@@ -1264,7 +1264,6 @@ class Synthesizer:
                 need_update_cdr = True
 
             if need_update_cdr:
-                logger.info("Updating linelist central depth and line range.")
                 allow_compute = ls_cfg["recompute"] != "never"
                 try:
                     sme = self.update_cdr(
@@ -1462,7 +1461,11 @@ class Synthesizer:
             sme = self.get_atmosphere(sme)
             dll.InputModel(sme.teff, sme.logg, sme.vmic, sme.atmo)
             dll.InputAbund(sme.abund)
-            dll.Ionization(0)
+            with warnings.catch_warnings(record=True) as caught_warnings:
+                warnings.simplefilter("always")
+                dll.Ionization(0)
+            for caught in caught_warnings:
+                logger.warning("%s", caught.message)
             dll.SetVWscale(sme.gam6)
             dll.SetH2broad(sme.h2broad)
         if passNLTE:

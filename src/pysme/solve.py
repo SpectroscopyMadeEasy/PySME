@@ -37,6 +37,33 @@ clight = speed_of_light * 1e-3  # km/s
 warnings.filterwarnings("ignore", category=OptimizeWarning)
 
 
+def _format_log_value(value, precision=4):
+    def _format_nested(obj):
+        if isinstance(obj, list):
+            return "[" + ", ".join(_format_nested(item) for item in obj) + "]"
+        if isinstance(obj, Real) and np.isfinite(obj):
+            return f"{float(obj):.{precision}f}"
+        return str(obj)
+
+    if isinstance(value, Real) and np.isfinite(value):
+        return f"{float(value):.{precision}f}"
+
+    arr = np.asarray(value)
+    if arr.ndim == 0:
+        try:
+            scalar = float(arr)
+        except (TypeError, ValueError):
+            return str(value)
+        if np.isfinite(scalar):
+            return f"{scalar:.{precision}f}"
+        return str(value)
+
+    try:
+        return _format_nested(np.asarray(arr, dtype=float).tolist())
+    except (TypeError, ValueError):
+        return str(value)
+
+
 class VariableNumber(np.lib.mixins.NDArrayOperatorsMixin):
     """
     This is essentially a pointer to the value, but will interact with operators
@@ -204,10 +231,26 @@ class SME_Solver:
                 if "abund" in name:
                     abund_name = name.split()[1]
                     sme.abund[abund_name] = self.derived_param[name](sme) - sme.monh
-                    print(f"Changing derived parameter {name} to {sme.abund[abund_name]:.2f}.")
                 else:
                     sme[name] = self.derived_param[name](sme)
-                    print(f"Changing derived parameter {name} to {sme[name]:.2f}.")
+
+        synth_values = [
+            f"{name}={_format_log_value(value)}"
+            for name, value in zip(self.parameter_names, param)
+        ]
+        if self.derived_param is not None:
+            for name in self.derived_param.keys():
+                if "abund" in name:
+                    abund_name = name.split()[1]
+                    derived_value = sme.abund[abund_name] + sme.monh
+                else:
+                    derived_value = sme[name]
+                synth_values.append(f"{name}(derived)={_format_log_value(derived_value)}")
+        logger.info(
+            "Synthesizing %s with values %s",
+            "jacobian" if isJacobian else "residual",
+            ", ".join(synth_values),
+        )
         # run spectral synthesis
         try:
             result = self.synthesizer.synthesize_spectrum(
@@ -896,9 +939,27 @@ class SME_Solver:
                 for name, value, unc in zip(
                     self.parameter_names, res.x, sme.fitresults.fit_uncertainties
                 ):
-                    logger.info("%s\t%.5f +- %.5g", name.ljust(10), value, unc)
-                logger.info("%s\t%s +- %s", "vrad".ljust(10), sme.vrad, sme.vrad_unc)
-            except:
+                    if isinstance(value, Real) and isinstance(unc, Real):
+                        logger.info(
+                            "Final %s %12.4f +- %12.4f",
+                            name.ljust(10),
+                            float(value),
+                            float(unc),
+                        )
+                    else:
+                        logger.info(
+                            "Final %s %s +- %s",
+                            name.ljust(10),
+                            _format_log_value(value),
+                            _format_log_value(unc),
+                        )
+                logger.info(
+                    "Final %s %s +- %s",
+                    "vrad".ljust(10),
+                    _format_log_value(sme.vrad),
+                    _format_log_value(sme.vrad_unc),
+                )
+            except Exception:
                 pass
         elif len(param_names) > 0:
             # This happens when vrad and/or cscale are given as parameters but nothing else
