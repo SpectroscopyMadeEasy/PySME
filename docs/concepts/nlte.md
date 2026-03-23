@@ -52,7 +52,7 @@ PySME provides information on whehter a line is synthesized in NLTE through the 
 
 | Element | Grid name | Zenodo version | Citation |
 |:---:|:---:|:---:|:---:|
-| H | `nlte_H_pysme.grd` | 3 | [Amarsi et al. 2020](https://ui.adsabs.harvard.edu/abs/2020A%26A...642A..62A) |
+| H | `nlte_H_pysme.grd` | 6 | [Zhou et al. 2023](https://ui.adsabs.harvard.edu/abs/2023A%26A...677A..98Z) |
 | Li | `nlte_Li_pysme.grd` | 3 | [Amarsi et al. 2020](https://ui.adsabs.harvard.edu/abs/2020A%26A...642A..62A) |
 | C | `nlte_C_pysme.grd` | 2 | [Amarsi et al. 2020](https://ui.adsabs.harvard.edu/abs/2020A%26A...642A..62A) |
 | N | `nlte_N_pysme.grd` | 3 | [Amarsi et al. 2020](https://ui.adsabs.harvard.edu/abs/2020A%26A...642A..62A) |
@@ -61,16 +61,16 @@ PySME provides information on whehter a line is synthesized in NLTE through the 
 | Mg | `nlte_Mg_pysme.grd` | 3 | [Amarsi et al. 2020](https://ui.adsabs.harvard.edu/abs/2020A%26A...642A..62A) |
 | Al | `nlte_Al_pysme.grd` | 3 | [Amarsi et al. 2020](https://ui.adsabs.harvard.edu/abs/2020A%26A...642A..62A) |
 | Si | `nlte_Si_pysme.grd` | 3 | [Amarsi et al. 2020](https://ui.adsabs.harvard.edu/abs/2020A%26A...642A..62A) |
-| S | `nlte_Si_pysme.grd` | 7 | [Amarsi et al. 2025](https://ui.adsabs.harvard.edu/abs/2025A%26A...703A..35A/abstract) |
+| S | `nlte_S_pysme.grd` | 7 | [Amarsi et al. 2025](https://ui.adsabs.harvard.edu/abs/2025A%26A...703A..35A/abstract) |
 | K | `nlte_K_pysme.grd` | 3 | [Amarsi et al. 2020](https://ui.adsabs.harvard.edu/abs/2020A%26A...642A..62A) |
 | Ca | `nlte_Ca_pysme.grd` | 3 | [Amarsi et al. 2020](https://ui.adsabs.harvard.edu/abs/2020A%26A...642A..62A) |
-| Ti | `nlte_Ti_pysme.grd` | 5 | [Mallinson et al. 2024](https://ui.adsabs.harvard.edu/abs/2024A%26A...687A...5M) |
+| Ti | `nlte_Ti_pysme.grd` | 6 | [Mallinson et al. 2024](https://ui.adsabs.harvard.edu/abs/2024A%26A...687A...5M) |
 | Mn | `nlte_Mn_pysme.grd` | 3 | [Amarsi et al. 2020](https://ui.adsabs.harvard.edu/abs/2020A%26A...642A..62A) |
 | Fe | `nlte_Fe_pysme.grd` | 4 | [Amarsi et al. 2020](https://ui.adsabs.harvard.edu/abs/2020A%26A...642A..62A) |
 | Cu | `nlte_Cu_pysme.grd` | 6 | [Caliskan et al. 2025](https://ui.adsabs.harvard.edu/abs/2025A%26A...696A.210C/abstract) |
 | Ba | `nlte_Ba_pysme.grd` | 3 | [Amarsi et al. 2020](https://ui.adsabs.harvard.edu/abs/2020A%26A...642A..62A) |
 
-All recommended/default grids are available in [Zenodo](https://zenodo.org/records/17064337).
+All recommended/default grids are available in the [Zenodo Grid/NLTE record family](https://zenodo.org/records/3888393). Older Zenodo versions often distribute PySME grids as `.tar.gz`, while newer versions may provide direct `.grd` files.
 
 ## Deprecated grids
 
