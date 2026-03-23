@@ -1,19 +1,66 @@
 {
-    "nso.bin": "atlas/nso.bin",
-    "atlas12.sav": "models/atlas12_v1.0.0.sav.gz",
-    "atlas9_vmic0.0.sav": "models/atlas9_vmic0.0_v1.0.0.sav.gz",
-    "atlas9_vmic2.0.sav": "models/atlas9_vmic2.0_v1.0.0.sav.gz",
-    "ll_vmic2.0.sav": "models/ll_vmic2.0_v1.0.0.sav.gz",
-    "marcs2012.sav": "models/marcs2012_v1.0.0.sav.gz",
-    "marcs2012p_t0.0.sav": "models/marcs2012p_t0.0_v1.0.0.sav.gz",
-    "marcs2012p_t1.0.sav": "models/marcs2012p_t1.0_v1.0.0.sav.gz",
-    "marcs2012p_t2.0.sav": "models/marcs2012p_t2.0_v1.0.0.sav.gz",
-    "marcs2012s_t1.0.sav": "models/marcs2012s_t1.0_v1.0.0.sav.gz",
-    "marcs2012s_t2.0.sav": "models/marcs2012s_t2.0_v1.0.0.sav.gz",
-    "marcs2012s_t5.0.sav": "models/marcs2012s_t5.0_v1.0.0.sav.gz",
-    "marcs2012t00cooldwarfs.sav": "models/marcs2012t00cooldwarfs_v1.0.0.sav.gz",
-    "marcs2012t01cooldwarfs.sav": "models/marcs2012t01cooldwarfs_v1.0.0.sav.gz",
-    "marcs2012t02cooldwarfs.sav": "models/marcs2012t02cooldwarfs_v1.0.0.sav.gz",
-    "marcs2014.sav": "models/marcs2014_v1.0.0.sav.gz"
+    "nso.bin": [
+        "https://nadc.china-vo.org/res/file_upload/download?id=53693",
+        "atlas/nso.bin"
+    ],
+    "atlas12.sav": [
+        "https://nadc.china-vo.org/res/file_upload/download?id=53705",
+        "models/atlas12_v1.0.0.sav.gz"
+    ],
+    "atlas9_vmic0.0.sav": [
+        "https://nadc.china-vo.org/res/file_upload/download?id=53697",
+        "models/atlas9_vmic0.0_v1.0.0.sav.gz"
+    ],
+    "atlas9_vmic2.0.sav": [
+        "https://nadc.china-vo.org/res/file_upload/download?id=53690",
+        "models/atlas9_vmic2.0_v1.0.0.sav.gz"
+    ],
+    "ll_vmic2.0.sav": [
+        "https://nadc.china-vo.org/res/file_upload/download?id=53707",
+        "models/ll_vmic2.0_v1.0.0.sav.gz"
+    ],
+    "marcs2012.sav": [
+        "https://nadc.china-vo.org/res/file_upload/download?id=53703",
+        "models/marcs2012_v1.0.0.sav.gz"
+    ],
+    "marcs2012p_t0.0.sav": [
+        "https://nadc.china-vo.org/res/file_upload/download?id=53702",
+        "models/marcs2012p_t0.0_v1.0.0.sav.gz"
+    ],
+    "marcs2012p_t1.0.sav": [
+        "https://nadc.china-vo.org/res/file_upload/download?id=53700",
+        "models/marcs2012p_t1.0_v1.0.0.sav.gz"
+    ],
+    "marcs2012p_t2.0.sav": [
+        "https://nadc.china-vo.org/res/file_upload/download?id=53694",
+        "models/marcs2012p_t2.0_v1.0.0.sav.gz"
+    ],
+    "marcs2012s_t1.0.sav": [
+        "https://nadc.china-vo.org/res/file_upload/download?id=53688",
+        "models/marcs2012s_t1.0_v1.0.0.sav.gz"
+    ],
+    "marcs2012s_t2.0.sav": [
+        "https://nadc.china-vo.org/res/file_upload/download?id=53680",
+        "models/marcs2012s_t2.0_v1.0.0.sav.gz"
+    ],
+    "marcs2012s_t5.0.sav": [
+        "https://nadc.china-vo.org/res/file_upload/download?id=53696",
+        "models/marcs2012s_t5.0_v1.0.0.sav.gz"
+    ],
+    "marcs2012t00cooldwarfs.sav": [
+        "https://nadc.china-vo.org/res/file_upload/download?id=53683",
+        "models/marcs2012t00cooldwarfs_v1.0.0.sav.gz"
+    ],
+    "marcs2012t01cooldwarfs.sav": [
+        "https://nadc.china-vo.org/res/file_upload/download?id=53684",
+        "models/marcs2012t01cooldwarfs_v1.0.0.sav.gz"
+    ],
+    "marcs2012t02cooldwarfs.sav": [
+        "https://nadc.china-vo.org/res/file_upload/download?id=53682",
+        "models/marcs2012t02cooldwarfs_v1.0.0.sav.gz"
+    ],
+    "marcs2014.sav": [
+        "https://nadc.china-vo.org/res/file_upload/download?id=53701",
+        "models/marcs2014_v1.0.0.sav.gz"
+    ]
 }
-
