@@ -111,6 +111,7 @@
         "https://zenodo.org/api/records/17064337/files/nlte_S_ama51_Sep2024_pysme.grd/content"
     ],
     "nlte_Cu_pysme.grd": [
+        "https://nadc.china-vo.org/res/file_upload/download?id=53734",
         "https://zenodo.org/api/records/15062813/files/nlte_Cu_caliskan_Oct2024_pysme.grd/content"
     ]
 }

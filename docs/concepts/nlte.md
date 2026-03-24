@@ -72,6 +72,18 @@ PySME provides information on whehter a line is synthesized in NLTE through the 
 
 All recommended/default grids are available in the [Zenodo Grid/NLTE record family](https://zenodo.org/records/3888393). Older Zenodo versions often distribute PySME grids as `.tar.gz`, while newer versions may provide direct `.grd` files.
 
+PySME also maintains an NADC mirror page for packaged atmosphere and NLTE data files at <https://nadc.china-vo.org/res/r101793/>.
+
+For the default `nlte_*_pysme.grd` pointers shipped with PySME, the preferred source order is:
+
+- most legacy default grids: `NADC -> Uppsala -> Zenodo`
+- `H`: `NADC -> Zenodo`
+- `Ti`: `NADC -> Uppsala -> Zenodo`
+- `S`: `NADC -> Zenodo`
+- `Cu`: `NADC -> Zenodo`
+
+The order above is implemented in `datafiles_nlte.json` using ordered pointer lists. Relative paths are expanded against path-compatible mirrors such as Uppsala, while NADC and Zenodo entries are usually provided as explicit download URLs.
+
 ## Deprecated grids
 
   - H 
