@@ -20,9 +20,7 @@ Edit `~/.sme/config.json` and set the data paths you want:
 {
   "data.file_server": "https://sme.astro.uu.se/atmos",
   "data.file_servers": [
-    "https://sme.astro.uu.se/atmos",
-    "https://zenodo.org",
-    "https://nadc.example.org/pysme"
+    "https://sme.astro.uu.se/atmos"
   ],
   "data.hlineprof": "/path/to/pysme/hlineprof",
   "data.atmospheres": "/path/to/pysme/atmospheres",
@@ -36,14 +34,17 @@ Edit `~/.sme/config.json` and set the data paths you want:
 
 Notes:
 
-- `data.file_servers` is optional and can define an ordered mirror list for path-compatible mirrors.
-- If `data.file_servers` is present, PySME tries mirrors in order and falls back automatically.
+- `data.file_servers` is optional and defines an ordered list of path-compatible mirrors.
+- If `data.file_servers` is present, PySME expands relative pointer paths against those servers and falls back automatically.
 - If `data.file_servers` is absent, PySME uses legacy `data.file_server` behavior.
 - Pointer values in `datafiles_*.json` can be:
-  - a single relative path (expanded against each mirror server)
+  - a single relative path (expanded against each path-compatible mirror server)
   - a list of paths/URLs (tried in order)
   - a full URL (`https://...` or `file://...`)
-- For Zenodo-style links, prefer full URLs (or URL lists) in pointers, because path layouts often differ from self-hosted mirrors.
+- Absolute URLs are tried as written and are not joined with `data.file_servers`.
+- This allows mixed-source fallbacks such as `NADC -> Uppsala -> Zenodo` in a single pointer list.
+- In the current PySME defaults, Uppsala is configured as the path-compatible mirror in `data.file_servers`, while NADC and Zenodo are usually referenced as explicit URLs in the pointer files.
+- The NADC packaged data mirror page is <https://nadc.china-vo.org/res/r101793/>.
 - `~` is supported in path values and will be expanded to your home directory.
 - Changing these paths does not migrate old files automatically; move existing files manually if needed.
 
