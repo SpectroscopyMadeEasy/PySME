@@ -572,6 +572,11 @@ class Scalar:
 _unique_grid = (
     H_lineprof[["Teff", "logg", "Fe_H", "mu"]].drop_duplicates().reset_index(drop=True)
 )
+_unique_mu_weight = (
+    H_lineprof[["mu", "wmu"]].drop_duplicates().sort_values("mu").reset_index(drop=True)
+)
+mu_H_3DNLTE = _unique_mu_weight["mu"].to_numpy()
+wmu_H_3DNLTE = _unique_mu_weight["wmu"].to_numpy()
 
 _indices_H_gamma = (H_lineprof['wl'] < 4500)
 _indices_H_beta = (H_lineprof['wl'] > 4500) & (H_lineprof['wl'] < 5500)
@@ -580,6 +585,12 @@ _indices_H_alpha = (H_lineprof['wl'] > 5500)
 _H_alpha_Ir = []
 _H_beta_Ir = []
 _H_gamma_Ir = []
+_H_alpha_I = []
+_H_beta_I = []
+_H_gamma_I = []
+_H_alpha_Ic = []
+_H_beta_Ic = []
+_H_gamma_Ic = []
 for i in _unique_grid.index:
     _indices = np.isclose(H_lineprof['Teff'], _unique_grid.loc[i, 'Teff']) 
     _indices &= np.isclose(H_lineprof['logg'], _unique_grid.loc[i, 'logg']) 
@@ -592,6 +603,12 @@ for i in _unique_grid.index:
         _lambda_H_alpha = _H_alpha_spectrum['wl'].values
         _lambda_H_beta = _H_beta_spectrum['wl'].values
         _lambda_H_gamma = _H_gamma_spectrum['wl'].values
+    _H_alpha_I.append(_H_alpha_spectrum['I'].values)
+    _H_beta_I.append(_H_beta_spectrum['I'].values)
+    _H_gamma_I.append(_H_gamma_spectrum['I'].values)
+    _H_alpha_Ic.append(_H_alpha_spectrum['Ic'].values)
+    _H_beta_Ic.append(_H_beta_spectrum['Ic'].values)
+    _H_gamma_Ic.append(_H_gamma_spectrum['Ic'].values)
     _H_alpha_Ir.append(_H_alpha_spectrum['I'].values/_H_alpha_spectrum['Ic'].values)
     _H_beta_Ir.append(_H_beta_spectrum['I'].values/_H_beta_spectrum['Ic'].values)
     _H_gamma_Ir.append(_H_gamma_spectrum['I'].values/_H_gamma_spectrum['Ic'].values)
@@ -599,6 +616,12 @@ for i in _unique_grid.index:
 _H_alpha_Ir = np.array(_H_alpha_Ir)
 _H_beta_Ir = np.array(_H_beta_Ir)
 _H_gamma_Ir = np.array(_H_gamma_Ir)
+_H_alpha_I = np.array(_H_alpha_I)
+_H_beta_I = np.array(_H_beta_I)
+_H_gamma_I = np.array(_H_gamma_I)
+_H_alpha_Ic = np.array(_H_alpha_Ic)
+_H_beta_Ic = np.array(_H_beta_Ic)
+_H_gamma_Ic = np.array(_H_gamma_Ic)
 
 lambda_H_3DNLTE = np.concatenate([_lambda_H_gamma, _lambda_H_beta, _lambda_H_alpha])
 
@@ -617,6 +640,36 @@ rbf_Hbeta = RBFInterpolator(
         )
 rbf_Hgamma = RBFInterpolator(
             _X, np.log10(np.clip(_H_gamma_Ir, 1e-12, None)),
+            neighbors=None,
+            kernel="cubic"
+        )
+rbf_Halpha_I = RBFInterpolator(
+            _X, np.log10(np.clip(_H_alpha_I, 1e-12, None)),
+            neighbors=50,
+            kernel="cubic"
+        )
+rbf_Hbeta_I = RBFInterpolator(
+            _X, np.log10(np.clip(_H_beta_I, 1e-12, None)),
+            neighbors=None,
+            kernel="cubic"
+        )
+rbf_Hgamma_I = RBFInterpolator(
+            _X, np.log10(np.clip(_H_gamma_I, 1e-12, None)),
+            neighbors=None,
+            kernel="cubic"
+        )
+rbf_Halpha_Ic = RBFInterpolator(
+            _X, np.log10(np.clip(_H_alpha_Ic, 1e-12, None)),
+            neighbors=50,
+            kernel="cubic"
+        )
+rbf_Hbeta_Ic = RBFInterpolator(
+            _X, np.log10(np.clip(_H_beta_Ic, 1e-12, None)),
+            neighbors=None,
+            kernel="cubic"
+        )
+rbf_Hgamma_Ic = RBFInterpolator(
+            _X, np.log10(np.clip(_H_gamma_Ic, 1e-12, None)),
             neighbors=None,
             kernel="cubic"
         )
@@ -704,9 +757,9 @@ rbf_Hgamma = RBFInterpolator(
 #     return pd.DataFrame(result, columns=['mu', 'wl', 'wmu', 'Ic_interp', 'I_interp']), in_boundary
 
 
-def interpolate_3DNLTEH_spectrum_RBF(teff, logg, monh, mu, boundary_vertices):        
+def interpolate_3DNLTEH_intensity_continuum_RBF(teff, logg, monh, mu, boundary_vertices):
     """
-    Interpolate the H line profile at the given parameters.
+    Interpolate the 3D NLTE H line intensity and continuum profiles at the given parameters.
     Parameters
     ----------
     Teff : float
@@ -722,11 +775,29 @@ def interpolate_3DNLTEH_spectrum_RBF(teff, logg, monh, mu, boundary_vertices):
     point_star_2d = (teff, logg)
     polygon = Path(boundary_vertices)
     in_boundary = polygon.contains_point(point_star_2d)
+    coords = _scalar.transform([[teff, logg, monh, mu]])
 
-    int_3dnlte_H_mu = np.concatenate([10**rbf_Hgamma(_scalar.transform([[teff, logg, monh, mu]]))[0],
-                                    10**rbf_Hbeta(_scalar.transform([[teff, logg, monh, mu]]))[0],
-                                    rbf_Halpha(_scalar.transform([[teff, logg, monh, mu]]))[0]])
-    return int_3dnlte_H_mu, in_boundary
+    int_3dnlte_H_mu = np.concatenate([
+        10**rbf_Hgamma_I(coords)[0],
+        10**rbf_Hbeta_I(coords)[0],
+        10**rbf_Halpha_I(coords)[0],
+    ])
+    cont_3dnlte_H_mu = np.concatenate([
+        10**rbf_Hgamma_Ic(coords)[0],
+        10**rbf_Hbeta_Ic(coords)[0],
+        10**rbf_Halpha_Ic(coords)[0],
+    ])
+    return int_3dnlte_H_mu, cont_3dnlte_H_mu, in_boundary
+
+
+def interpolate_3DNLTEH_spectrum_RBF(teff, logg, monh, mu, boundary_vertices):        
+    """
+    Interpolate the normalized 3D NLTE H line profile at the given parameters.
+    """
+    int_3dnlte_H_mu, cont_3dnlte_H_mu, in_boundary = interpolate_3DNLTEH_intensity_continuum_RBF(
+        teff, logg, monh, mu, boundary_vertices
+    )
+    return int_3dnlte_H_mu / np.clip(cont_3dnlte_H_mu, 1e-12, None), in_boundary
 
 def load_cdr_to_linelist(sme, filepath):
     """
@@ -930,6 +1001,4 @@ def save_compressed_grid(mask_bits, unique_widths, codes, n_lines_total, out_pat
         codes=codes,
         n_lines_total=np.array(n_lines_total, dtype=np.int32)
     )
-
-
 

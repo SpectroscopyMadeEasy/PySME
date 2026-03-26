@@ -26,7 +26,12 @@ from .iliffe_vector import Iliffe_vector
 from .large_file_storage import setup_lfs
 from .sme import MASK_VALUES
 from .sme_synth import SME_DLL
-from .util import show_progress_bars, boundary_vertices, safe_interpolation, interpolate_3DNLTEH_spectrum_RBF
+from .util import (
+    show_progress_bars,
+    boundary_vertices,
+    safe_interpolation,
+    interpolate_3DNLTEH_intensity_continuum_RBF,
+)
 from . import util
 from .sme import SME_Structure
 
@@ -1150,9 +1155,13 @@ class Synthesizer:
 
         # Prepare 3D NLTE H profile corrections
         if sme.tdnlte_H:
-        #     sme.tdnlte_H_correction = self.get_H_3dnlte_correction(sme)
-        # if sme.tdnlte_H_new:
-            sme.tdnlte_H_correction = self.get_H_3dnlte_correction_rbf(sme)
+            if sme.specific_intensities_only:
+                logger.warning(
+                    "3D NLTE H correction is defined at flux level and is not applied "
+                    "when specific_intensities_only=True."
+                )
+            else:
+                sme.tdnlte_H_correction = self.get_H_3dnlte_correction_rbf(sme)
 
         if sme is not self.known_sme:
             logger.debug("Synthesize spectrum")
@@ -1264,7 +1273,6 @@ class Synthesizer:
                 need_update_cdr = True
 
             if need_update_cdr:
-                logger.info("Updating linelist central depth and line range.")
                 allow_compute = ls_cfg["recompute"] != "never"
                 try:
                     sme = self.update_cdr(
@@ -1462,7 +1470,11 @@ class Synthesizer:
             sme = self.get_atmosphere(sme)
             dll.InputModel(sme.teff, sme.logg, sme.vmic, sme.atmo)
             dll.InputAbund(sme.abund)
-            dll.Ionization(0)
+            with warnings.catch_warnings(record=True) as caught_warnings:
+                warnings.simplefilter("always")
+                dll.Ionization(0)
+            for caught in caught_warnings:
+                logger.warning("%s", caught.message)
             dll.SetVWscale(sme.gam6)
             dll.SetH2broad(sme.h2broad)
         if passNLTE:
@@ -1729,13 +1741,6 @@ class Synthesizer:
             keep_lineop=keep_line_opacity and not sme.first_segment,
             wave=wint_seg,
         )
-
-        # Insert the new 3DNLTE correction
-        if sme.tdnlte_H:
-            interpolator = interp1d(util.lambda_H_3DNLTE, sme.tdnlte_H_correction, kind="linear", fill_value=1, bounds_error=False, assume_sorted=True)
-            correction_3dnlte_H_interp = interpolator(wint)
-
-            sint *= correction_3dnlte_H_interp
 
         # # Assign the nlte flags
         # nlte_flags = dll.GetNLTEflags()
@@ -2447,30 +2452,42 @@ class Synthesizer:
 
         sme_H_only = SME_Structure()
         sme_H_only.teff, sme_H_only.logg, sme_H_only.monh, sme_H_only.vmic, sme_H_only.vmac, sme_H_only.vsini = sme.teff, sme.logg, sme.monh, sme.vmic, sme.vmac, sme.vsini
+        sme_H_only.abund = deepcopy(sme.abund)
+        sme_H_only.atmo = deepcopy(sme.atmo)
+        sme_H_only.gam6 = sme.gam6
+        sme_H_only.h2broad = sme.h2broad
+        sme_H_only.mu = np.asarray(sme.mu, dtype=float)
         sme_H_only.iptype = sme.iptype
         sme_H_only.ipres = sme.ipres
-        sme_H_only.specific_intensities_only = True
-        # sme_H_only.normalize_by_continuum = False
+        sme_H_only.specific_intensities_only = False
+        sme_H_only.normalize_by_continuum = True
         for i in range(len(sme.nlte.elements)):
             sme_H_only.nlte.set_nlte(sme.nlte.elements[i], sme.nlte.grids[sme.nlte.elements[i]])
         sme_H_only.linelist = sme.linelist[(sme.linelist['species'] == 'H 1')]
+        if len(sme_H_only.linelist) == 0:
+            logger.info("No H I lines in the linelist, not performing 3D NLTE H correction.")
+            sme.tdnlte_H = False
+            return None
         sme_H_only.wave = np.arange(4000, 6700, 0.02)
         sme_H_only.tdnlte_H = False
         sme_H_only_res = self.synthesize_spectrum(sme_H_only)
 
+        mu_3d = np.asarray(util.mu_H_3DNLTE, dtype=float)
+        wt_3d = np.asarray(util.wmu_H_3DNLTE, dtype=float)
+        wt_3d = wt_3d[np.argsort(np.sqrt(1 - mu_3d ** 2))]
+
         int_3dnlte_H = []
-        interpolator = interp1d(
-            sme_H_only_res.wint[0],
-            sme_H_only_res.sint[0],
-            kind="linear",
-            fill_value=1,
-            bounds_error=False,
-            assume_sorted=True,
-        )
-        int_1d_H = interpolator(util.lambda_H_3DNLTE)
-        for mu in sme_H_only.mu:
-            int_3dnlte_H_mu, in_boundary = interpolate_3DNLTEH_spectrum_RBF(sme_H_only.teff, sme_H_only.logg, sme_H_only.monh, mu, boundary_vertices)
+        cont_3dnlte_H = []
+        for mu in mu_3d:
+            int_3dnlte_H_mu, cont_3dnlte_H_mu, in_boundary = interpolate_3DNLTEH_intensity_continuum_RBF(
+                sme_H_only.teff,
+                sme_H_only.logg,
+                sme_H_only.monh,
+                mu,
+                boundary_vertices,
+            )
             int_3dnlte_H.append(int_3dnlte_H_mu)
+            cont_3dnlte_H.append(cont_3dnlte_H_mu)
         
         if not in_boundary:
             logger.info(f"Outside the H 3dnlte grid, not performing correction.")
@@ -2478,10 +2495,52 @@ class Synthesizer:
             return None
         
         int_3dnlte_H = np.array(int_3dnlte_H)
-        int_1d_H = np.array(int_1d_H)
-        correction = int_3dnlte_H / int_1d_H
+        cont_3dnlte_H = np.array(cont_3dnlte_H)
 
-        return correction
+        wave_3dnlte = util.lambda_H_3DNLTE
+        segment_masks = [
+            wave_3dnlte < 4500,
+            (wave_3dnlte > 4500) & (wave_3dnlte < 5500),
+            wave_3dnlte > 5500,
+        ]
+        flux_wave = []
+        flux_norm = []
+        for mask in segment_masks:
+            wint_single = wave_3dnlte[mask]
+            sint_single = int_3dnlte_H[:, mask]
+            cint_single = cont_3dnlte_H[:, mask]
+            wgrid, vstep = self.new_wavelength_grid(wint_single)
+
+            cint_flux = self.integrate_flux(mu_3d, cint_single, 1, 0, 0, wt=wt_3d)
+            cint_flux = np.interp(wgrid, wint_single, cint_flux)
+
+            y_integrated = np.empty((len(mu_3d), len(wgrid)))
+            for imu in range(len(mu_3d)):
+                y_integrated[imu] = np.interp(wgrid, wint_single, sint_single[imu])
+            sint_flux = self.integrate_flux(
+                mu_3d, y_integrated, vstep, sme.vsini, sme.vmac, wt=wt_3d
+            )
+
+            if sme.iptype is not None:
+                ipres = sme.ipres.item() if np.size(sme.ipres) == 1 else sme.ipres[0]
+                sint_flux = broadening.apply_broadening(
+                    ipres, wgrid, sint_flux, type=sme.iptype, sme=sme
+                )
+
+            flux_wave.append(wgrid)
+            flux_norm.append(sint_flux / np.clip(cint_flux, 1e-12, None))
+
+        flux_wave = np.concatenate(flux_wave)
+        flux_norm = np.concatenate(flux_norm)
+
+        correction = safe_interpolation(
+            flux_wave,
+            flux_norm,
+            sme_H_only_res.wave[0],
+            fill_value=1,
+        ) / np.clip(sme_H_only_res.synth[0], 1e-12, None)
+
+        return sme_H_only_res.wave[0], correction
 
     # def get_H_3dnlte_correction(self, sme):
     #     """

@@ -919,8 +919,31 @@ class Grid:
             [t < min(p) or t > max(p) for t, p in zip(target, points) if len(p) > 0]
         ):
             if self.first_warning:
+                def _format_scalar(value):
+                    try:
+                        return f"{float(value):.3f}"
+                    except (TypeError, ValueError):
+                        return str(value)
+
+                def _format_axis(values):
+                    values = np.asarray(values)
+                    if values.size == 0:
+                        return "[]"
+                    return "[" + ", ".join(_format_scalar(v) for v in values) + "]"
+
                 logger.warning(
-                    f"Extrapolate on the {self.elem} NLTE grid. Requested values of {target} on grid {points}"
+                    "Extrapolate on %s NLTE grid:\n"
+                    "requested rabund=%s, Teff=%s, logg=%s, [M/H]=%s\n"
+                    "grid spans rabund=%s, Teff=%s, logg=%s, [M/H]=%s",
+                    self.elem,
+                    _format_scalar(rabund),
+                    _format_scalar(teff),
+                    _format_scalar(logg),
+                    _format_scalar(monh),
+                    _format_axis(points[0]),
+                    _format_axis(points[1]),
+                    _format_axis(points[2]),
+                    _format_axis(points[3]),
                 )
                 self.first_warning = False
 
