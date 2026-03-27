@@ -21,6 +21,29 @@ from .util import show_progress_bars
 
 logger = logging.getLogger(__name__)
 
+
+def _validate_nlte_linelist(linelist, elem, selection):
+    """Ensure the line list carries the metadata required for NLTE matching."""
+    required = {"term_lower", "term_upper"}
+    if selection == "energy":
+        required.update({"e_upp", "j_lo", "j_up"})
+
+    columns = set(linelist.columns)
+    missing = sorted(required - columns)
+    if not missing:
+        return
+
+    message = (
+        "NLTE is not supported with the current line list because it lacks the "
+        f"level metadata required for NLTE matching ({', '.join(sorted(required))}). "
+        f"Missing columns: {', '.join(missing)}."
+    )
+    if getattr(linelist, "lineformat", None) == "short":
+        message += " Short-format VALD linelists are not supported for NLTE."
+    else:
+        message += f" Requested element: {elem}."
+    raise ValueError(message)
+
 class DirectAccessFile:
     """
     This function reads a single record from binary file that has the following
@@ -1187,6 +1210,8 @@ class NLTE(Collection):
         """Read and interpolate the NLTE grid for the current element and parameters"""
         if self.grids[elem] is None:
             raise ValueError(f"Element {elem} has not been prepared for NLTE")
+
+        _validate_nlte_linelist(sme.linelist, elem, self.selection)
 
         # The grids are cached in the NLTE object, but not saved
         if elem in self.grid_data.keys():

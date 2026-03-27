@@ -97,6 +97,17 @@ def test_run_with_nlte():
 
 
 @skipif_lfs
+@pytest.mark.usefixtures("lfs_nlte")
+def test_short_format_vald_raises_for_nlte(lfs_nlte):
+    sme = make_minimum_structure()
+    sme.linelist = ValdFile("{}/testcase1.lin".format(cwd))
+    sme.nlte.set_nlte("Ca", "marcs2012p_t1.0_Ca.grd")
+
+    with pytest.raises(ValueError, match="Short-format VALD linelists are not supported for NLTE"):
+        sme.nlte.get_grid(sme, "Ca", lfs_nlte)
+
+
+@skipif_lfs
 @pytest.mark.usefixtures("lfs_atmo", "lfs_nlte")
 def test_dll(lfs_atmo, lfs_nlte):
     sme = make_minimum_structure()
