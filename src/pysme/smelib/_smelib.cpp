@@ -88,6 +88,41 @@ static PyObject *smelib_SetLibraryPath(PyObject *self, PyObject *args)
     Py_RETURN_NONE;
 }
 
+static char smelib_SetHlinopWarningMode_docstring[] = "Set HLINPROF->HLINOP warning mode";
+static PyObject *smelib_SetHlinopWarningMode(PyObject *self, PyObject *args)
+{
+    int mode;
+    void *args_c[1];
+    const char *result = NULL;
+
+    if (!PyArg_ParseTuple(args, "i", &mode))
+        return NULL;
+
+    args_c[0] = &mode;
+    result = SetHlinopWarningMode(1, args_c);
+    if (result != NULL && result[0] != OK_response)
+    {
+        PyErr_SetString(PyExc_RuntimeError, result);
+        return NULL;
+    }
+
+    Py_RETURN_NONE;
+}
+
+static char smelib_GetHlinopWarnings_docstring[] = "Return and clear HLINPROF->HLINOP warnings";
+static PyObject *smelib_GetHlinopWarnings(PyObject *self, PyObject *args)
+{
+    const char *result;
+    (void)self;
+    (void)args;
+
+    result = GetHlinopWarnings(0, NULL);
+    if (result == NULL || result[0] == OK_response)
+        Py_RETURN_NONE;
+
+    return Py_BuildValue("s", result);
+}
+
 static char smelib_InputWaveRange_docstring[] = "Read in Wavelength range";
 static PyObject *smelib_InputWaveRange(PyObject *self, PyObject *args)
 {
@@ -1623,6 +1658,8 @@ static PyMethodDef module_methods[] = {
     {"GetDataFiles", smelib_GetDataFiles, METH_NOARGS, smelib_GetDataFiles_docstring},
     {"GetLibraryPath", smelib_GetLibraryPath, METH_NOARGS, smelib_GetLibraryPath_docstring},
     {"SetLibraryPath", smelib_SetLibraryPath, METH_VARARGS, smelib_SetLibraryPath_docstring},
+    {"SetHlinopWarningMode", smelib_SetHlinopWarningMode, METH_VARARGS, smelib_SetHlinopWarningMode_docstring},
+    {"GetHlinopWarnings", smelib_GetHlinopWarnings, METH_NOARGS, smelib_GetHlinopWarnings_docstring},
     {"InputWaveRange", smelib_InputWaveRange, METH_VARARGS, smelib_InputWaveRange_docstring},
     {"SetVWscale", smelib_SetVWscale, METH_VARARGS, smelib_SetVWscale_docstring},
     {"SetH2broad", smelib_SetH2broad, METH_NOARGS, smelib_SetH2broad_docstring},

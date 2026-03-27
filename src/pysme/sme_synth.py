@@ -53,6 +53,7 @@ class SME_DLL:
         self.libfile = libfile
         reload_lib(libfile)
 
+        _smelib.SetHlinopWarningMode(1)
         self.SetLibraryPath(datadir)
         self.check_data_files_exist()
 
@@ -147,6 +148,19 @@ class SME_DLL:
     def ClearH2broad(self):
         """Clear flag for H2 molecule"""
         self.SetH2broad(False)
+
+    def SetHlinopWarningMode(self, mode):
+        """Set HLINPROF->HLINOP warning mode (0=stderr, 1=record-only, 2=off)."""
+        _smelib.SetHlinopWarningMode(int(mode))
+
+    def GetHlinopWarnings(self):
+        """Return and clear the last HLINPROF->HLINOP warning summary, if any."""
+        return _smelib.GetHlinopWarnings()
+
+    def _log_hlinop_warnings(self):
+        msg = self.GetHlinopWarnings()
+        if msg:
+            logger.warning("%s", msg)
 
     def SetLineInfoMode(self, mode):
         """Set handling mode for precomputed line info (0=internal, 1=use_if_valid, 2=trust)."""
@@ -556,6 +570,7 @@ class SME_DLL:
         nw, wave, sint, cint = _smelib.Transf(
             mu, wave, nwmax, accrt, accwi, keep_lineop, long_continuum
         )
+        self._log_hlinop_warnings()
 
         # Resize the arrays
         wave = wave[:nw]
@@ -586,7 +601,9 @@ class SME_DLL:
             Centeral depth (i.e. specific intensity) of each line
         """
 
-        return _smelib.CentralDepth(mu, accrt)
+        table = _smelib.CentralDepth(mu, accrt)
+        self._log_hlinop_warnings()
+        return table
 
     def ALMAXRange(self, accrt=1e-4):
         """Compute first-stage ALMAX and line ranges from SMElib preselection logic.
@@ -603,7 +620,9 @@ class SME_DLL:
         linerange : array of size (nlines, 2)
             Preselection range for each line.
         """
-        return _smelib.ALMAXRange(accrt=accrt)
+        result = _smelib.ALMAXRange(accrt=accrt)
+        self._log_hlinop_warnings()
+        return result
 
     def GetLineOpacity(self, wave):
         """
