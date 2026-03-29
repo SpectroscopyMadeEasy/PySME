@@ -145,8 +145,11 @@ master_doc = "index"
 # for a list of supported languages.
 #
 # This is also used if you do content translation via gettext catalogs.
-# Usually you set "language" from the command line for these cases.
-language = "en"
+# Keep English as the default source language and override at build time,
+# for example with ``-D language=zh_CN``.
+language = os.environ.get("PYSME_DOCS_LANGUAGE", "en")
+locale_dirs = ["locales"]
+gettext_compact = False
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.

@@ -1,0 +1,106 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2025, Jeff Valenti, Nikolai Piskunov, Mingjie Jian, Ansgar
+# Wehrhahn
+# This file is distributed under the same license as the PySME package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PySME 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-03-29 22:44+0900\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: zh_CN\n"
+"Language-Team: zh_CN <LL@li.org>\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: ../../fundamentals/abund.md:1
+msgid "Abundance"
+msgstr "丰度"
+
+#: ../../fundamentals/abund.md:3
+msgid ""
+"`sme.abund` stores elemental abundances, while `sme.monh` stores the "
+"global metallicity offset. In PySME, these two are combined at synthesis "
+"time."
+msgstr ""
+"`sme.abund` 保存元素丰度，而 `sme.monh` 保存整体金属丰度偏移量。在 PySME 中，这两者会在合成时组合使用。"
+
+#: ../../fundamentals/abund.md:6
+msgid "Core rule in PySME"
+msgstr "PySME 中的核心规则"
+
+#: ../../fundamentals/abund.md:8
+msgid "For elements heavier than He, the abundance used by SMElib is:"
+msgstr "对于比 He 更重的元素，SMElib 实际使用的丰度为："
+
+#: ../../fundamentals/abund.md:14
+msgid "Hydrogen and helium are not shifted by `monh`."
+msgstr "氢和氦不会受到 `monh` 的平移影响。"
+
+#: ../../fundamentals/abund.md:16
+msgid "What this means when you modify abundances"
+msgstr "当你修改丰度时，这意味着什么"
+
+#: ../../fundamentals/abund.md:18
+msgid ""
+"When you update one element in `sme.abund`, you are writing the "
+"**pattern** value (before the global metallicity shift).   So if you want"
+" a target final abundance `A_target` (for example in `H=12`), use:"
+msgstr ""
+"当你更新 `sme.abund` 中某个元素时，你写入的是 **pattern** 值（即整体金属丰度平移之前的值）。因此，如果你想得到目标最终丰度 "
+"`A_target`（例如采用 `H=12` 标度），应使用："
+
+#: ../../fundamentals/abund.md:26
+msgid "then assign that pattern value."
+msgstr "然后把这个 pattern 值写入即可。"
+
+#: ../../fundamentals/abund.md:29
+msgid ""
+"Note that when printing out `abund`, `monh` is applied to the abundance "
+"values."
+msgstr "注意，在打印 `abund` 时，`monh` 已经被应用到丰度值上。"
+
+#: ../../fundamentals/abund.md:32
+msgid "Practical examples"
+msgstr "实际示例"
+
+#: ../../fundamentals/abund.md:41
+msgid "1. Set a target absolute abundance (H=12)"
+msgstr "1. 设置目标绝对丰度（H=12 标度）"
+
+#: ../../fundamentals/abund.md:43
+msgid "If you want final `A(Mg) = 7.40`:"
+msgstr "如果你希望最终 `A(Mg) = 7.40`："
+
+#: ../../fundamentals/abund.md:50
+msgid ""
+"Because PySME adds `monh` later, this produces the intended final Mg "
+"abundance."
+msgstr "由于 PySME 会在后续再加上 `monh`，这样就会得到你希望的最终 Mg 丰度。"
+
+#: ../../fundamentals/abund.md:52
+msgid "2. Keep scaled-solar composition, only change metallicity"
+msgstr "2. 保持 scaled-solar 组成，只修改金属丰度"
+
+#: ../../fundamentals/abund.md:58
+msgid ""
+"This shifts all metals (Z > 2) together by `-0.50 dex`, while keeping "
+"abundance ratios fixed."
+msgstr "这会让所有金属元素（Z > 2）整体平移 `-0.50 dex`，同时保持丰度比不变。"
+
+#: ../../fundamentals/abund.md:60
+msgid "3. Set an element enhancement at fixed metallicity"
+msgstr "3. 在固定金属丰度下设置某个元素增强"
+
+#: ../../fundamentals/abund.md:62
+msgid ""
+"If you want `[Mg/Fe] = +0.30` at current `monh`, add `+0.30` to Mg in the"
+" pattern relative to your base pattern."
+msgstr ""
+"如果你希望在当前 `monh` 下满足 `[Mg/Fe] = +0.30`，就在你的基准 pattern 上，对 Mg 增加 `+0.30`。"

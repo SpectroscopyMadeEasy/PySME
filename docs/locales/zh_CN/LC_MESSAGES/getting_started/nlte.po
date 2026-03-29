@@ -1,0 +1,73 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2025, Jeff Valenti, Nikolai Piskunov, Mingjie Jian, Ansgar
+# Wehrhahn
+# This file is distributed under the same license as the PySME package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PySME 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-03-29 22:44+0900\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: zh_CN\n"
+"Language-Team: zh_CN <LL@li.org>\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: ../../getting_started/nlte.md:1
+msgid "NLTE correction"
+msgstr "NLTE 修正"
+
+#: ../../getting_started/nlte.md:3
+msgid ""
+"The non-Local Thermal Equilibrium (NLTE) correction can be applied to the"
+" spectrum by setting the `nlte` attribute of the SME structure, before "
+"`synthesize_spectrum` or `solve`:"
+msgstr ""
+"在调用 `synthesize_spectrum` 或 `solve` 之前，可以先设置 SME 结构中的 `nlte` 属性，从而对光谱应用 "
+"NLTE（non-local thermodynamic equilibrium）修正："
+
+#: ../../getting_started/nlte.md:10
+msgid "The current elements with NLTE correction includes:"
+msgstr "当前支持 NLTE 修正的元素如下："
+
+#: ../../getting_started/nlte.md:12
+msgid "![](../_static/nlte_table.png)"
+msgstr "![](../_static/nlte_table.png)"
+
+#: ../../getting_started/nlte.md:15
+msgid ""
+"Long format VALD linelist is required for NLTE calculations. If only a "
+"short format has been given, then the calculations will only be in LTE. "
+"(See [](../fundamentals/linelist.md))"
+msgstr ""
+"NLTE 计算需要使用 VALD 的 long format 谱线表。如果给的是 short format，那么程序只会按 LTE 计算。"
+"详见 [谱线表](../fundamentals/linelist.md)。"
+
+#: ../../getting_started/nlte.md:17
+msgid "The NLTE grids are only compatible with the MARCS model atmosphere."
+msgstr "NLTE 网格目前只兼容 MARCS 模型大气。"
+
+#: ../../getting_started/nlte.md:21
+msgid ""
+"Upon the first use of the NLTE correction, the NLTE grid will be "
+"downloaded from the server and this may takes a while, depending on the "
+"size of the NLTE grid."
+msgstr "第一次使用 NLTE 修正时，程序会从服务器下载对应的 NLTE 网格。具体耗时取决于网格文件大小。"
+
+#: ../../getting_started/nlte.md:24
+msgid ""
+"Similarly they can be disabled for each element using "
+"`sme.nlte.remove_nlte(el)`."
+msgstr "如果你想对某个元素关闭 NLTE，也可以使用 `sme.nlte.remove_nlte(el)`。"
+
+#: ../../getting_started/nlte.md:26
+msgid ""
+"More details on NLTE can be found in the [concept "
+"section](../concepts/nlte.md)."
+msgstr "更多细节请参考 [concept 部分中的 NLTE 说明](../concepts/nlte.md)。"

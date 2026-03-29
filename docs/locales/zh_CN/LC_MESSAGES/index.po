@@ -1,0 +1,126 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2025, Jeff Valenti, Nikolai Piskunov, Mingjie Jian, Ansgar
+# Wehrhahn
+# This file is distributed under the same license as the PySME package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PySME 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-03-29 22:44+0900\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: zh_CN\n"
+"Language-Team: zh_CN <LL@li.org>\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: ../../index.rst:2
+msgid "PySME documentation"
+msgstr "PySME 文档"
+
+#: ../../index.rst:4
+msgid "Version: |release|"
+msgstr "版本：|release|"
+
+#: ../../index.rst:6
+msgid ""
+"More than two decades ago `Valenti & Piskunov (1996) "
+"<https://ui.adsabs.harvard.edu/abs/1996A&AS..118..595V>`_ developed SME -"
+" Spectroscopy Made Easy, a high-precision stellar-spectra "
+"synthesis/analysis engine that has powered hundreds of studies. PySME is "
+"its modern Python front-end: a wrapper around the original C++/Fortran "
+"core that lets you (1) compute accurate, high-resolution synthetic "
+"spectra from a linelist + model atmosphere, (2) invert observed spectra "
+"to derive stellar parameters, and (3) explore NLTE corrections — all from"
+" an interactive notebook or scripted pipeline. The same capabilities make"
+" PySME invaluable for exoplanet work, where characterising the host star "
+"is essential for understanding its planets."
+msgstr ""
+"二十多年前，`Valenti & Piskunov (1996) "
+"<https://ui.adsabs.harvard.edu/abs/1996A&AS..118..595V>`_ 开发了 SME "
+"(Spectroscopy Made Easy)，这是一个高精度的恒星光谱合成与分析引擎，已经支撑了数百项研究。"
+"PySME 是它的现代 Python 前端：它封装了原始的 C++/Fortran 核心，使你可以通过交互式笔记本或脚本化流水线来 "
+"(1) 根据谱线表和模型大气计算高精度、高分辨率的合成光谱，(2) 对观测光谱做反演以求得恒星参数，以及 "
+"(3) 探索 NLTE 修正。正因为具备这些能力，PySME 在系外行星研究中也非常有价值，因为理解宿主星性质是理解其行星的基础。"
+
+#: ../../index.rst:9
+msgid "Key features"
+msgstr "主要特性"
+
+#: ../../index.rst:11
+msgid "Plane-parallel and spherical radiative-transfer engine"
+msgstr "支持平面平行与球对称几何的辐射转移引擎"
+
+#: ../../index.rst:12
+msgid "LTE & 1-D NLTE line formation with pre-computed grids"
+msgstr "支持 LTE 和基于预计算网格的 1-D NLTE 成线计算"
+
+#: ../../index.rst:13
+#, python-brace-format
+msgid ""
+"Automatic :math:`\\chi^2` fitting for :math:`T_\\mathrm{eff}`, "
+":math:`\\log{g}`, :math:`v_\\mathrm{mic}`, [X/Fe] …"
+msgstr ""
+"支持对 :math:`T_\\mathrm{eff}`、:math:`\\log{g}`、:math:`v_\\mathrm{mic}`、"
+"[X/Fe] 等参数进行自动 :math:`\\chi^2` 拟合"
+
+#: ../../index.rst:14
+msgid "Seamless use of ATLAS and MARCS model atmospheres and VALD line lists"
+msgstr "可无缝使用 ATLAS、MARCS 模型大气以及 VALD 谱线表"
+
+#: ../../index.rst:46
+msgid "Citation"
+msgstr "引用"
+
+#: ../../index.rst:48
+msgid "Jian et al. (2026; in prep.)"
+msgstr "Jian et al. (2026; in prep.)"
+
+#: ../../index.rst:49
+msgid ""
+"`Wehrhahn et al. (2023) "
+"<https://ui.adsabs.harvard.edu/abs/2023A&A...671A.171W>`_"
+msgstr ""
+"`Wehrhahn et al. (2023) "
+"<https://ui.adsabs.harvard.edu/abs/2023A&A...671A.171W>`_"
+
+#: ../../index.rst:52
+msgid "Indices and tables"
+msgstr "索引与表格"
+
+#: ../../index.rst:54
+msgid ":ref:`genindex`"
+msgstr ":ref:`总索引 <genindex>`"
+
+#: ../../index.rst:55
+msgid ":ref:`modindex`"
+msgstr ":ref:`模块索引 <modindex>`"
+
+#: ../../index.rst:56
+msgid ":ref:`search`"
+msgstr ":ref:`搜索 <search>`"
+
+#: ../../index.rst:58
+msgid "Quick links"
+msgstr "快速链接"
+
+#: ../../index.rst
+msgid "GitHub repository"
+msgstr "GitHub 仓库"
+
+#: ../../index.rst:59
+msgid "https://github.com/SpectroscopyMadeEasy/PySME"
+msgstr "https://github.com/SpectroscopyMadeEasy/PySME"
+
+#: ../../index.rst
+msgid "Issue tracker"
+msgstr "Issue 跟踪"
+
+#: ../../index.rst:60
+msgid "https://github.com/SpectroscopyMadeEasy/PySME/issues"
+msgstr "https://github.com/SpectroscopyMadeEasy/PySME/issues"

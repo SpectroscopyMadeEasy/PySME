@@ -1,0 +1,561 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2025, Jeff Valenti, Nikolai Piskunov, Mingjie Jian, Ansgar
+# Wehrhahn
+# This file is distributed under the same license as the PySME package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PySME 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-03-29 22:44+0900\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: zh_CN\n"
+"Language-Team: zh_CN <LL@li.org>\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: ../../concepts/nlte.md:1
+msgid "NLTE grids"
+msgstr ""
+
+#: ../../concepts/nlte.md:3
+msgid ""
+"Non Local Thermal Equilibrium (NLTE) calculations are important to "
+"accuarately fit certain lines. PySME supports them using pre-computed "
+"grids of NLTE departure coefficients, which need to be created for every "
+"element.  For common elements PySME provides grids (see below) via the "
+"LFS (see [](lfs.md)).  If any of these grids are used, please kindly take"
+" care to cite the papers describing the NLTE models and departure "
+"coefficient calculations."
+msgstr ""
+
+#: ../../concepts/nlte.md:8
+msgid ""
+"NLTE calculations need to be specified for each element they are supposed"
+" to be used for individually using `sme.nlte.set_nlte(el, grid)` (the "
+"`grid` can be omitted if there is a grid in lfs). Similarly they can be "
+"disabled for each element using `sme.nlte.remove_nlte(el)`, where sme is "
+"your SME structure. If no element is set to NLTE in the structure PySME "
+"will perform LTE calculations only."
+msgstr ""
+
+#: ../../concepts/nlte.md:13
+msgid "Fields of NLTE object"
+msgstr ""
+
+#: ../../concepts/nlte.md:15
+msgid "`elements`: The elements for which NLTE has been activated"
+msgstr ""
+
+#: ../../concepts/nlte.md:16
+msgid "`grids`: The grid file that is used for each active element"
+msgstr ""
+
+#: ../../concepts/nlte.md:17
+msgid ""
+"`subgrid_size`: A small segment of the NLTE grid will be cached in memory"
+"   to speed up calculations. This sets the size of that cache   by "
+"defining the number of points in each   axis (rabund, teff, logg, monh)."
+msgstr ""
+
+#: ../../concepts/nlte.md:21
+msgid "`flags`: After the synthesis all lines are flaged if they used NLTE"
+msgstr ""
+
+#: ../../concepts/nlte.md:23
+msgid "Grid interpolation"
+msgstr ""
+
+#: ../../concepts/nlte.md:25
+msgid "The grid has 6 dimensions."
+msgstr ""
+
+#: ../../concepts/nlte.md:27
+msgid "teff: Effective Temperature"
+msgstr ""
+
+#: ../../concepts/nlte.md:28
+msgid "logg: Surface Gravity"
+msgstr ""
+
+#: ../../concepts/nlte.md:29
+msgid "monh: Overall Metallicity"
+msgstr ""
+
+#: ../../concepts/nlte.md:30
+msgid "rabund: relative abundance of that element"
+msgstr ""
+
+#: ../../concepts/nlte.md:31
+msgid "depth: optical depth in the atmosphere"
+msgstr ""
+
+#: ../../concepts/nlte.md:32
+msgid ""
+"departure coefficients:   The NLTE departure coefficients describing how "
+"much   it varies from the LTE calculation"
+msgstr ""
+
+#: ../../concepts/nlte.md:36
+msgid ""
+"We then perform linear interpolation to the stellar parameters we want to"
+" model. And we then perform a cubic spline fit to the depth scale of the "
+"model atmosphere we specified (See [](atmosphere))."
+msgstr ""
+
+#: ../../concepts/nlte.md:40
+msgid ""
+"We then use the linelist to find only the relevant transitions in the "
+"grid, and pass the departure coefficients for each line to the C library."
+msgstr ""
+
+#: ../../concepts/nlte.md:43
+msgid "NLTE flags in line list"
+msgstr ""
+
+#: ../../concepts/nlte.md:45
+msgid ""
+"PySME provides information on whehter a line is synthesized in NLTE "
+"through the `nlte_flag` column in the line list."
+msgstr ""
+
+#: ../../concepts/nlte.md:47
+msgid "`1`: this line was synthesized with in NLTE."
+msgstr ""
+
+#: ../../concepts/nlte.md:48
+msgid "`0`: this line was synthesized in LTE."
+msgstr ""
+
+#: ../../concepts/nlte.md:49
+msgid ""
+"`-1`: this line was not included in the current synthesis pass (see "
+"[](../advance/line_filtering.md))."
+msgstr ""
+
+#: ../../concepts/nlte.md:51
+msgid "Recommended and default grids"
+msgstr ""
+
+#: ../../concepts/nlte.md
+msgid "Element"
+msgstr ""
+
+#: ../../concepts/nlte.md
+msgid "Grid name"
+msgstr ""
+
+#: ../../concepts/nlte.md
+msgid "Zenodo version"
+msgstr ""
+
+#: ../../concepts/nlte.md
+msgid "Citation"
+msgstr ""
+
+#: ../../concepts/nlte.md ../../concepts/nlte.md:89
+msgid "H"
+msgstr ""
+
+#: ../../concepts/nlte.md
+msgid "`nlte_H_pysme.grd`"
+msgstr ""
+
+#: ../../concepts/nlte.md
+msgid "6"
+msgstr ""
+
+#: ../../concepts/nlte.md
+msgid ""
+"[Zhou et al. "
+"2023](https://ui.adsabs.harvard.edu/abs/2023A%26A...677A..98Z)"
+msgstr ""
+
+#: ../../concepts/nlte.md ../../concepts/nlte.md:91
+msgid "Li"
+msgstr ""
+
+#: ../../concepts/nlte.md
+msgid "`nlte_Li_pysme.grd`"
+msgstr ""
+
+#: ../../concepts/nlte.md
+msgid "3"
+msgstr ""
+
+#: ../../concepts/nlte.md
+msgid ""
+"[Amarsi et al. "
+"2020](https://ui.adsabs.harvard.edu/abs/2020A%26A...642A..62A)"
+msgstr ""
+
+#: ../../concepts/nlte.md ../../concepts/nlte.md:95
+msgid "C"
+msgstr ""
+
+#: ../../concepts/nlte.md
+msgid "`nlte_C_pysme.grd`"
+msgstr ""
+
+#: ../../concepts/nlte.md
+msgid "2"
+msgstr ""
+
+#: ../../concepts/nlte.md ../../concepts/nlte.md:97
+msgid "N"
+msgstr ""
+
+#: ../../concepts/nlte.md
+msgid "`nlte_N_pysme.grd`"
+msgstr ""
+
+#: ../../concepts/nlte.md ../../concepts/nlte.md:99
+msgid "O"
+msgstr ""
+
+#: ../../concepts/nlte.md
+msgid "`nlte_O_pysme.grd`"
+msgstr ""
+
+#: ../../concepts/nlte.md ../../concepts/nlte.md:103
+msgid "Na"
+msgstr ""
+
+#: ../../concepts/nlte.md
+msgid "`nlte_Na_pysme.grd`"
+msgstr ""
+
+#: ../../concepts/nlte.md ../../concepts/nlte.md:112
+msgid "Mg"
+msgstr ""
+
+#: ../../concepts/nlte.md
+msgid "`nlte_Mg_pysme.grd`"
+msgstr ""
+
+#: ../../concepts/nlte.md ../../concepts/nlte.md:109
+msgid "Al"
+msgstr ""
+
+#: ../../concepts/nlte.md
+msgid "`nlte_Al_pysme.grd`"
+msgstr ""
+
+#: ../../concepts/nlte.md ../../concepts/nlte.md:115
+msgid "Si"
+msgstr ""
+
+#: ../../concepts/nlte.md
+msgid "`nlte_Si_pysme.grd`"
+msgstr ""
+
+#: ../../concepts/nlte.md
+msgid "S"
+msgstr ""
+
+#: ../../concepts/nlte.md
+msgid "`nlte_S_pysme.grd`"
+msgstr ""
+
+#: ../../concepts/nlte.md
+msgid "7"
+msgstr ""
+
+#: ../../concepts/nlte.md
+msgid ""
+"[Amarsi et al. "
+"2025](https://ui.adsabs.harvard.edu/abs/2025A%26A...703A..35A/abstract)"
+msgstr ""
+
+#: ../../concepts/nlte.md ../../concepts/nlte.md:118
+msgid "K"
+msgstr ""
+
+#: ../../concepts/nlte.md
+msgid "`nlte_K_pysme.grd`"
+msgstr ""
+
+#: ../../concepts/nlte.md ../../concepts/nlte.md:120
+msgid "Ca"
+msgstr ""
+
+#: ../../concepts/nlte.md
+msgid "`nlte_Ca_pysme.grd`"
+msgstr ""
+
+#: ../../concepts/nlte.md ../../concepts/nlte.md:124
+msgid "Ti"
+msgstr ""
+
+#: ../../concepts/nlte.md
+msgid "`nlte_Ti_pysme.grd`"
+msgstr ""
+
+#: ../../concepts/nlte.md
+msgid ""
+"[Mallinson et al. "
+"2024](https://ui.adsabs.harvard.edu/abs/2024A%26A...687A...5M)"
+msgstr ""
+
+#: ../../concepts/nlte.md ../../concepts/nlte.md:126
+msgid "Mn"
+msgstr ""
+
+#: ../../concepts/nlte.md
+msgid "`nlte_Mn_pysme.grd`"
+msgstr ""
+
+#: ../../concepts/nlte.md ../../concepts/nlte.md:128
+msgid "Fe"
+msgstr ""
+
+#: ../../concepts/nlte.md
+msgid "`nlte_Fe_pysme.grd`"
+msgstr ""
+
+#: ../../concepts/nlte.md
+msgid "4"
+msgstr ""
+
+#: ../../concepts/nlte.md
+msgid "Cu"
+msgstr ""
+
+#: ../../concepts/nlte.md
+msgid "`nlte_Cu_pysme.grd`"
+msgstr ""
+
+#: ../../concepts/nlte.md
+msgid ""
+"[Caliskan et al. "
+"2025](https://ui.adsabs.harvard.edu/abs/2025A%26A...696A.210C/abstract)"
+msgstr ""
+
+#: ../../concepts/nlte.md ../../concepts/nlte.md:133
+msgid "Ba"
+msgstr ""
+
+#: ../../concepts/nlte.md
+msgid "`nlte_Ba_pysme.grd`"
+msgstr ""
+
+#: ../../concepts/nlte.md:73
+msgid ""
+"All recommended/default grids are available in the [Zenodo Grid/NLTE "
+"record family](https://zenodo.org/records/3888393). Older Zenodo versions"
+" often distribute PySME grids as `.tar.gz`, while newer versions may "
+"provide direct `.grd` files."
+msgstr ""
+
+#: ../../concepts/nlte.md:75
+msgid ""
+"PySME also maintains an NADC mirror page for packaged atmosphere and NLTE"
+" data files at <https://nadc.china-vo.org/res/r101793/>."
+msgstr ""
+
+#: ../../concepts/nlte.md:77
+msgid ""
+"For the default `nlte_*_pysme.grd` pointers shipped with PySME, the "
+"preferred source order is:"
+msgstr ""
+
+#: ../../concepts/nlte.md:79
+msgid "most legacy default grids: `NADC -> Uppsala -> Zenodo`"
+msgstr ""
+
+#: ../../concepts/nlte.md:80
+msgid "`H`: `NADC -> Zenodo`"
+msgstr ""
+
+#: ../../concepts/nlte.md:81
+msgid "`Ti`: `NADC -> Uppsala -> Zenodo`"
+msgstr ""
+
+#: ../../concepts/nlte.md:82
+msgid "`S`: `NADC -> Zenodo`"
+msgstr ""
+
+#: ../../concepts/nlte.md:83
+msgid "`Cu`: `NADC -> Zenodo`"
+msgstr ""
+
+#: ../../concepts/nlte.md:85
+msgid ""
+"The order above is implemented in `datafiles_nlte.json` using ordered "
+"pointer lists. Relative paths are expanded against path-compatible "
+"mirrors such as Uppsala, while NADC and Zenodo entries are usually "
+"provided as explicit download URLs."
+msgstr ""
+
+#: ../../concepts/nlte.md:87
+msgid "Deprecated grids"
+msgstr ""
+
+#: ../../concepts/nlte.md:90
+msgid "marcs2012_H2018.grd"
+msgstr ""
+
+#: ../../concepts/nlte.md:92
+msgid ""
+"marcs2012_Li.grd [(Lind et al. "
+"2009)](https://ui.adsabs.harvard.edu/abs/2009A%26A...503..541L)"
+msgstr ""
+
+#: ../../concepts/nlte.md:93
+msgid ""
+"marcs2012_Li2009.grd [(Lind et al. "
+"2009)](https://ui.adsabs.harvard.edu/abs/2009A%26A...503..541L)"
+msgstr ""
+
+#: ../../concepts/nlte.md:94
+msgid "nlte_Li_multi.grd"
+msgstr ""
+
+#: ../../concepts/nlte.md:96
+msgid "marcs2012_C.grd"
+msgstr ""
+
+#: ../../concepts/nlte.md:98
+msgid "marcs2012_N.grd"
+msgstr ""
+
+#: ../../concepts/nlte.md:100
+msgid ""
+"marcs2012p_t1.0_O.grd [(Sitnova et al. "
+"2013)](https://ui.adsabs.harvard.edu/abs/2013AstL...39..126S)"
+msgstr ""
+
+#: ../../concepts/nlte.md:101
+msgid ""
+"marcs2012_O2015.grd [(Amarsi et al. "
+"2016b)](https://ui.adsabs.harvard.edu/abs/2016MNRAS.455.3735A)"
+msgstr ""
+
+#: ../../concepts/nlte.md:102
+msgid "marcs2012_O.grd"
+msgstr ""
+
+#: ../../concepts/nlte.md:104
+msgid ""
+"marcs2012p_t1.0_Na.grd [(Mashonkina et al. "
+"2001)](https://ui.adsabs.harvard.edu/abs/2000ARep...44..790M)"
+msgstr ""
+
+#: ../../concepts/nlte.md:105
+msgid ""
+"marcs2012_Na.grd [(Lind et al. "
+"2011)](https://ui.adsabs.harvard.edu/abs/2011A%26A...528A.103L)"
+msgstr ""
+
+#: ../../concepts/nlte.md:106
+msgid ""
+"marcs2012_Na2011.grd [(Lind et al. "
+"2011)](https://ui.adsabs.harvard.edu/abs/2011A%26A...528A.103L)"
+msgstr ""
+
+#: ../../concepts/nlte.md:107
+msgid "nlte_Na_multi_full.grd"
+msgstr ""
+
+#: ../../concepts/nlte.md:108
+msgid "nlte_Na_multi_sun.grd"
+msgstr ""
+
+#: ../../concepts/nlte.md:110
+msgid "marcs2012_Al.grd"
+msgstr ""
+
+#: ../../concepts/nlte.md:111
+msgid "marcs2012_Al2017.grd"
+msgstr ""
+
+#: ../../concepts/nlte.md:113
+msgid ""
+"marcs2012_Mg2016.grd [(Osorio et al. "
+"2016)](https://ui.adsabs.harvard.edu/abs/2016A%26A...586A.120O)"
+msgstr ""
+
+#: ../../concepts/nlte.md:114
+msgid "marcs2012_Mg.grd"
+msgstr ""
+
+#: ../../concepts/nlte.md:116
+msgid ""
+"marcs2012_Si2016.grd [(Amarsi & Asplund "
+"2017)](https://ui.adsabs.harvard.edu/abs/2017MNRAS.464..264A)"
+msgstr ""
+
+#: ../../concepts/nlte.md:117
+msgid "marcs2012_Si.grd"
+msgstr ""
+
+#: ../../concepts/nlte.md:119
+msgid "marcs2012_K.grd"
+msgstr ""
+
+#: ../../concepts/nlte.md:121
+msgid ""
+"marcs2012s_t2.0_Ca.grd [(Mashonkina et al. "
+"2007)](https://ui.adsabs.harvard.edu/abs/2007A%26A...461..261M)"
+msgstr ""
+
+#: ../../concepts/nlte.md:122
+msgid ""
+"marcs2012p_t1.0_Ca.grd [(Mashonkina et al. "
+"2017)](https://ui.adsabs.harvard.edu/abs/2007A%26A...461..261M)"
+msgstr ""
+
+#: ../../concepts/nlte.md:123
+msgid "marcs2012_Ca.grd"
+msgstr ""
+
+#: ../../concepts/nlte.md:125
+msgid ""
+"marcs2012s_t2.0_Ti.grd [(Sitnova et al. "
+"2016)](https://ui.adsabs.harvard.edu/abs/2016MNRAS.461.1000S)"
+msgstr ""
+
+#: ../../concepts/nlte.md:127
+msgid "marcs2012_Mn.grd"
+msgstr ""
+
+#: ../../concepts/nlte.md:129
+msgid ""
+"marcs2012_Fe2016.grd [(Amarsi et al. "
+"2016a)](https://ui.adsabs.harvard.edu/abs/2016MNRAS.463.1518A)"
+msgstr ""
+
+#: ../../concepts/nlte.md:130
+msgid ""
+"marcs2012s_t2.0_Fe.grd [(Mashonkina et al. "
+"2011)](https://ui.adsabs.harvard.edu/abs/2011A%26A...528A..87M)"
+msgstr ""
+
+#: ../../concepts/nlte.md:131
+msgid "nlte_Fe_multi_full.grd"
+msgstr ""
+
+#: ../../concepts/nlte.md:132
+msgid "marcs2012_Fe.grd"
+msgstr ""
+
+#: ../../concepts/nlte.md:134
+msgid ""
+"marcs2012p_t1.0_Ba.grd [(Mashonkina et al. "
+"1999)](https://ui.adsabs.harvard.edu/abs/1999A%26A...343..519M)"
+msgstr ""
+
+#: ../../concepts/nlte.md:135
+msgid "Eu"
+msgstr ""
+
+#: ../../concepts/nlte.md:136
+msgid "nlte_Eu.grd"
+msgstr ""
+

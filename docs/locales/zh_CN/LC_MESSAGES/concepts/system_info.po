@@ -1,0 +1,100 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2025, Jeff Valenti, Nikolai Piskunov, Mingjie Jian, Ansgar
+# Wehrhahn
+# This file is distributed under the same license as the PySME package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PySME 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-03-29 22:44+0900\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: zh_CN\n"
+"Language-Team: zh_CN <LL@li.org>\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: ../../concepts/system_info.md:1
+msgid "System Info"
+msgstr ""
+
+#: ../../concepts/system_info.md:4
+msgid ""
+"The system info object is mostly for debugging, so you probably don't "
+"need to worry about it."
+msgstr ""
+
+#: ../../concepts/system_info.md:7
+msgid "Still here are the fields:"
+msgstr ""
+
+#: ../../concepts/system_info.md:9
+msgid "arch"
+msgstr ""
+
+#: ../../concepts/system_info.md:9
+msgid "System architecture"
+msgstr ""
+
+#: ../../concepts/system_info.md:10
+msgid "os"
+msgstr ""
+
+#: ../../concepts/system_info.md:10
+msgid "Operating system"
+msgstr ""
+
+#: ../../concepts/system_info.md:11
+msgid "os_family"
+msgstr ""
+
+#: ../../concepts/system_info.md:11
+msgid "OS family (e.g. Windows, Unix)"
+msgstr ""
+
+#: ../../concepts/system_info.md:12
+msgid "os_name"
+msgstr ""
+
+#: ../../concepts/system_info.md:12
+msgid "Name of the OS"
+msgstr ""
+
+#: ../../concepts/system_info.md:13
+msgid "release"
+msgstr ""
+
+#: ../../concepts/system_info.md:13
+msgid "Python version"
+msgstr ""
+
+#: ../../concepts/system_info.md:14
+msgid "build_date"
+msgstr ""
+
+#: ../../concepts/system_info.md:14
+msgid "build date of the python version"
+msgstr ""
+
+#: ../../concepts/system_info.md:15
+msgid "memory_bits"
+msgstr ""
+
+#: ../../concepts/system_info.md:15
+msgid "Platform architecture bit size (32bit or 64bit)"
+msgstr ""
+
+#: ../../concepts/system_info.md:16
+msgid "host"
+msgstr ""
+
+#: ../../concepts/system_info.md:16
+msgid "Name of the machine"
+msgstr ""
+

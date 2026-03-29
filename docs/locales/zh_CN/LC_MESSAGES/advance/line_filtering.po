@@ -1,0 +1,251 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2025, Jeff Valenti, Nikolai Piskunov, Mingjie Jian, Ansgar
+# Wehrhahn
+# This file is distributed under the same license as the PySME package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PySME 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-03-29 22:44+0900\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: zh_CN\n"
+"Language-Team: zh_CN <LL@li.org>\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: ../../advance/line_filtering.md:1
+msgid "Line Filtering"
+msgstr ""
+
+#: ../../advance/line_filtering.md:3
+msgid ""
+"For wide wavelength coverage (or many segments), using the full line list"
+" in every segment is expensive. PySME provides dynamic line filtering to "
+"keep only relevant lines per segment (see Jian et al. in prep)."
+msgstr ""
+
+#: ../../advance/line_filtering.md:7
+msgid "Core Options"
+msgstr ""
+
+#: ../../advance/line_filtering.md:9
+msgid ""
+"Use `linelist_mode` and `line_select_method` together in synthesis or "
+"solve:"
+msgstr ""
+
+#: ../../advance/line_filtering.md:11
+msgid "`\"all\"`: use all lines (default)."
+msgstr ""
+
+#: ../../advance/line_filtering.md:12
+msgid ""
+"`\"dynamic\"`: filter lines by precomputed line properties (recommended "
+"for long spectra)."
+msgstr ""
+
+#: ../../advance/line_filtering.md:13
+msgid "`\"auto\"`: legacy alias of `\"dynamic\"` (deprecated)."
+msgstr ""
+
+#: ../../advance/line_filtering.md:14
+msgid "`line_select_method=\"internal\"`: no external preselection metadata."
+msgstr ""
+
+#: ../../advance/line_filtering.md:15
+msgid "`line_select_method=\"cdr\"`: use `central_depth` + `line_range_*`."
+msgstr ""
+
+#: ../../advance/line_filtering.md:16
+msgid "`line_select_method=\"almax\"`: use `almax_ratio` + `line_range_*`."
+msgstr ""
+
+#: ../../advance/line_filtering.md:18
+msgid "How Dynamic Filtering Works"
+msgstr ""
+
+#: ../../advance/line_filtering.md:20
+msgid "When `linelist_mode=\"dynamic\"`:"
+msgstr ""
+
+#: ../../advance/line_filtering.md:22
+msgid "PySME ensures line metadata exists for the selected method."
+msgstr ""
+
+#: ../../advance/line_filtering.md:23
+msgid "`cdr`: `central_depth`, `line_range_s`, `line_range_e`"
+msgstr ""
+
+#: ../../advance/line_filtering.md:24
+msgid "`almax`: `almax_ratio`, `line_range_s`, `line_range_e`"
+msgstr ""
+
+#: ../../advance/line_filtering.md:25
+msgid "If metadata is missing or stale, PySME updates it automatically."
+msgstr ""
+
+#: ../../advance/line_filtering.md:26
+msgid ""
+"For each segment, PySME keeps lines that overlap the segment range (with "
+"broadening margin) and pass a strength threshold."
+msgstr ""
+
+#: ../../advance/line_filtering.md:28
+msgid "Only this reduced line subset is sent to SMElib for that segment."
+msgstr ""
+
+#: ../../advance/line_filtering.md:30
+msgid "This can significantly reduce runtime for long or segmented spectra."
+msgstr ""
+
+#: ../../advance/line_filtering.md:32
+msgid "Main Controls"
+msgstr ""
+
+#: ../../advance/line_filtering.md:34
+msgid "Shared controls:"
+msgstr ""
+
+#: ../../advance/line_filtering.md:35
+msgid "`sme.line_select_method`: `internal | cdr | almax`"
+msgstr ""
+
+#: ../../advance/line_filtering.md:36
+msgid "`sme.line_select_parallel`: enable/disable parallel metadata update"
+msgstr ""
+
+#: ../../advance/line_filtering.md:37
+msgid "`sme.line_select_n_jobs`: number of worker processes"
+msgstr ""
+
+#: ../../advance/line_filtering.md:38
+msgid "`sme.line_select_chunk_size`: chunk size for metadata update"
+msgstr ""
+
+#: ../../advance/line_filtering.md:39
+msgid "`sme.line_select_recompute`: `if_stale | always | never`"
+msgstr ""
+
+#: ../../advance/line_filtering.md:40
+msgid "`sme.line_select_stale_thres`: stale thresholds for model changes"
+msgstr ""
+
+#: ../../advance/line_filtering.md:41
+msgid "CDR method controls:"
+msgstr ""
+
+#: ../../advance/line_filtering.md:42
+msgid "`sme.line_select_cdr_strength_thres`"
+msgstr ""
+
+#: ../../advance/line_filtering.md:43
+msgid "`sme.line_select_cdr_bin_width`"
+msgstr ""
+
+#: ../../advance/line_filtering.md:44
+msgid "`line_precompute_database` / `cdr_create` (function args)"
+msgstr ""
+
+#: ../../advance/line_filtering.md:45
+msgid "ALMAX method controls:"
+msgstr ""
+
+#: ../../advance/line_filtering.md:46
+msgid "`sme.line_select_almax_threshold`"
+msgstr ""
+
+#: ../../advance/line_filtering.md:47
+msgid "`sme.line_select_almax_use_bins`"
+msgstr ""
+
+#: ../../advance/line_filtering.md:48
+msgid "`sme.line_select_almax_bin_width`"
+msgstr ""
+
+#: ../../advance/line_filtering.md:50
+msgid ""
+"`line_precompute_database` is a shared on-disk cache for both `cdr` and "
+"`almax`. Cache entries are isolated by `(method, linelist_hash, stellar "
+"params)`, so one folder can safely store multiple linelists and both "
+"methods together. Legacy `cdr_database` is still accepted as an alias."
+msgstr ""
+
+#: ../../advance/line_filtering.md:55
+msgid "ALMAX strong-line rule"
+msgstr ""
+
+#: ../../advance/line_filtering.md:57
+msgid "`line_select_almax_use_bins=False`:"
+msgstr ""
+
+#: ../../advance/line_filtering.md:58
+msgid "`strong = (almax_ratio >= line_select_almax_threshold)`"
+msgstr ""
+
+#: ../../advance/line_filtering.md:59
+msgid "`line_select_almax_use_bins=True`:"
+msgstr ""
+
+#: ../../advance/line_filtering.md:60
+msgid ""
+"`strong = flag_strong_lines_by_bins(wl, almax_ratio, "
+"threshold=line_select_almax_threshold, "
+"bin_width=line_select_almax_bin_width)`"
+msgstr ""
+
+#: ../../advance/line_filtering.md:62
+msgid ""
+"`line_select_almax_threshold` is the single ALMAX threshold parameter for"
+" both rules. If it is `None`, it falls back to `sme.accrt` (legacy-"
+"compatible behavior)."
+msgstr ""
+
+#: ../../advance/line_filtering.md:66
+msgid "Example 1: Dynamic Filtering in Synthesis (CDR)"
+msgstr ""
+
+#: ../../advance/line_filtering.md:79
+msgid "Example 2: Dynamic Filtering in Synthesis (ALMAX)"
+msgstr ""
+
+#: ../../advance/line_filtering.md:92
+msgid "Example 3: Dynamic Filtering in Solve"
+msgstr ""
+
+#: ../../advance/line_filtering.md:110
+msgid "Practical Guidance"
+msgstr ""
+
+#: ../../advance/line_filtering.md:112
+msgid ""
+"Start with `line_select_method=\"cdr\"` for continuity with existing CDR "
+"workflows."
+msgstr ""
+
+#: ../../advance/line_filtering.md:113
+msgid "For ALMAX, start with `line_select_almax_threshold = sme.accrt`."
+msgstr ""
+
+#: ../../advance/line_filtering.md:114
+msgid ""
+"Enable `line_select_almax_use_bins=True` when you want bin-wise "
+"cumulative pruning."
+msgstr ""
+
+#: ../../advance/line_filtering.md:115
+msgid ""
+"Use `\"all\"` for short, narrow windows where filtering overhead may not "
+"help."
+msgstr ""
+
+#: ../../advance/line_filtering.md:116
+msgid "Use `\"dynamic\"` for wide ranges or many segments."
+msgstr ""
+

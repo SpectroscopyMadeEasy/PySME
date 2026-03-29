@@ -1,0 +1,86 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2025, Jeff Valenti, Nikolai Piskunov, Mingjie Jian, Ansgar
+# Wehrhahn
+# This file is distributed under the same license as the PySME package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PySME 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-03-29 22:44+0900\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: zh_CN\n"
+"Language-Team: zh_CN <LL@li.org>\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: ../../dev/changelog.md:1
+msgid "Changelog"
+msgstr ""
+
+#: ../../dev/changelog.md:3
+msgid "This page keeps only high-level release and migration notes."
+msgstr ""
+
+#: ../../dev/changelog.md:5
+msgid "Detailed per-release changes are maintained on GitHub Releases:"
+msgstr ""
+
+#: ../../dev/changelog.md:7
+msgid "https://github.com/SpectroscopyMadeEasy/PySME/releases"
+msgstr ""
+
+#: ../../dev/changelog.md:8
+msgid "https://github.com/SpectroscopyMadeEasy/PySME/tags"
+msgstr ""
+
+#: ../../dev/changelog.md:10
+msgid "Changelog policy"
+msgstr ""
+
+#: ../../dev/changelog.md:12
+msgid ""
+"Use GitHub Releases as the source of truth for detailed change history "
+"(v0.7.x and newer)."
+msgstr ""
+
+#: ../../dev/changelog.md:13
+msgid "Use the Git tags list for older historical versions."
+msgstr ""
+
+#: ../../dev/changelog.md:14
+msgid "Keep this page concise, focused on major milestones and migration notes."
+msgstr ""
+
+#: ../../dev/changelog.md:16
+msgid "Unreleased"
+msgstr ""
+
+#: ../../dev/changelog.md:18
+msgid "Preparing for the first stable 1.x milestone (`v1.0.0`)."
+msgstr ""
+
+#: ../../dev/changelog.md:19
+msgid ""
+"Release and documentation workflows were standardized for long-term "
+"maintenance."
+msgstr ""
+
+#: ../../dev/changelog.md:20
+msgid "No intentional scientific-model behavior break from the latest 0.7.x line."
+msgstr ""
+
+#: ../../dev/changelog.md:22
+msgid "Legacy 0.x notes"
+msgstr ""
+
+#: ../../dev/changelog.md:24
+msgid "Historical details for older 0.x releases are available in the tag list."
+msgstr ""
+

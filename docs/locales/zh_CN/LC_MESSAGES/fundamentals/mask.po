@@ -1,0 +1,111 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2025, Jeff Valenti, Nikolai Piskunov, Mingjie Jian, Ansgar
+# Wehrhahn
+# This file is distributed under the same license as the PySME package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PySME 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-03-29 22:44+0900\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: zh_CN\n"
+"Language-Team: zh_CN <LL@li.org>\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: ../../fundamentals/mask.md:1
+msgid "Mask"
+msgstr "掩膜"
+
+#: ../../fundamentals/mask.md:3
+msgid ""
+"Masking the observed spectrum is supported in `solve`.  The code will "
+"then allocate the corresponding pixel to different mask, and perform "
+"different manupulation to them."
+msgstr ""
+"`solve` 支持对观测光谱应用掩膜。程序会将对应的像素分配到不同的掩膜类别，并对它们执行不同的处理。"
+
+#: ../../fundamentals/mask.md:6
+msgid ""
+"The mask, `sme.mask` is an array with `dtype=int` with the same length "
+"with `sme.wave`. The types of mask are:"
+msgstr ""
+"掩膜 `sme.mask` 是一个 `dtype=int` 的数组，其长度与 `sme.wave` 相同。掩膜类型如下："
+
+#: ../../fundamentals/mask.md
+msgid "mask value"
+msgstr "掩膜值"
+
+#: ../../fundamentals/mask.md
+msgid "mask name"
+msgstr "掩膜名称"
+
+#: ../../fundamentals/mask.md
+msgid "Description"
+msgstr "说明"
+
+#: ../../fundamentals/mask.md
+msgid "0"
+msgstr "0"
+
+#: ../../fundamentals/mask.md
+msgid "bad pixel"
+msgstr "坏像素"
+
+#: ../../fundamentals/mask.md
+msgid "Pixels excluded"
+msgstr "被排除的像素"
+
+#: ../../fundamentals/mask.md
+msgid "1"
+msgstr "1"
+
+#: ../../fundamentals/mask.md
+msgid "line pixel"
+msgstr "谱线像素"
+
+#: ../../fundamentals/mask.md
+msgid "Pixels included in the parameter fitting"
+msgstr "参与参数拟合的像素"
+
+#: ../../fundamentals/mask.md
+msgid "2"
+msgstr "2"
+
+#: ../../fundamentals/mask.md
+msgid "continuum pixel"
+msgstr "连续谱像素"
+
+#: ../../fundamentals/mask.md
+msgid "Pixels included in continuum fitting"
+msgstr "参与连续谱拟合的像素"
+
+#: ../../fundamentals/mask.md
+msgid "4"
+msgstr "4"
+
+#: ../../fundamentals/mask.md
+msgid "vrad pixel"
+msgstr "vrad 像素"
+
+#: ../../fundamentals/mask.md
+msgid "Pixels included in radial velocity fitting"
+msgstr "参与径向速度拟合的像素"
+
+#: ../../fundamentals/mask.md:16
+msgid ""
+"The masks are additive, i.e., you can set mask value to 5 for line and "
+"vrad pixel. Only the good pixels will be included in the fit, but the "
+"synthetic spectrum will still be calculated."
+msgstr ""
+"这些掩膜值是可叠加的。例如，你可以把某个像素的掩膜值设为 5，表示它同时是谱线像素和 vrad 像素。只有有效像素会参与拟合，但合成光谱仍会照常计算。"
+
+#: ../../fundamentals/mask.md:18
+msgid "In default, mask is all 1."
+msgstr "默认情况下，掩膜全为 1。"

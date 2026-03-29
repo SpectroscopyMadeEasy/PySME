@@ -1,0 +1,273 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2025, Jeff Valenti, Nikolai Piskunov, Mingjie Jian, Ansgar
+# Wehrhahn
+# This file is distributed under the same license as the PySME package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PySME 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-03-29 22:44+0900\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: zh_CN\n"
+"Language-Team: zh_CN <LL@li.org>\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: ../../advance/how-to.md:1
+msgid "PySME how to"
+msgstr ""
+
+#: ../../advance/how-to.md:3
+msgid "This page describes some new (and in testing) function of PySME."
+msgstr ""
+
+#: ../../advance/how-to.md:5
+msgid "How to get the atmosphere grid"
+msgstr ""
+
+#: ../../advance/how-to.md:23
+msgid "The atmosphere grid is stored in `atmo`:"
+msgstr ""
+
+#: ../../advance/how-to.md:74
+msgid "How to update central depth and line range"
+msgstr ""
+
+#: ../../advance/how-to.md:76
+msgid ""
+"Two new parameters for each line, central depth and line range, are added"
+" to PySME since 0.4.189."
+msgstr ""
+
+#: ../../advance/how-to.md:78
+msgid ""
+"Central depth is the line depth **before** any kind of boradening. It "
+"should **not** be used as an indicator of how deep a line is in the final"
+" synthetic spectra, since actual line depth also depands on the broadning"
+" mechanisms. However, it can be used for screnning out the weak lines in "
+"the line list, thus acclerating the synthesis speed."
+msgstr ""
+
+#: ../../advance/how-to.md:82
+msgid ""
+"Line range indicates the wavelength range where a line has contribution, "
+"and it can be used to select the revelant lines for the synthetic "
+"wavelength, also for acclerating the synthesis speed."
+msgstr ""
+
+#: ../../advance/how-to.md:84
+msgid "These parameters can be calculated as follow:"
+msgstr ""
+
+#: ../../advance/how-to.md:95
+msgid "After we read in the line list, it looks like:"
+msgstr ""
+
+#: ../../advance/how-to.md:166
+msgid ""
+"Now we calculate the central depth and line range, in Teff, logg and monh"
+" of 5000, 4.0, 0:"
+msgstr ""
+
+#: ../../advance/how-to.md:177
+msgid "Then `sme.linelist` becomes:"
+msgstr ""
+
+#: ../../advance/how-to.md:235
+msgid ""
+"The last three columns are the central depth, start and end wavelength of"
+" line range. The function calculated these parameters for each line in a "
+"batch of 2000 lines (`sme.cdr_N_line_chunk`), in parallel "
+"(`sme.cdr_parallel`) of 10 (`sme.cdr_n_jobs`) jobs.  These vairalbes can "
+"be modified to change the behaviour of the function."
+msgstr ""
+
+#: ../../advance/how-to.md:239
+msgid ""
+"The variable `sme.linelist.cdr_paras` will also be updated to an array of"
+" [Teff, logg, monh, vmic] used for running `update_cdr`."
+msgstr ""
+
+#: ../../advance/how-to.md:241
+msgid "How to synthesize a long spectra"
+msgstr ""
+
+#: ../../advance/how-to.md:243
+msgid ""
+"The synthesis of long spectra, i.e., a spectra covering a wide wavelength"
+" range (>100AA) or a spectra divided into many chunks but still cover a "
+"wide wavelength range, would be a bit tricky."
+msgstr ""
+
+#: ../../advance/how-to.md:245
+msgid ""
+"The deafult synthesis mode of PySME takes all the lines in the `linelist`"
+" into account to synthesize the spectra, thus the synthesis takes a long "
+"time. To make it even worse, the synthesis is repeated for each segment, "
+"thus if we have 10 segment covering from 3000-9000AA, all the lines "
+"(including those in ~9000AA) will be used for the first segment "
+"(3000-3600AA), and the total time cost is 10 times longer than just using"
+" one segment to cover the whole range."
+msgstr ""
+
+#: ../../advance/how-to.md:248
+msgid ""
+"This situation can be improved by using the central depth and line range "
+"parameters to select the relevant lines for each segment, by simply "
+"adding `linelist_mode='dynamic'` in `synthesize_spectrum`:"
+msgstr ""
+
+#: ../../advance/how-to.md:262
+msgid ""
+"`linelist_mode='auto'` is still accepted as a deprecated compatibility "
+"alias and maps to `linelist_mode='dynamic'`."
+msgstr ""
+
+#: ../../advance/how-to.md:265
+msgid ""
+"The detailed explanaiton of what `linelist_mode='dynamic'` triggers is as"
+" follow:"
+msgstr ""
+
+#: ../../advance/how-to.md:267
+msgid ""
+"If the `sme.linelist.cdr_paras` is None (means `update_cdr` hasn't run "
+"for it), or either the Teff, logg, monh and vmic (optional) in "
+"`sme.linelist.cdr_paras` differ from the input parameters by 250K, 0.5, "
+"0.5 or 1 (you can change these parameter in "
+"`sme.linelist.cdr_paras_thres` as a dictionary), then run `update_cdr` "
+"under current input stellar parameters."
+msgstr ""
+
+#: ../../advance/how-to.md:268
+msgid "Find the beginning and ending wavelength of each segment, wbeg and wend."
+msgstr ""
+
+#: ../../advance/how-to.md:269
+msgid "For each segment, only input the lines with:"
+msgstr ""
+
+#: ../../advance/how-to.md:270
+msgid "`central_depth` > sme.cdr_depth_thres (default 0), and"
+msgstr ""
+
+#: ../../advance/how-to.md:271
+msgid "`line_range_s` <= wend + del_wav + line_margin, and"
+msgstr ""
+
+#: ../../advance/how-to.md:272
+msgid "`line_range_e` >= wbeg - del_wav - line_margin"
+msgstr ""
+
+#: ../../advance/how-to.md:273
+msgid "Finish the synthesis."
+msgstr ""
+
+#: ../../advance/how-to.md:275
+msgid ""
+"Here del_wav is defined as sqrt(sme.vmic^2 + sme.vmac^2 + "
+"sme.vsini^2)/c*lambda + lambda/sme.ipres, and line_margin is set to 2AA "
+"(just for adding some margin). NLTE calculation is also availalbe in this"
+" mode, by setting `sme.nlte.set_nlte`."
+msgstr ""
+
+#: ../../advance/how-to.md:278
+msgid ""
+"Note that the input line list will not change - only the lines being "
+"input to each segment synthesis will differ."
+msgstr ""
+
+#: ../../advance/how-to.md:280
+msgid ""
+"Removing the `linelist_mode` variable or changing it to `all` falls back "
+"to the default way to perform synthesis, described in the beginning of "
+"this section."
+msgstr ""
+
+#: ../../advance/how-to.md:282
+msgid "Unified line-selection controls (CDR and ALMAX)"
+msgstr ""
+
+#: ../../advance/how-to.md:284
+msgid "Current PySME exposes a unified interface for external line selection:"
+msgstr ""
+
+#: ../../advance/how-to.md:286
+msgid "`sme.line_select_method`: `internal | cdr | almax`"
+msgstr ""
+
+#: ../../advance/how-to.md:287
+msgid "`sme.line_select_parallel`: enable/disable parallel metadata update"
+msgstr ""
+
+#: ../../advance/how-to.md:288
+msgid "`sme.line_select_n_jobs`: worker count for parallel updates"
+msgstr ""
+
+#: ../../advance/how-to.md:289
+msgid "`sme.line_select_chunk_size`: chunk size for metadata updates"
+msgstr ""
+
+#: ../../advance/how-to.md:290
+msgid "`sme.line_select_recompute`: `if_stale | always | never`"
+msgstr ""
+
+#: ../../advance/how-to.md:292
+msgid "ALMAX mode supports two strong-line rules:"
+msgstr ""
+
+#: ../../advance/how-to.md:294
+msgid "`sme.line_select_almax_use_bins = False`:"
+msgstr ""
+
+#: ../../advance/how-to.md:295
+msgid "simple cut with `almax_ratio >= sme.line_select_almax_threshold`"
+msgstr ""
+
+#: ../../advance/how-to.md:296
+msgid "`sme.line_select_almax_use_bins = True`:"
+msgstr ""
+
+#: ../../advance/how-to.md:297
+msgid "bin-wise cumulative cut with `flag_strong_lines_by_bins(...)`"
+msgstr ""
+
+#: ../../advance/how-to.md:299
+msgid "Both ALMAX rules use the same threshold parameter:"
+msgstr ""
+
+#: ../../advance/how-to.md:301
+msgid "`sme.line_select_almax_threshold`"
+msgstr ""
+
+#: ../../advance/how-to.md:303
+msgid ""
+"If `sme.line_select_almax_threshold` is `None`, it falls back to "
+"`sme.accrt` to preserve legacy behavior."
+msgstr ""
+
+#: ../../advance/how-to.md:306
+msgid "Example:"
+msgstr ""
+
+#: ../../advance/how-to.md:317
+msgid "How to fit parameter for a long spectra"
+msgstr ""
+
+#: ../../advance/how-to.md:319
+msgid ""
+"The vairalbe for such process is as same as the one used in the last "
+"section:"
+msgstr ""
+
+#: ../../advance/how-to.md:333
+msgid "It only triggers the `linelist_mode` variable in `synthesize_spectrum`."
+msgstr ""
+

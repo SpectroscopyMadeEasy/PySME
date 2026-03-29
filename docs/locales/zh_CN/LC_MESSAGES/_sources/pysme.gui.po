@@ -1,0 +1,133 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2025, Jeff Valenti, Nikolai Piskunov, Mingjie Jian, Ansgar
+# Wehrhahn
+# This file is distributed under the same license as the PySME package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PySME 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-03-29 22:44+0900\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: zh_CN\n"
+"Language-Team: zh_CN <LL@li.org>\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: ../../_sources/pysme.gui.rst:2
+msgid "pysme.gui package"
+msgstr ""
+
+#: ../../_sources/pysme.gui.rst:5
+msgid "Submodules"
+msgstr ""
+
+#: ../../_sources/pysme.gui.rst:8
+msgid "pysme.gui.plot\\_colors module"
+msgstr ""
+
+#: of pysme.gui.plot_colors:1
+msgid "Defines the colors to use in plotting"
+msgstr ""
+
+#: of pysme.gui.plot_colors.PlotColors:1 pysme.gui.plot_plotly.FinalPlot:1
+#: pysme.gui.plot_plotly.FitPlot:1 pysme.gui.plot_pyplot.MaskPlot:1
+msgid "Bases: :py:class:`object`"
+msgstr ""
+
+#: of pysme.gui.plot_colors.PlotColors:1
+msgid "Define the colors to use in plotting"
+msgstr ""
+
+#: ../../_sources/pysme.gui.rst:16
+msgid "pysme.gui.plot\\_plotly module"
+msgstr ""
+
+#: of pysme.gui.plot_plotly:1
+msgid ""
+"Provide Plotting utility for Jupyter Notebook using Plot.ly Can also be "
+"used just for Plot.ly, which will then generated html files"
+msgstr ""
+
+#: of pysme.gui.plot_plotly.FinalPlot:1
+msgid "Big plot that covers everything"
+msgstr ""
+
+#: of pysme.gui.plot_plotly.FinalPlot.add:1
+msgid ""
+"adds a scatter plot to the image, and makes the necessary changes in the "
+"slider"
+msgstr ""
+
+#: of pysme.gui.plot_plotly.FinalPlot.create_mask_points:1
+msgid "Creates the points that define the outer edge of the mask region"
+msgstr ""
+
+#: of pysme.gui.plot_plotly.FinalPlot.create_plot:1
+msgid "Generate the plot componentes (lines and masks) and line labels"
+msgstr ""
+
+#: of pysme.gui.plot_plotly.FinalPlot.on_toggle_click:1
+msgid "Callback for mask mode selector buttons"
+msgstr ""
+
+#: of pysme.gui.plot_plotly.FinalPlot.save:1
+msgid "save plot to html file"
+msgstr ""
+
+#: of pysme.gui.plot_plotly.FinalPlot.selection_fn:1
+msgid "Callback for area selection, changes the mask depending on selected mode"
+msgstr ""
+
+#: of pysme.gui.plot_plotly.FinalPlot.set_mask_bad:1
+msgid "Called by clicking the 'bad' mask button"
+msgstr ""
+
+#: of pysme.gui.plot_plotly.FinalPlot.set_mask_continuum:1
+msgid "Called by clicking the 'continuum' mask button"
+msgstr ""
+
+#: of pysme.gui.plot_plotly.FinalPlot.set_mask_good:1
+msgid "Called by clicking the 'good' mask button"
+msgstr ""
+
+#: of pysme.gui.plot_plotly.FinalPlot.set_mask_line:1
+msgid "Called by clicking the 'line' mask button"
+msgstr ""
+
+#: of pysme.gui.plot_plotly.FinalPlot.set_mask_type:1
+msgid "Changes the mask change mode and chooses the current interactive tool"
+msgstr ""
+
+#: of pysme.gui.plot_plotly.FinalPlot.shift_mask:1
+msgid ""
+"shift the edges of the mask to the bottom of the plot, so that the mask "
+"creates a shape with straight edges"
+msgstr ""
+
+#: of pysme.gui.plot_plotly.FitPlot:1
+msgid "Plot the sme solve fit, as iterations pass along"
+msgstr ""
+
+#: of pysme.gui.plot_plotly.FitPlot.add_synth:1
+msgid "add a scatter plot to the plot"
+msgstr ""
+
+#: ../../_sources/pysme.gui.rst:24
+msgid "pysme.gui.plot\\_pyplot module"
+msgstr ""
+
+#: of pysme.gui.plot_pyplot.MaskPlot:1
+msgid "A plot that can be used to define the mask"
+msgstr ""
+
+#: ../../_sources/pysme.gui.rst:33
+msgid "Module contents"
+msgstr ""
+

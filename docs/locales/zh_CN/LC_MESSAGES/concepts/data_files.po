@@ -1,0 +1,179 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2025, Jeff Valenti, Nikolai Piskunov, Mingjie Jian, Ansgar
+# Wehrhahn
+# This file is distributed under the same license as the PySME package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PySME 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-03-29 22:44+0900\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: zh_CN\n"
+"Language-Team: zh_CN <LL@li.org>\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: ../../concepts/data_files.md:1
+msgid "Data Files You Need"
+msgstr ""
+
+#: ../../concepts/data_files.md:4
+msgid "PySME uses local cache data under `~/.sme/`."
+msgstr ""
+
+#: ../../concepts/data_files.md:6
+msgid ""
+"The supported way to change data/cache locations is to edit "
+"`~/.sme/config.json`. PySME reads directory settings from that file."
+msgstr ""
+
+#: ../../concepts/data_files.md:9
+msgid "Typical files:"
+msgstr ""
+
+#: ../../concepts/data_files.md:11
+msgid "Atmosphere grids"
+msgstr ""
+
+#: ../../concepts/data_files.md:12
+msgid "NLTE grids"
+msgstr ""
+
+#: ../../concepts/data_files.md:13
+msgid "Optional custom resources"
+msgstr ""
+
+#: ../../concepts/data_files.md:15
+msgid "Configure data locations"
+msgstr ""
+
+#: ../../concepts/data_files.md:17
+msgid "Edit `~/.sme/config.json` and set the data paths you want:"
+msgstr ""
+
+#: ../../concepts/data_files.md:35
+msgid "Notes:"
+msgstr ""
+
+#: ../../concepts/data_files.md:37
+msgid ""
+"`data.file_servers` is optional and defines an ordered list of path-"
+"compatible mirrors."
+msgstr ""
+
+#: ../../concepts/data_files.md:38
+msgid ""
+"If `data.file_servers` is present, PySME expands relative pointer paths "
+"against those servers and falls back automatically."
+msgstr ""
+
+#: ../../concepts/data_files.md:39
+msgid ""
+"If `data.file_servers` is absent, PySME uses legacy `data.file_server` "
+"behavior."
+msgstr ""
+
+#: ../../concepts/data_files.md:40
+msgid "Pointer values in `datafiles_*.json` can be:"
+msgstr ""
+
+#: ../../concepts/data_files.md:41
+msgid ""
+"a single relative path (expanded against each path-compatible mirror "
+"server)"
+msgstr ""
+
+#: ../../concepts/data_files.md:42
+msgid "a list of paths/URLs (tried in order)"
+msgstr ""
+
+#: ../../concepts/data_files.md:43
+msgid "a full URL (`https://...` or `file://...`)"
+msgstr ""
+
+#: ../../concepts/data_files.md:44
+msgid ""
+"Absolute URLs are tried as written and are not joined with "
+"`data.file_servers`."
+msgstr ""
+
+#: ../../concepts/data_files.md:45
+msgid ""
+"This allows mixed-source fallbacks such as `NADC -> Uppsala -> Zenodo` in"
+" a single pointer list."
+msgstr ""
+
+#: ../../concepts/data_files.md:46
+msgid ""
+"In the current PySME defaults, Uppsala is configured as the path-"
+"compatible mirror in `data.file_servers`, while NADC and Zenodo are "
+"usually referenced as explicit URLs in the pointer files."
+msgstr ""
+
+#: ../../concepts/data_files.md:47
+msgid ""
+"The NADC packaged data mirror page is <https://nadc.china-"
+"vo.org/res/r101793/>."
+msgstr ""
+
+#: ../../concepts/data_files.md:48
+msgid ""
+"`~` is supported in path values and will be expanded to your home "
+"directory."
+msgstr ""
+
+#: ../../concepts/data_files.md:49
+msgid ""
+"Changing these paths does not migrate old files automatically; move "
+"existing files manually if needed."
+msgstr ""
+
+#: ../../concepts/data_files.md:51
+msgid "Accessing data files"
+msgstr ""
+
+#: ../../concepts/data_files.md:52
+msgid ""
+"The atmosphere and nlte data files should be downloaded from the server "
+"automatically when used, so network connection is required when using "
+"PySME (not only during installation). These files can also be downloaded "
+"manually by:"
+msgstr ""
+
+#: ../../concepts/data_files.md:54
+msgid ""
+"Download data files as part of IDL SME from "
+"[here](http://www.stsci.edu/~valenti/sme.html)."
+msgstr ""
+
+#: ../../concepts/data_files.md:55
+msgid ""
+"copy them into their respective storage locations in ~/.sme/atmospheres "
+"and ~/.sme/nlte_grids"
+msgstr ""
+
+#: ../../concepts/data_files.md:56
+msgid "atmospheres: everything from SME/atmospheres"
+msgstr ""
+
+#: ../../concepts/data_files.md:57
+msgid ""
+"Download the nlte_grids in "
+"[zenodo](https://doi.org/10.5281/zenodo.3888393)."
+msgstr ""
+
+#: ../../concepts/data_files.md:58
+msgid ""
+"The files (mainly atmosphere models and NLTE departure coefficient grids)"
+" required by PySME will be saved inside `~/.sme/`. These files can be "
+"large thus if your home directory is small, we recommend to create a "
+"softlink for `~/.sme`."
+msgstr ""
+

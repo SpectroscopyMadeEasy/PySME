@@ -1,0 +1,110 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2025, Jeff Valenti, Nikolai Piskunov, Mingjie Jian, Ansgar
+# Wehrhahn
+# This file is distributed under the same license as the PySME package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PySME 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-03-29 22:44+0900\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: zh_CN\n"
+"Language-Team: zh_CN <LL@li.org>\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: ../../advance/derived_param.md:1
+msgid "Derived Parameters"
+msgstr ""
+
+#: ../../advance/derived_param.md:3
+msgid ""
+"`derived_param` lets you define SME parameters as functions of other "
+"parameters during fitting, without adding them to the free-parameter "
+"list."
+msgstr ""
+
+#: ../../advance/derived_param.md:6
+msgid "What It Does"
+msgstr ""
+
+#: ../../advance/derived_param.md:8
+msgid "In `solve(...)`, PySME:"
+msgstr ""
+
+#: ../../advance/derived_param.md:10
+msgid "sets the current free parameters,"
+msgstr ""
+
+#: ../../advance/derived_param.md:11
+msgid "evaluates each function in `derived_param`,"
+msgstr ""
+
+#: ../../advance/derived_param.md:12
+msgid "writes the returned value back to `sme`,"
+msgstr ""
+
+#: ../../advance/derived_param.md:13
+msgid "runs synthesis and computes residuals."
+msgstr ""
+
+#: ../../advance/derived_param.md:15
+msgid "So derived parameters are updated at every iteration."
+msgstr ""
+
+#: ../../advance/derived_param.md:17
+msgid "API"
+msgstr ""
+
+#: ../../advance/derived_param.md:29
+msgid "`derived_param` is a `dict[str, callable]`."
+msgstr ""
+
+#: ../../advance/derived_param.md:30
+msgid "Key: SME parameter name (for example `\"vmic\"` or `\"abund Mg\"`)."
+msgstr ""
+
+#: ../../advance/derived_param.md:31
+msgid "Value: function `f(sme) -> float`."
+msgstr ""
+
+#: ../../advance/derived_param.md:33
+msgid "Rules and Notes"
+msgstr ""
+
+#: ../../advance/derived_param.md:35
+msgid "A parameter cannot be both free and derived in the same run."
+msgstr ""
+
+#: ../../advance/derived_param.md:36
+msgid "`dynamic_param` is still accepted as a legacy alias, but it is deprecated."
+msgstr ""
+
+#: ../../advance/derived_param.md:37
+msgid ""
+"For abundance keys (for example `\"abund Mg\"`), return the **final "
+"abundance** you want in the usual abundance scale. PySME applies the "
+"internal `monh` conversion for you when writing into `sme.abund`."
+msgstr ""
+
+#: ../../advance/derived_param.md:41
+msgid "Example 1: Tie `vmic` to `teff` and `logg`"
+msgstr ""
+
+#: ../../advance/derived_param.md:55
+msgid ""
+"Here `vmic` is never fitted directly; it is recomputed from the current "
+"model state at each iteration."
+msgstr ""
+
+#: ../../advance/derived_param.md:58
+msgid "Example 2: Enforce fixed `[Mg/Fe]`"
+msgstr ""
+

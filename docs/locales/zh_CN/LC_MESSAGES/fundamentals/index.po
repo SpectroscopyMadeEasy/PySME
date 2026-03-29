@@ -1,0 +1,32 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2025, Jeff Valenti, Nikolai Piskunov, Mingjie Jian, Ansgar
+# Wehrhahn
+# This file is distributed under the same license as the PySME package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PySME 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-03-29 22:44+0900\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: zh_CN\n"
+"Language-Team: zh_CN <LL@li.org>\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: ../../fundamentals/index.rst:2
+msgid "Fundamentals and usage"
+msgstr "基础概念与用法"
+
+#: ../../fundamentals/index.rst:4
+msgid ""
+"This section introduces the fundamentals you need before running "
+"synthesis or fitting in PySME. It covers the key data structures and "
+"controls that define spectra, line selection, and model behavior."
+msgstr ""
+"本节介绍在 PySME 中进行光谱合成或拟合之前需要掌握的基础内容。它涵盖定义光谱、谱线选择和模型行为的关键数据结构与控制参数。"

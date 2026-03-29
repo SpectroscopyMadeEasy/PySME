@@ -1,0 +1,106 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2025, Jeff Valenti, Nikolai Piskunov, Mingjie Jian, Ansgar
+# Wehrhahn
+# This file is distributed under the same license as the PySME package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PySME 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-03-29 22:44+0900\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: zh_CN\n"
+"Language-Team: zh_CN <LL@li.org>\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: ../../concepts/fitparameters.md:1
+msgid "Fitparameters"
+msgstr ""
+
+#: ../../concepts/fitparameters.md:3
+msgid ""
+"PySME can use a wide variety of fitparameters, however there are a few "
+"things to consider."
+msgstr ""
+
+#: ../../concepts/fitparameters.md:6
+msgid "How to specify fitparameters"
+msgstr ""
+
+#: ../../concepts/fitparameters.md:8
+msgid ""
+"Fitparameters can either be passed to `pysme.solve.solve` or as part of "
+"the sme structure. When in doubt the explicitly passed values overwrite "
+"the structure. Fitparameters are passed using their names as strings "
+"(e.g. `'teff'` or `'logg'`), which are usually straightforward."
+msgstr ""
+
+#: ../../concepts/fitparameters.md:13
+msgid ""
+"There are however a few more tricky ones for individual abundances and "
+"linelist parameters:"
+msgstr ""
+
+#: ../../concepts/fitparameters.md:16
+msgid "Abundances"
+msgstr ""
+
+#: ../../concepts/fitparameters.md:17
+#, python-brace-format
+msgid ""
+"Individual abundances are passed using strings of the form `'abund {El}'`"
+" where `'El'` is the short form element we want to fit (e.g. `'Mg'`). "
+"PySME supports the fitting of all elements up to `'Es'`. Alternatively "
+"you can also use the element number, i.e. the charge number, instead; "
+"e.g. `'3'` for Lithium."
+msgstr ""
+
+#: ../../concepts/fitparameters.md:24
+msgid "Linelist"
+msgstr ""
+
+#: ../../concepts/fitparameters.md:25
+#, python-brace-format
+msgid ""
+"For linelist parameters use `'linelist {nr} {p}'`, where `'nr'` is the "
+"index in the linelist and `'p'` is the name of the parameter (e.g. "
+"`'gflog'`). Parameters of the long format (e.g. lande_upper) can only be "
+"varied for a long format linelist. For a list of the linelist parameters,"
+" see [](linelist)."
+msgstr ""
+
+#: ../../concepts/fitparameters.md:32
+msgid "Bounds"
+msgstr ""
+
+#: ../../concepts/fitparameters.md:34
+msgid ""
+"Most parameters have bounds. PySME gets the bounds of each parameter from"
+" the specified atmosphere grid if possible. It also only allows for "
+"positive turbulence velocities for example."
+msgstr ""
+
+#: ../../concepts/fitparameters.md:38
+msgid "Continuum and Radial velocities"
+msgstr ""
+
+#: ../../concepts/fitparameters.md:41
+msgid ""
+"It might be logical to think that the continuum and especially the radial"
+" velocity is a regular fitparameters. However there are several options "
+"about how to handle them (see [here](./sme_struct.md#radial-velocity-and-"
+"continuum)). It is therefore recommended to use `'cscale_flag'` and "
+"`'vrad_flag'` to specify the desired fitting method. If `'vrad'` is "
+"passed as a fitparameter it is equivalent to `'vrad_flag' = 'each'`, and "
+"if `'cont'` is passed it is the same as `'cscale_flag' = 'linear'`. See "
+"the [radial velocity](../fundamentals/rv.md) and "
+"[continuum](../fundamentals/continuum.md) page for more information."
+msgstr ""
+

@@ -1,0 +1,54 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2025, Jeff Valenti, Nikolai Piskunov, Mingjie Jian, Ansgar
+# Wehrhahn
+# This file is distributed under the same license as the PySME package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PySME 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-03-29 22:44+0900\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: zh_CN\n"
+"Language-Team: zh_CN <LL@li.org>\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: ../../getting_started/first_fit.md:1
+msgid "Fit an observed spectrum"
+msgstr "拟合一条观测光谱"
+
+#: ../../getting_started/first_fit.md:3
+msgid ""
+"Assuming that we have an observed spectrum, with its wavelength, "
+"normalized flux, and uncertainties, as an array of `wave`, `flux` and "
+"`uncertainties`."
+msgstr "假设你已经有一条观测光谱，并且它的波长、归一化通量和不确定度分别存放在 `wave`、`flux` 和 `uncertainties` 这几个数组里。"
+
+#: ../../getting_started/first_fit.md:5
+msgid "They can be inserted into the SME structure with:"
+msgstr "这些数据可以这样写入 SME 结构："
+
+#: ../../getting_started/first_fit.md:18
+msgid ""
+"The new inputs are the [instrument resolution](../concepts/sme_struct.md"
+"#instrument-parameters) and [observed "
+"spectra](../concepts/sme_struct.md#spectra)."
+msgstr ""
+"这里新增的关键输入是[仪器分辨率](../concepts/sme_struct.md#instrument-parameters)和"
+"[观测光谱](../concepts/sme_struct.md#spectra)。"
+
+#: ../../getting_started/first_fit.md:20
+msgid "Then the `solve` function can be used to find the best fit solution:"
+msgstr "接着可以调用 `solve` 来寻找最佳拟合解："
+
+#: ../../getting_started/first_fit.md:27
+msgid ""
+"The [fitresults](../concepts/sme_struct.md#fitresults) are stored in "
+"`sme.fitresults`."
+msgstr "拟合结果会保存在 `sme.fitresults` 中。相关结构细节可见 [fitresults](../concepts/sme_struct.md#fitresults)。"

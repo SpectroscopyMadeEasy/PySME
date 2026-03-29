@@ -1,0 +1,116 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2025, Jeff Valenti, Nikolai Piskunov, Mingjie Jian, Ansgar
+# Wehrhahn
+# This file is distributed under the same license as the PySME package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PySME 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-03-29 22:44+0900\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: zh_CN\n"
+"Language-Team: zh_CN <LL@li.org>\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: ../../concepts/fitresults.md:1
+msgid "Fitresults"
+msgstr ""
+
+#: ../../concepts/fitresults.md:3
+msgid ""
+"The fitresults objects is a pretty straightforward collection of "
+"fitresults."
+msgstr ""
+
+#: ../../concepts/fitresults.md:6
+msgid ""
+"Note that all results are purely based on the fitting and do not include "
+"model uncertainties from e.g. the linelist."
+msgstr ""
+
+#: ../../concepts/fitresults.md:9
+msgid ""
+"The given uncertainties in punc are estimated from the residual "
+"distribution and seem to be reasonable for some parameters, but get "
+"problematic if the parameter only affects a small number of points (e.g. "
+"individual abundances)."
+msgstr ""
+
+#: ../../concepts/fitresults.md:14
+msgid "Here are the fields"
+msgstr ""
+
+#: ../../concepts/fitresults.md:16
+msgid "`maxiter`: Maximum number of iterations"
+msgstr ""
+
+#: ../../concepts/fitresults.md:17
+msgid "`chisq`: Final chi square"
+msgstr ""
+
+#: ../../concepts/fitresults.md:18
+msgid ""
+"`uncertainties`: Uncertainties of the fitparameters bases on SME "
+"statistics"
+msgstr ""
+
+#: ../../concepts/fitresults.md:19
+msgid ""
+"`fit_uncertainties`: Uncertainties of the fitparameters based solely on "
+"the least-squares fit"
+msgstr ""
+
+#: ../../concepts/fitresults.md:20
+msgid "`covar`: covariance matrix of the fitparameters"
+msgstr ""
+
+#: ../../concepts/fitresults.md:21
+msgid "`grad`: the gradient of the cost function for each parameter"
+msgstr ""
+
+#: ../../concepts/fitresults.md:22
+msgid "`pder`: The jacobian, i.e. the derivate at each point for each parameter"
+msgstr ""
+
+#: ../../concepts/fitresults.md:23
+msgid "`resid`: The residual between observation and model"
+msgstr ""
+
+#: ../../concepts/fitresults.md:25
+msgid "Uncertainties"
+msgstr ""
+
+#: ../../concepts/fitresults.md:27
+msgid ""
+"As mentioned above we estimate the uncertainties using a special metric. "
+"This metric is based on the destribution of the derivatives for each "
+"fitparameter. We estimate the cumulative distribution function of the "
+"**generalized** normal distribution with:"
+msgstr ""
+
+#: ../../concepts/fitresults.md:38
+msgid ""
+"![](https://upload.wikimedia.org/wikipedia/commons/thumb/c/ca/Normal_Distribution_CDF.svg"
+"/500px-Normal_Distribution_CDF.svg.png)."
+msgstr ""
+
+#: ../../concepts/fitresults.md:40
+msgid ""
+"(Example of the cumulative distribution function for various values of "
+"sigma)"
+msgstr ""
+
+#: ../../concepts/fitresults.md:43
+msgid ""
+"It is explained in detail in [Paper II (SME: "
+"Evolution)](https://ui.adsabs.harvard.edu/abs/2017A%26A...597A..16P/abstract)."
+msgstr ""
+

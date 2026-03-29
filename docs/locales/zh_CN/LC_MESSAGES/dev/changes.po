@@ -1,0 +1,328 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2025, Jeff Valenti, Nikolai Piskunov, Mingjie Jian, Ansgar
+# Wehrhahn
+# This file is distributed under the same license as the PySME package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PySME 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-03-29 22:44+0900\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: zh_CN\n"
+"Language-Team: zh_CN <LL@li.org>\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: ../../dev/changes.rst:2
+msgid "Changes from IDL SME"
+msgstr ""
+
+#: ../../dev/changes.rst:4
+msgid "Changes from IDL SME to PySME:"
+msgstr ""
+
+#: ../../dev/changes.rst:6
+msgid "SME structure:"
+msgstr ""
+
+#: ../../dev/changes.rst:7 ../../dev/changes.rst:38 ../../dev/changes.rst:46
+msgid "Python Class object"
+msgstr ""
+
+#: ../../dev/changes.rst:8
+msgid ""
+"all properties can be accessed as properties (sme.name) or as items "
+"([\"name\"])"
+msgstr ""
+
+#: ../../dev/changes.rst:10
+msgid "all properties are case insensitive"
+msgstr ""
+
+#: ../../dev/changes.rst:11
+msgid "Can read IDL sav files, but not write, uses numpy npy format instead"
+msgstr ""
+
+#: ../../dev/changes.rst:12
+msgid "fitresult values in fitresult object (e.g. covariance matrix)"
+msgstr ""
+
+#: ../../dev/changes.rst:13
+msgid "pname, ab_free, and glob_free are now combined in fitparameters"
+msgstr ""
+
+#: ../../dev/changes.rst:14
+msgid "idlver still called that, but contains information about Python version"
+msgstr ""
+
+#: ../../dev/changes.rst:15
+msgid ""
+"cscale is the polynomial coefficients describing the continuum (of any "
+"degree)"
+msgstr ""
+
+#: ../../dev/changes.rst:17
+msgid "preferred access to spectra, through wave, spec, uncs, mask, synth"
+msgstr ""
+
+#: ../../dev/changes.rst:18
+msgid ""
+"all of which represent the data as Iliffe vectors, i.e. a list of arrays "
+"of arbitrary length (The underlying data structure is the same, and is "
+"still accessable, wave is renamed to wob) also available are mask_good, "
+"mask_bad, mask_line, and mask_continuum, which are boolean Iliffe vectors"
+" of the masks"
+msgstr ""
+
+#: ../../dev/changes.rst:24
+msgid ""
+"obsolete properties removed (smod_orig, cmod_orig, cmod, jint, sint, "
+"psig_l, psig_r, rchisq, crms, lrms, vmac_pro, cintb, cintr, obs_type, "
+"clim)"
+msgstr ""
+
+#: ../../dev/changes.rst:27
+msgid "redundant properties are now dynamic (nmu, nseg, md5)"
+msgstr ""
+
+#: ../../dev/changes.rst:28
+msgid "property \"obs_name\" renamed to object"
+msgstr ""
+
+#: ../../dev/changes.rst:29
+msgid ""
+"property \"wave\" renamed to wob, but \"wave\" still exists but as an "
+"Iliffe vector (as described above)"
+msgstr ""
+
+#: ../../dev/changes.rst:31
+msgid "flags, cscale_flag and vrad_flag now use strings instead of integers"
+msgstr ""
+
+#: ../../dev/changes.rst:32
+msgid "cscale_flag : \"none\", \"fix\", \"constant\", \"linear\", \"quadratic\""
+msgstr ""
+
+#: ../../dev/changes.rst:33
+msgid "vrad_flag : \"none\", \"whole\", \"each\""
+msgstr ""
+
+#: ../../dev/changes.rst:34
+msgid ""
+"cscale and vrad are always the expected size (i.e. equal to the number of"
+" segments, and polynomial degrees)"
+msgstr ""
+
+#: ../../dev/changes.rst:37
+msgid "Abundance:"
+msgstr ""
+
+#: ../../dev/changes.rst:39
+msgid "set of multiple solar abundances available"
+msgstr ""
+
+#: ../../dev/changes.rst:40
+msgid ""
+"can output abundances in different formats ('sme', 'n/nTot', 'n/nH', and "
+"'H=12')"
+msgstr ""
+
+#: ../../dev/changes.rst:42
+msgid "internal format is 'H=12', i.e. log(X/H) + 12"
+msgstr ""
+
+#: ../../dev/changes.rst:43
+msgid "metallicity is included as part of the abundance"
+msgstr ""
+
+#: ../../dev/changes.rst:45
+msgid "LineList:"
+msgstr ""
+
+#: ../../dev/changes.rst:47
+msgid "uses a Pandas Dataframe under the hood"
+msgstr ""
+
+#: ../../dev/changes.rst:48
+msgid ""
+"combines species, atomic, lulande, extra, depth, lineref, term_upp, and "
+"term_low"
+msgstr ""
+
+#: ../../dev/changes.rst:50
+msgid ""
+"also provides relative error measure for each line (based on error code "
+"in lineref)"
+msgstr ""
+
+#: ../../dev/changes.rst:53
+msgid "NLTE:"
+msgstr ""
+
+#: ../../dev/changes.rst:54
+msgid "works similar to IDL"
+msgstr ""
+
+#: ../../dev/changes.rst:55
+msgid ""
+"NLTE can be activated/deactivated with sme.nlte.set_nlte(element_name) / "
+"remove_nlte(element_name)"
+msgstr ""
+
+#: ../../dev/changes.rst:57
+msgid "NLTE lines are flagged by the C library in sme.nlte.flags"
+msgstr ""
+
+#: ../../dev/changes.rst:59
+msgid "Synthetic Spectrum:"
+msgstr ""
+
+#: ../../dev/changes.rst:60
+msgid "uses the same C library as IDL SME"
+msgstr ""
+
+#: ../../dev/changes.rst:61
+msgid "sme_func, gives almost the same results as in IDL"
+msgstr ""
+
+#: ../../dev/changes.rst:62
+msgid "there are slight differences in the interpolation of the atmospheres"
+msgstr ""
+
+#: ../../dev/changes.rst:63
+msgid ""
+"continuum and radial velocity are now determined at the same time using a"
+" least_squares fit (with method \"trf\")"
+msgstr ""
+
+#: ../../dev/changes.rst:66
+msgid "Solver:"
+msgstr ""
+
+#: ../../dev/changes.rst:67
+msgid ""
+"Switched solving algorithm to use scipy.optimize.least_squares with "
+"method=\"trf\""
+msgstr ""
+
+#: ../../dev/changes.rst:68
+msgid "\"trf\" = Trust-region Reflective"
+msgstr ""
+
+#: ../../dev/changes.rst:69
+msgid ""
+"robust loss function \"soft_l1\" resid = 2 * ((1 + z)**0.5 - 1) with z = "
+"model - obs / uncs"
+msgstr ""
+
+#: ../../dev/changes.rst:71
+msgid "also includes bounds, but only for the outer edges of the atmosphere grid"
+msgstr ""
+
+#: ../../dev/changes.rst:72
+msgid ""
+"will find different minima than IDL SME, but within a reasonable range "
+"and often with slightly better chi square"
+msgstr ""
+
+#: ../../dev/changes.rst:74
+msgid ""
+"for parameters outside the atmosphere grid, the an infinite residual is "
+"returned, which causes the least squares to avoid that area"
+msgstr ""
+
+#: ../../dev/changes.rst:77
+msgid "Logging:"
+msgstr ""
+
+#: ../../dev/changes.rst:78
+msgid "log with standard logging module"
+msgstr ""
+
+#: ../../dev/changes.rst:79
+msgid "output both to console and to file"
+msgstr ""
+
+#: ../../dev/changes.rst:81
+msgid "C interface:"
+msgstr ""
+
+#: ../../dev/changes.rst:82
+msgid "as mentioned above uses the same library as IDL SME"
+msgstr ""
+
+#: ../../dev/changes.rst:83
+msgid "general purpose interface is idl_call_external in cwrapper.py"
+msgstr ""
+
+#: ../../dev/changes.rst:84
+msgid "numerics are converted to ctypes elements"
+msgstr ""
+
+#: ../../dev/changes.rst:85
+msgid ""
+"numpy arrays are converted to appropiate ctypes (memory stays the same if"
+" possible)"
+msgstr ""
+
+#: ../../dev/changes.rst:87
+msgid ""
+"strings (and string arrays) are copied into IDL_string structures (memory"
+" will change)"
+msgstr ""
+
+#: ../../dev/changes.rst:89
+msgid "output is written back into original arrays if necessary"
+msgstr ""
+
+#: ../../dev/changes.rst:90
+msgid "specific functions are implemented in sme_synth.py"
+msgstr ""
+
+#: ../../dev/changes.rst:91
+msgid "data types are converted to the necessary values"
+msgstr ""
+
+#: ../../dev/changes.rst:92
+msgid ""
+"the size of input arrays is stored for the output functions (e.g. number "
+"of lines)"
+msgstr ""
+
+#: ../../dev/changes.rst:94
+msgid "errors in the C code will raise Exceptions (ValueErrors)"
+msgstr ""
+
+#: ../../dev/changes.rst:96
+msgid "Plotting:"
+msgstr ""
+
+#: ../../dev/changes.rst:97
+msgid "two plotting modules"
+msgstr ""
+
+#: ../../dev/changes.rst:98
+msgid "one for matplotlib.pyplot (creates a window)"
+msgstr ""
+
+#: ../../dev/changes.rst:99
+msgid "one for plot.ly (creates a html file with javascript)"
+msgstr ""
+
+#: ../../dev/changes.rst:100
+msgid "both provide functionality to move through the segments"
+msgstr ""
+
+#: ../../dev/changes.rst:101
+msgid ""
+"can also change the mask from within the plot (requires a jupyter "
+"notebook session for plot.ly)"
+msgstr ""
+
