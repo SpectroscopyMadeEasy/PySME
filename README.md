@@ -23,6 +23,14 @@ Stable release (recommended):
 pip install pysme-astro
 ```
 
+On macOS arm64, `pip` will use a pre-built wheel when one matches your Python
+and macOS version. If no compatible wheel is available, `pip` falls back to a
+source build. In that case, install the local build toolchain first:
+
+```bash
+brew install gcc cmake ninja
+```
+
 Install latest source from GitHub:
 
 ```bash
