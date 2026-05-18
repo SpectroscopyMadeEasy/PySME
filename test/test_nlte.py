@@ -10,7 +10,7 @@ import pytest
 
 from pysme.abund import Abund
 from pysme.linelist.vald import ValdFile
-from pysme.nlte import DirectAccessFile, nlte
+from pysme.nlte import DirectAccessFile, Grid, nlte
 from pysme.sme import SME_Structure as SME_Struct
 from pysme.sme_synth import SME_DLL
 from pysme.synthesize import Synthesizer, synthesize_spectrum
@@ -184,3 +184,46 @@ def test_read_write_direct_access_file(temp: str):
             vf = np.char.decode(vf)
 
         assert np.all(vf == value)
+
+
+def _make_grid_for_abundance_test(elem, solar_pattern="grevesse2007", abund_format="Fe=12"):
+    grid = Grid.__new__(Grid)
+    grid.elem = elem
+    grid.abund_format = abund_format
+    grid.solar = Abund(pattern=solar_pattern, monh=0)
+    return grid
+
+
+def test_h_scaled_rel_abund_is_zero_for_asplund2021():
+    grid = _make_grid_for_abundance_test("H")
+    abund = Abund(pattern="asplund2021", monh=0)
+
+    assert grid.solar_rel_abund(abund, "H") == pytest.approx(0.0)
+    assert grid.scaled_rel_abund(abund) == pytest.approx(0.0)
+
+
+def test_h_scaled_rel_abund_is_zero_for_grevesse2007():
+    grid = _make_grid_for_abundance_test("H")
+    abund = Abund(pattern="grevesse2007", monh=0)
+
+    assert grid.solar_rel_abund(abund, "H") == pytest.approx(0.0)
+    assert grid.scaled_rel_abund(abund) == pytest.approx(0.0)
+
+
+def test_h_old_scaled_rel_abund_would_show_pattern_offset():
+    grid = _make_grid_for_abundance_test("H")
+    abund = Abund(pattern="asplund2021", monh=0)
+
+    old_scaled_rel_abund = grid.solar_rel_abund(abund, "H") - grid.solar_rel_abund(abund, "Fe")
+
+    assert old_scaled_rel_abund == pytest.approx(-0.01, abs=1e-6)
+    assert grid.scaled_rel_abund(abund) == pytest.approx(0.0)
+
+
+def test_metal_scaled_rel_abund_is_unchanged():
+    grid = _make_grid_for_abundance_test("Mg")
+    abund = Abund(pattern="asplund2021", monh=0)
+
+    expected = grid.solar_rel_abund(abund, "Mg") - grid.solar_rel_abund(abund, "Fe")
+
+    assert grid.scaled_rel_abund(abund) == pytest.approx(expected)

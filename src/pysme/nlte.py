@@ -515,6 +515,12 @@ class Grid:
 
     def scaled_rel_abund(self, abund):
         """Get the abundance of self.elem relative to Fe, i.e. [X/Fe]"""
+        # H is fixed to A(H)=12 by definition in the H=12 abundance scale.
+        # The standard H NLTE grid therefore expects a zero abundance offset,
+        # independent of small differences in the adopted solar abundance
+        # pattern (for example via Fe or He in other abundance formats).
+        if self.elem == "H":
+            return self.solar_rel_abund(abund, self.elem)
         sel = self.solar_rel_abund(abund, self.elem)
         sfe = self.solar_rel_abund(abund, "Fe")
         rabund = sel - sfe
