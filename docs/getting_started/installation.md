@@ -36,6 +36,19 @@ source .venv/bin/activate
 pip install pysme-astro
 ```
 
+On macOS arm64, `pip` uses a pre-built wheel only when one matches your Python
+and macOS version. If no compatible wheel is available, it falls back to a
+source build and therefore needs a local compiler toolchain.
+
+Install the required build tools with Homebrew before retrying:
+
+```bash
+brew install gcc cmake ninja
+```
+
+This requirement is for the source-build fallback path. Normal wheel installs
+do not need these tools.
+
 ### From GitHub source (latest)
 
 #### Clone the repository
@@ -50,6 +63,12 @@ cd PySME
 ```bash
 pip install -U pip
 pip install .
+```
+
+On macOS arm64, make sure the build dependencies are installed first:
+
+```bash
+brew install gcc cmake ninja
 ```
 
 If you already cloned without submodules, run:
