@@ -3,6 +3,7 @@
 
 import os
 import tempfile
+from types import SimpleNamespace
 from os.path import dirname
 
 import numpy as np
@@ -218,6 +219,132 @@ def test_h_old_scaled_rel_abund_would_show_pattern_offset():
 
     assert old_scaled_rel_abund == pytest.approx(-0.01, abs=1e-6)
     assert grid.scaled_rel_abund(abund) == pytest.approx(0.0)
+
+
+class _FakeLineList:
+    def __init__(self, species, use_indices=None):
+        self.species = np.asarray(species)
+        columns = []
+        if use_indices is not None:
+            columns.append("use_indices")
+        self._lines = SimpleNamespace(columns=columns)
+        self._use_indices = None if use_indices is None else np.asarray(use_indices, dtype=bool)
+
+    def __getitem__(self, item):
+        if isinstance(item, str):
+            if item == "use_indices" and self._use_indices is not None:
+                return self._use_indices
+            raise KeyError(item)
+        return _FakeLineList(self.species[item])
+
+
+class _FakeSME:
+    def __init__(self, linelist):
+        self.linelist = linelist
+
+
+def _make_grid_for_matching_cache(selection="energy"):
+    grid = Grid.__new__(Grid)
+    grid.elem = "Ti"
+    grid.selection = selection
+    grid.grid_name = "fake.grd"
+    grid._grid_conf = np.array(["c1", "c2"])
+    grid._grid_term = np.array(["t1", "t2"])
+    grid._grid_species = np.array(["Ti 1", "Ti 1"])
+    grid._grid_rotnum = np.array([1.0, 2.0])
+    grid._grid_energies = np.array([0.1, 0.2])
+    grid._grid_citation_info = "citation"
+    grid.citation_info = "citation"
+    grid._match_cache = {}
+    grid.limits = {}
+    grid.bgrid = None
+    grid.depth = None
+    grid.linerefs = None
+    grid.lineindices = None
+    grid.iused = None
+    grid.first_warning = True
+    return grid
+
+
+def test_renew_linelist_reuses_matching_for_unchanged_use_indices(monkeypatch):
+    species = np.array(["Ti 1", "Fe 1", "Ti 1"])
+    use_indices = np.array([True, False, True])
+    sme = _FakeSME(_FakeLineList(species, use_indices=use_indices))
+    grid = _make_grid_for_matching_cache()
+
+    calls = {"count": 0}
+
+    def fake_select(self, conf, term, species, rotnum, energies):
+        calls["count"] += 1
+        return (
+            np.array([0, 2]),
+            np.array([[0, 1], [1, 0]]),
+            np.array([True, True]),
+        )
+
+    monkeypatch.setattr(Grid, "select_energies", fake_select)
+
+    grid.renew_linelist(sme)
+    first_lineindices = grid.lineindices.copy()
+    first_linerefs = grid.linerefs.copy()
+    first_iused = grid.iused.copy()
+
+    grid.renew_linelist(sme)
+
+    assert calls["count"] == 1
+    assert np.array_equal(grid.lineindices, first_lineindices)
+    assert np.array_equal(grid.linerefs, first_linerefs)
+    assert np.array_equal(grid.iused, first_iused)
+
+
+def test_initialized_grid_skips_first_renew_for_same_use_indices(monkeypatch):
+    species = np.array(["Ti 1", "Fe 1", "Ti 1"])
+    use_indices = np.array([True, False, True])
+    sme = _FakeSME(_FakeLineList(species, use_indices=use_indices))
+    grid = _make_grid_for_matching_cache()
+
+    calls = {"count": 0}
+
+    def fake_select(self, conf, term, species, rotnum, energies):
+        calls["count"] += 1
+        return (
+            np.array([0, 2]),
+            np.array([[0, 1], [1, 0]]),
+            np.array([True, True]),
+        )
+
+    monkeypatch.setattr(Grid, "select_energies", fake_select)
+
+    key = grid._matching_cache_key(sme)
+    grid._refresh_matching(sme, key=key)
+    grid.renew_linelist(sme)
+
+    assert calls["count"] == 1
+
+
+def test_renew_linelist_recomputes_matching_when_use_indices_change(monkeypatch):
+    species = np.array(["Ti 1", "Fe 1", "Ti 1"])
+    grid = _make_grid_for_matching_cache()
+
+    calls = {"count": 0}
+
+    def fake_select(self, conf, term, species, rotnum, energies):
+        calls["count"] += 1
+        return (
+            np.array([0]),
+            np.array([[0, 0]]),
+            np.array([True, False]),
+        )
+
+    monkeypatch.setattr(Grid, "select_energies", fake_select)
+
+    sme1 = _FakeSME(_FakeLineList(species, use_indices=np.array([True, False, False])))
+    sme2 = _FakeSME(_FakeLineList(species, use_indices=np.array([False, False, True])))
+
+    grid.renew_linelist(sme1)
+    grid.renew_linelist(sme2)
+
+    assert calls["count"] == 2
 
 
 def test_metal_scaled_rel_abund_is_unchanged():

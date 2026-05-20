@@ -291,18 +291,7 @@ class Grid:
     ):
         #:str: Element of the NLTE grid
         self.elem = elem
-
-        if 'use_indices' in sme.linelist._lines.columns:
-            #:LineList: Whole LineList that was passed to the C library
-            self.linelist = sme.linelist[sme.linelist['use_indices']]
-            #:array(str): Elemental Species Names for the linelist
-            self.species = sme.linelist.species[sme.linelist['use_indices']]
-            # sme.linelist._lines = sme.linelist._lines.drop(columns=['use_indices'])
-        else:
-            #:LineList: Whole LineList that was passed to the C library
-            self.linelist = sme.linelist
-            #:array(str): Elemental Species Names for the linelist
-            self.species = sme.linelist.species
+        self._set_linelist_view(sme)
 
         #:str: Name of the grid
         self.grid_name = sme.nlte.grids[elem]
@@ -390,56 +379,104 @@ class Grid:
         self.citation_info = ""
 
         self.first_warning = True
+        self._match_cache = {}
+        self._active_match_key = None
+        self._cache_grid_metadata()
+        self._refresh_matching(sme, key=self._matching_cache_key(sme))
 
-        conf = self.directory["conf"].astype("U")
-        term = self.directory["term"].astype("U")
+    def _set_linelist_view(self, sme):
+        if "use_indices" in sme.linelist._lines.columns:
+            use_indices = np.asarray(sme.linelist["use_indices"], dtype=bool)
+            #:LineList: Whole LineList that was passed to the C library
+            self.linelist = sme.linelist[use_indices]
+            #:array(str): Elemental Species Names for the linelist
+            self.species = sme.linelist.species[use_indices]
+        else:
+            #:LineList: Whole LineList that was passed to the C library
+            self.linelist = sme.linelist
+            #:array(str): Elemental Species Names for the linelist
+            self.species = sme.linelist.species
+
+    def _cache_grid_metadata(self):
+        self._grid_conf = self.directory["conf"].astype("U")
+        self._grid_term = self.directory["term"].astype("U")
         try:
-            species = self.directory["spec"].astype("U")
+            self._grid_species = self.directory["spec"].astype("U")
         except KeyError:
             logger.warning(
-                f"Could not find 'species' field in NLTE file {self.grid_name}. Assuming they are all '{self.elem} 1'."
+                "Could not find 'species' field in NLTE file %s. Assuming they are all '%s 1'.",
+                self.grid_name,
+                self.elem,
             )
-            species = np.full(conf.shape, "%s 1" % self.elem)
-            pass
-        rotnum = self.directory["J"]  # rotational number of the atomic state
+            self._grid_species = np.full(self._grid_conf.shape, f"{self.elem} 1")
+        self._grid_rotnum = self.directory["J"]
         if self.version[0] == 1 and self.version[1] >= 10:
-            energies = self.directory["energy"]  # energy in eV
-            self.citation_info = self.directory["citation"][()].decode()
+            self._grid_energies = self.directory["energy"]
+            self._grid_citation_info = self.directory["citation"][()].decode()
+            self.citation_info = self._grid_citation_info
         else:
+            self._grid_energies = None
+            self._grid_citation_info = None
             self.citation_info = None
             if self.selection != "levels":
-                # logger.warning(
-                #     "NLTE grid file version %s only supports level selection, not %s",
-                #     self.version,
-                #     self.selection,
-                # )
                 self.selection = "levels"
 
+    def _matching_cache_key(self, sme):
+        base = id(sme.linelist._lines)
+        if "use_indices" in sme.linelist._lines.columns:
+            use_indices = np.asarray(sme.linelist["use_indices"], dtype=bool)
+            packed = np.packbits(use_indices, bitorder="little").tobytes()
+            return ("masked", base, use_indices.size, int(np.count_nonzero(use_indices)), packed)
+        return ("full", base, len(self.species))
+
+    def _compute_matching(self):
         if self.selection == "levels":
-            self.lineindices, self.linerefs, self.iused = self.select_levels(
-                conf, term, species, rotnum
+            return self.select_levels(
+                self._grid_conf, self._grid_term, self._grid_species, self._grid_rotnum
             )
-        elif self.selection == "energy":
-            self.lineindices, self.linerefs, self.iused = self.select_energies(
-                conf, term, species, rotnum, energies
+        if self.selection == "energy":
+            return self.select_energies(
+                self._grid_conf,
+                self._grid_term,
+                self._grid_species,
+                self._grid_rotnum,
+                self._grid_energies,
+            )
+        raise ValueError(f"Unknown NLTE selection mode: {self.selection}")
+
+    def _set_matching(self, matching):
+        lineindices, linerefs, iused = matching
+        self.lineindices = None if lineindices is None else np.array(lineindices, copy=True)
+        self.linerefs = None if linerefs is None else np.array(linerefs, copy=True)
+        self.iused = np.array(iused, copy=True)
+
+    def _refresh_matching(self, sme=None, key=None):
+        if sme is not None:
+            self._set_linelist_view(sme)
+            if key is None:
+                key = self._matching_cache_key(sme)
+
+        if key is not None and key in self._match_cache:
+            self._set_matching(self._match_cache[key])
+            self._active_match_key = key
+            return
+
+        matching = self._compute_matching()
+        self._set_matching(matching)
+        self._active_match_key = key
+        if key is not None:
+            self._match_cache[key] = tuple(
+                None if item is None else np.array(item, copy=True) for item in matching
             )
 
     def renew_linelist(
         self,
         sme,
     ):
-
-        if 'use_indices' in sme.linelist._lines.columns:
-            #:LineList: Whole LineList that was passed to the C library
-            self.linelist = sme.linelist[sme.linelist['use_indices']]
-            #:array(str): Elemental Species Names for the linelist
-            self.species = sme.linelist.species[sme.linelist['use_indices']]
-            # sme.linelist._lines = sme.linelist._lines.drop(columns=['use_indices'])
-        else:
-            #:LineList: Whole LineList that was passed to the C library
-            self.linelist = sme.linelist
-            #:array(str): Elemental Species Names for the linelist
-            self.species = sme.linelist.species
+        self._set_linelist_view(sme)
+        key = self._matching_cache_key(sme)
+        if key == self._active_match_key:
+            return
 
         #:dict: upper and lower parameters covered by the grid
         self.limits = {}
@@ -456,44 +493,10 @@ class Grid:
         self.iused = None
 
         #:str: citations in bibtex format, if known
-        self.citation_info = ""
+        self.citation_info = self._grid_citation_info
 
         self.first_warning = True
-
-        conf = self.directory["conf"].astype("U")
-        term = self.directory["term"].astype("U")
-        try:
-            species = self.directory["spec"].astype("U")
-        except KeyError:
-            logger.warning(
-                "Could not find 'species' field in NLTE file %s. Assuming they are all '%s 1'.",
-                self.grid_name,
-                self.elem,
-            )
-            species = np.full(conf.shape, "%s 1" % self.elem)
-            pass
-        rotnum = self.directory["J"]  # rotational number of the atomic state
-        if self.version[0] == 1 and self.version[1] >= 10:
-            energies = self.directory["energy"]  # energy in eV
-            self.citation_info = self.directory["citation"][()].decode()
-        else:
-            self.citation_info = None
-            if self.selection != "levels":
-                # logger.warning(
-                #     "NLTE grid file version %s only supports level selection, not %s",
-                #     self.version,
-                #     self.selection,
-                # )
-                self.selection = "levels"
-
-        if self.selection == "levels":
-            self.lineindices, self.linerefs, self.iused = self.select_levels(
-                conf, term, species, rotnum
-            )
-        elif self.selection == "energy":
-            self.lineindices, self.linerefs, self.iused = self.select_energies(
-                conf, term, species, rotnum, energies
-            )
+        self._refresh_matching(sme, key=key)
 
     def solar_rel_abund(self, abund, elem):
         """Get the abundance of elem relative to H, i.e. [X/H]"""
