@@ -430,7 +430,7 @@ class SME_Structure(Parameters):
         if key.startswith("abund "):
             element = key[5:].strip()
             element = element.capitalize()
-            self.abund[element] = value
+            self.abund.set_pattern_abundance(element, value)
         elif key.startswith("linelist "):
             _, idx, field = key[8:].split(" ", 2)
             idx = int(idx)

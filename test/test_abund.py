@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 from collections import OrderedDict
+import warnings
 
 import numpy as np
 import pytest
 
 from pysme.abund import Abund
+from pysme.sme import SME_Structure
 
 pattern_names = ["Asplund2009", "Grevesse2007", "Empty"]
 types = ["H=12", "n/nH", "n/nTot", "SME"]
@@ -84,6 +86,7 @@ def test_pattern_property_set_and_get():
     abund = Abund(pattern="Empty", monh=0)
     with pytest.raises(AttributeError):
         abund.pattern = 0.0
+    assert isinstance(dict(abund.pattern), dict)
 
 
 def test_update_pattern():
@@ -132,3 +135,119 @@ def test_totype_fromtype():
         copy = Abund.totype(orig, "INVALID")
     with pytest.raises(ValueError):
         copy = Abund.fromtype(orig, "INVALID")
+
+
+def _make_asplund2021_abund():
+    abund = Abund(pattern="asplund2021", monh=-1.196)
+    abund.xm["Ti"] = 0.135
+    return abund
+
+
+def test_abundance_views_basic_consistency():
+    abund = _make_asplund2021_abund()
+
+    assert abund.reference["Ti"] == pytest.approx(4.97)
+    assert abund.pattern["Ti"] == pytest.approx(5.105)
+    assert abund.A["Ti"] == pytest.approx(3.909)
+    assert abund.xh["Ti"] == pytest.approx(-1.061)
+    assert abund.xm["Ti"] == pytest.approx(0.135)
+
+
+@pytest.mark.parametrize(
+    ("setter", "value"),
+    [
+        ("A", 3.909),
+        ("xh", -1.061),
+        ("xm", 0.135),
+        ("pattern", 5.105),
+    ],
+)
+def test_abundance_view_setters_are_equivalent(setter, value):
+    abund = Abund(pattern="asplund2021", monh=-1.196)
+    getattr(abund, setter)["Ti"] = value
+
+    assert abund.A["Ti"] == pytest.approx(3.909)
+    assert abund.xm["Ti"] == pytest.approx(0.135)
+    assert abund.pattern["Ti"] == pytest.approx(5.105)
+
+
+def test_changing_monh_preserves_xm_and_pattern():
+    abund = _make_asplund2021_abund()
+    old_pattern = abund.pattern["Ti"]
+
+    abund.monh = -1.3
+
+    assert abund.pattern["Ti"] == pytest.approx(old_pattern)
+    assert abund.xm["Ti"] == pytest.approx(0.135)
+    assert abund.A["Ti"] == pytest.approx(old_pattern - 1.3)
+
+
+def test_reference_remains_fixed_after_updates():
+    abund = Abund(pattern="asplund2021", monh=-1.196)
+    ref = abund.reference["Ti"]
+
+    abund.A["Ti"] = 3.909
+    abund.xh["Ti"] = -1.061
+    abund.xm["Ti"] = 0.135
+    abund.pattern["Ti"] = 5.105
+
+    assert abund.reference["Ti"] == pytest.approx(ref)
+
+
+def test_solar_alias_for_builtin_and_error_for_custom_pattern():
+    solar = Abund(pattern="asplund2021", monh=0)
+    assert solar.solar["Ti"] == pytest.approx(solar.reference["Ti"])
+
+    custom = Abund(pattern=solar.get_pattern("H=12", raw=True), monh=0, type="H=12")
+    assert custom.reference["Ti"] == pytest.approx(solar.reference["Ti"])
+    with pytest.raises(ValueError, match="not marked as a solar pattern"):
+        _ = custom.solar["Ti"]
+
+
+@pytest.mark.parametrize("elem", ["H", "He"])
+def test_xm_invalid_for_h_and_he(elem):
+    abund = Abund(pattern="asplund2021", monh=-1.196)
+    with pytest.raises(ValueError, match="only defined for elements heavier than He"):
+        _ = abund.xm[elem]
+    with pytest.raises(ValueError, match="only defined for elements heavier than He"):
+        abund.xm[elem] = 0.0
+
+
+def test_legacy_setter_warns_and_pattern_view_does_not():
+    abund = Abund(pattern="asplund2021", monh=-1.196)
+
+    with pytest.warns(FutureWarning, match="Direct abundance assignment"):
+        abund["Ti"] = 5.105
+    assert abund.pattern["Ti"] == pytest.approx(5.105)
+
+    with warnings.catch_warnings(record=True) as record:
+        warnings.simplefilter("always")
+        abund.pattern["Ti"] = 5.000
+    assert not record
+    assert abund.pattern["Ti"] == pytest.approx(5.000)
+
+
+def test_sme_structure_abundance_assignment_avoids_warning():
+    sme = SME_Structure()
+    sme.abund = Abund(pattern="asplund2021", monh=-1.196)
+
+    with warnings.catch_warnings(record=True) as record:
+        warnings.simplefilter("always")
+        sme["Abund Ti"] = 5.105
+    assert not record
+    assert sme.abund.pattern["Ti"] == pytest.approx(5.105)
+
+
+def test_no_xfe_view_added():
+    abund = Abund(pattern="asplund2021", monh=0)
+    assert not hasattr(abund, "xfe")
+
+
+def test_abundance_reference_metadata_roundtrip():
+    abund = _make_asplund2021_abund()
+
+    restored = Abund.from_dict(abund.to_dict())
+
+    assert restored.reference["Ti"] == pytest.approx(abund.reference["Ti"])
+    assert restored.pattern["Ti"] == pytest.approx(abund.pattern["Ti"])
+    assert restored.A["Ti"] == pytest.approx(abund.A["Ti"])

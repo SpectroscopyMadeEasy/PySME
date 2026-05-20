@@ -5,6 +5,8 @@ Elemental abundance data handling module
 import io
 import json
 import logging
+import warnings
+from collections.abc import MutableMapping
 
 import numpy as np
 from flex.extensions.bindata import BinaryDataExtension
@@ -12,6 +14,27 @@ from flex.extensions.bindata import BinaryDataExtension
 from .persistence import IPersist
 
 logger = logging.getLogger(__name__)
+
+
+class _AbundanceView(MutableMapping):
+    def __init__(self, abund, kind):
+        self.abund = abund
+        self.kind = kind
+
+    def __getitem__(self, elem):
+        return self.abund._view_get(self.kind, elem)
+
+    def __setitem__(self, elem, value):
+        self.abund._view_set(self.kind, elem, value)
+
+    def __delitem__(self, elem):
+        raise TypeError("Abundance views do not support item deletion")
+
+    def __iter__(self):
+        return iter(self.abund.elem)
+
+    def __len__(self):
+        return len(self.abund.elem)
 
 _citation_anders1989 = r"""
 @ARTICLE{1989GeCoA..53..197A,
@@ -457,6 +480,13 @@ class Abund(IPersist):
         return self.get_element(elem)
 
     def __setitem__(self, elem, abund):
+        warnings.warn(
+            'Direct abundance assignment via sme.abund["X"] is ambiguous and kept for '
+            'backward compatibility. Use sme.abund.A["X"] to set the abundance used in '
+            'synthesis, or sme.abund.pattern["X"] to set the internal SME pattern.',
+            FutureWarning,
+            stacklevel=2,
+        )
         self.update_pattern({elem: abund})
 
     def __str__(self):
@@ -489,6 +519,16 @@ class Abund(IPersist):
     def __repr__(self):
         return self.__str__()
 
+    def __getattribute__(self, name):
+        if name == "solar":
+            if not object.__getattribute__(self, "_reference_is_solar"):
+                raise ValueError(
+                    "The current abundance reference is not marked as a solar pattern. "
+                    "Use sme.abund.reference['X'] instead."
+                )
+            return _AbundanceView(self, "reference")
+        return object.__getattribute__(self, name)
+
     # These are there for the atmosphere interpolation
     # The internal format is always H=12, so that should be fine
     def __add__(self, other):
@@ -501,6 +541,9 @@ class Abund(IPersist):
         else:
             raise NotImplementedError
         result.type = self.type
+        result._reference_pattern = self._reference_pattern.copy()
+        result._reference_name = self._reference_name
+        result._reference_is_solar = self._reference_is_solar
         return result
 
     def __radd__(self, other):
@@ -516,6 +559,9 @@ class Abund(IPersist):
             result._pattern *= other
             result.monh *= other
         result.type = self.type
+        result._reference_pattern = self._reference_pattern.copy()
+        result._reference_name = self._reference_name
+        result._reference_is_solar = self._reference_is_solar
         return result
 
     def __rmul__(self, other):
@@ -537,6 +583,9 @@ class Abund(IPersist):
             pattern=pattern,
             citation_info=self.citation_info,
         )
+        other._reference_pattern = self._reference_pattern.copy()
+        other._reference_name = self._reference_name
+        other._reference_is_solar = self._reference_is_solar
         return other
 
     @staticmethod
@@ -667,10 +716,112 @@ class Abund(IPersist):
     def monh(self, monh):
         self._monh = float(monh)
 
+    def _metallicity_offset(self):
+        return 0.0 if self.monh is None else float(self.monh)
+
+    def _is_metallicity_scaled(self, elem):
+        return self._get_index(elem) >= 2
+
+    def _require_xm_element(self, elem):
+        if not self._is_metallicity_scaled(elem):
+            raise ValueError(
+                f"[{elem}/M]_PySME is only defined for elements heavier than He."
+            )
+
+    def get_pattern_abundance(self, elem):
+        return self._pattern[self._get_index(elem)]
+
+    def set_pattern_abundance(self, elem, value):
+        self._pattern[self._get_index(elem)] = float(value)
+
+    def get_reference_abundance(self, elem):
+        return self._reference_pattern[self._get_index(elem)]
+
+    def get_A(self, elem):
+        value = self.get_pattern_abundance(elem)
+        if self._is_metallicity_scaled(elem):
+            value += self._metallicity_offset()
+        return value
+
+    def set_A(self, elem, value):
+        value = float(value)
+        if self._is_metallicity_scaled(elem):
+            value -= self._metallicity_offset()
+        self.set_pattern_abundance(elem, value)
+
+    def get_xh(self, elem):
+        return self.get_A(elem) - self.get_reference_abundance(elem)
+
+    def set_xh(self, elem, value):
+        self.set_A(elem, self.get_reference_abundance(elem) + float(value))
+
+    def get_xm(self, elem):
+        self._require_xm_element(elem)
+        return self.get_pattern_abundance(elem) - self.get_reference_abundance(elem)
+
+    def set_xm(self, elem, value):
+        self._require_xm_element(elem)
+        self.set_pattern_abundance(elem, self.get_reference_abundance(elem) + float(value))
+
+    def _view_get(self, kind, elem):
+        if kind == "A":
+            return self.get_A(elem)
+        if kind == "xh":
+            return self.get_xh(elem)
+        if kind == "xm":
+            return self.get_xm(elem)
+        if kind == "pattern":
+            return self.get_pattern_abundance(elem)
+        if kind == "reference":
+            return self.get_reference_abundance(elem)
+        raise ValueError(f"Unknown abundance view {kind!r}")
+
+    def _view_set(self, kind, elem, value):
+        if kind == "A":
+            self.set_A(elem, value)
+            return
+        if kind == "xh":
+            self.set_xh(elem, value)
+            return
+        if kind == "xm":
+            self.set_xm(elem, value)
+            return
+        if kind == "pattern":
+            self.set_pattern_abundance(elem, value)
+            return
+        if kind == "reference":
+            raise TypeError("The abundance reference view is read-only")
+        raise ValueError(f"Unknown abundance view {kind!r}")
+
+    def _set_reference_metadata(self, pattern, name=None, is_solar=False):
+        self._reference_pattern = np.array(pattern, dtype=float, copy=True)
+        self._reference_name = name
+        self._reference_is_solar = bool(is_solar)
+
     @property
     def pattern(self):
-        """array: Abundance pattern in the initial format"""
-        return self.get_pattern(self.type, raw=False)
+        """Mutable mapping view of the current internal abundance pattern."""
+        return _AbundanceView(self, "pattern")
+
+    @property
+    def A(self):
+        """Mutable mapping view of abundances used in synthesis (H=12 scale)."""
+        return _AbundanceView(self, "A")
+
+    @property
+    def xh(self):
+        """Mutable mapping view of [X/H] relative to the reference pattern."""
+        return _AbundanceView(self, "xh")
+
+    @property
+    def xm(self):
+        """Mutable mapping view of [X/M]_PySME relative to the reference pattern."""
+        return _AbundanceView(self, "xm")
+
+    @property
+    def reference(self):
+        """Read-only mapping view of the fixed abundance reference pattern."""
+        return _AbundanceView(self, "reference")
 
     def set_pattern_by_name(self, pattern_name):
         """Set the abundance pattern to one of the predefined options
@@ -726,10 +877,17 @@ class Abund(IPersist):
                 "'asplund2005', 'lodders2003', 'lodders2010', 'anders1989', "
                 "'grevesse1996', 'grevesse1998', or 'empty'."
             )
+        self._set_reference_metadata(
+            self._pattern,
+            name=pattern_name,
+            is_solar=pattern_name.lower() != "empty",
+        )
 
-    def set_pattern_by_value(self, pattern, type):
+    def set_pattern_by_value(self, pattern, type, update_reference=True):
         self._pattern = self.fromtype(pattern, type, raw=True)
         self.type = type
+        if update_reference:
+            self._set_reference_metadata(self._pattern, name=None, is_solar=False)
 
     def update_pattern(self, updates):
         """Update the abundance pattern for several elements at once
@@ -751,7 +909,7 @@ class Abund(IPersist):
         for key in updates:
             pos = self._get_index(key)
             pattern[pos] = updates[key]
-        self.set_pattern_by_value(pattern, self.type)
+        self.set_pattern_by_value(pattern, self.type, update_reference=False)
 
     def get_pattern(self, type=None, raw=False):
         """
@@ -792,6 +950,9 @@ class Abund(IPersist):
             "type": self.type,
             "citation_info": self.citation_info,
             "data": self._pattern,
+            "reference_pattern": self._reference_pattern,
+            "reference_name": self._reference_name,
+            "reference_is_solar": self._reference_is_solar,
         }
         return data
 
@@ -804,6 +965,11 @@ class Abund(IPersist):
             citation_info=data["citation_info"],
         )
         obj.type = data["type"]
+        obj._reference_pattern = np.array(
+            data.get("reference_pattern", obj._pattern), dtype=float, copy=True
+        )
+        obj._reference_name = data.get("reference_name")
+        obj._reference_is_solar = bool(data.get("reference_is_solar", False))
         return obj
 
     def _save(self):
@@ -812,6 +978,9 @@ class Abund(IPersist):
             "type_internal": self._type_internal,
             "type": self.type,
             "citation_info": self.citation_info,
+            "reference_pattern": self._reference_pattern.tolist(),
+            "reference_name": self._reference_name,
+            "reference_is_solar": self._reference_is_solar,
         }
         data = self._pattern
         ext = BinaryDataExtension(header, data)
@@ -827,6 +996,11 @@ class Abund(IPersist):
             type=header["type"],
             citation_info=header["citation_info"],
         )
+        abund._reference_pattern = np.array(
+            header.get("reference_pattern", pattern), dtype=float, copy=True
+        )
+        abund._reference_name = header.get("reference_name")
+        abund._reference_is_solar = bool(header.get("reference_is_solar", False))
         return abund
 
     def _save_v1(self, file, folder="abund"):
@@ -839,12 +1013,17 @@ class Abund(IPersist):
             "format": self.type,
             "monh": monh,
             "citation_info": self.citation_info,
+            "reference_name": self._reference_name,
+            "reference_is_solar": self._reference_is_solar,
         }
         file.writestr(f"{folder}info.json", json.dumps(info))
 
         b = io.BytesIO()
         np.save(b, self.get_pattern(raw=True))
         file.writestr(f"{folder}pattern.npy", b.getvalue())
+        b = io.BytesIO()
+        np.save(b, self._reference_pattern)
+        file.writestr(f"{folder}reference_pattern.npy", b.getvalue())
 
     @staticmethod
     def _load_v1(file, names, folder=""):
@@ -858,16 +1037,25 @@ class Abund(IPersist):
                 monh = info["monh"]
                 citation_info = info.get("citation_info", _citation_atomic_weights)
 
+            elif name.endswith("reference_pattern.npy"):
+                b = io.BytesIO(file.read(name))
+                reference_pattern = np.load(b)
             elif name.endswith("pattern.npy"):
                 b = io.BytesIO(file.read(name))
                 pattern = np.load(b)
 
-        return Abund(
+        abund = Abund(
             monh=monh,
             pattern=pattern,
             type=abund_format,
             citation_info=citation_info,
         )
+        abund._reference_pattern = np.array(
+            locals().get("reference_pattern", abund._pattern), dtype=float, copy=True
+        )
+        abund._reference_name = info.get("reference_name")
+        abund._reference_is_solar = bool(info.get("reference_is_solar", False))
+        return abund
 
     @staticmethod
     def solar():
