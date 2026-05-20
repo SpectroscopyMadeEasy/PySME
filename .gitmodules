@@ -1,4 +1,4 @@
 [submodule "smelib"]
 	path = smelib
-	url = https://github.com/MingjieJian/SMElib.git
+	url = https://github.com/SpectroscopyMadeEasy/SMElib.git
 	update = checkout
