@@ -55,6 +55,22 @@ logger = logging.getLogger(__name__)
 
 clight = speed_of_light * 1e-3  # km/s
 
+_PROFILE_NLTE_PROVIDER_DEFAULTS = {
+    "H": "pysme_h_3dnlte_rbf",
+}
+
+_PROFILE_NLTE_PROVIDER_CONFIG = {
+    "pysme_h_3dnlte_rbf": {
+        "element": "H",
+        "species": "H 1",
+        "supported_windows_air": [
+            [4335.0, 4345.0],
+            [4855.0, 4868.0],
+            [6550.0, 6575.0],
+        ],
+    },
+}
+
 __DLL_DICT__ = {}
 __DLL_IDS__ = {}
 
@@ -1197,15 +1213,8 @@ class Synthesizer:
         )
         cdr_database = None
 
-        # Prepare 3D NLTE H profile corrections
-        if sme.tdnlte_H:
-            if sme.specific_intensities_only:
-                logger.warning(
-                    "3D NLTE H correction is defined at flux level and is not applied "
-                    "when specific_intensities_only=True."
-                )
-            else:
-                sme.tdnlte_H_correction = self.get_H_3dnlte_correction_rbf(sme)
+        # Prepare profile-based NLTE corrections before segment synthesis.
+        self._prepare_profile_nlte(sme)
 
         if sme is not self.known_sme:
             logger.debug("Synthesize spectrum")
@@ -1794,6 +1803,13 @@ class Synthesizer:
             wave=wint_seg,
         )
 
+        # Insert the new 3DNLTE correction
+        if self._is_profile_nlte_h_applied(sme):
+            interpolator = interp1d(util.lambda_H_3DNLTE, sme.tdnlte_H_correction, kind="linear", fill_value=1, bounds_error=False, assume_sorted=True)
+            correction_3dnlte_H_interp = interpolator(wint)
+
+            sint *= correction_3dnlte_H_interp
+
         # # Assign the nlte flags
         # nlte_flags = dll.GetNLTEflags()
         # sme.nlte.flags = nlte_flags
@@ -1831,7 +1847,7 @@ class Synthesizer:
                 sint = broadening.apply_broadening(ipres, wint, sint, type=sme.iptype, sme=sme)
 
             # Apply the correction on Ha, Hb and Hgamma line here.
-            if sme.tdnlte_H:
+            if self._is_profile_nlte_h_applied(sme):
                 correction_resample = safe_interpolation(sme.tdnlte_H_correction[0], sme.tdnlte_H_correction[1], wint, fill_value=1)
                 sint *= correction_resample
 
@@ -2557,6 +2573,7 @@ class Synthesizer:
             return None
         sme_H_only.wave = np.arange(4000, 6700, 0.02)
         sme_H_only.tdnlte_H = False
+        sme_H_only.profile_nlte.enabled = False
         sme_H_only_res = self.synthesize_spectrum(sme_H_only)
 
         mu_3d = np.asarray(util.mu_H_3DNLTE, dtype=float)
@@ -2578,7 +2595,6 @@ class Synthesizer:
         
         if not in_boundary:
             logger.info(f"Outside the H 3dnlte grid, not performing correction.")
-            sme.tdnlte_H = False
             return None
         
         int_3dnlte_H = np.array(int_3dnlte_H)
@@ -2628,6 +2644,164 @@ class Synthesizer:
         ) / np.clip(sme_H_only_res.synth[0], 1e-12, None)
 
         return sme_H_only_res.wave[0], correction
+
+    @staticmethod
+    def _provider_windows_in_wran(sme, provider_cfg):
+        wran = np.asarray(sme.wran, dtype=float).reshape(-1, 2)
+        applied = []
+        for win_lo, win_hi in provider_cfg["supported_windows_air"]:
+            overlaps = (wran[:, 1] >= win_lo) & (wran[:, 0] <= win_hi)
+            if np.any(overlaps):
+                applied.append([float(win_lo), float(win_hi)])
+        return applied
+
+    @staticmethod
+    def _linelist_has_species(sme, species):
+        try:
+            linelist_species = np.asarray(sme.linelist["species"], dtype="U")
+        except Exception:
+            return False
+        return bool(np.any(linelist_species == species))
+
+    @staticmethod
+    def _profile_nlte_summary_base(sme, requested, element, provider, provider_cfg):
+        return {
+            "requested": bool(requested),
+            "applied": False,
+            "element": element,
+            "provider": provider,
+            "supported_windows_air": deepcopy(provider_cfg["supported_windows_air"]) if provider_cfg is not None else [],
+            "applied_windows_air": [],
+            "fallback": False,
+            "fallback_reason": None,
+        }
+
+    def _normalize_profile_nlte_request(self, sme):
+        requested = bool(getattr(sme, "tdnlte_H", False) or getattr(sme.profile_nlte, "enabled", False))
+        if not requested:
+            sme.profile_nlte.summary = {
+                "requested": False,
+                "applied": False,
+                "element": None,
+                "provider": None,
+                "supported_windows_air": [],
+                "applied_windows_air": [],
+                "fallback": False,
+                "fallback_reason": None,
+            }
+            return None, None
+
+        element = sme.profile_nlte.element
+        if element is None and getattr(sme, "tdnlte_H", False):
+            element = "H"
+        if isinstance(element, (list, tuple, set, np.ndarray)):
+            raise ValueError("Profile-NLTE currently supports only one element provider at a time")
+        if element is None:
+            raise ValueError("profile_nlte.enabled=True requires profile_nlte.element to be set")
+
+        element = str(element).strip()
+        provider = sme.profile_nlte.provider or _PROFILE_NLTE_PROVIDER_DEFAULTS.get(element)
+        if provider is None:
+            raise ValueError(f"No default profile-NLTE provider is configured for element '{element}'")
+        if provider not in _PROFILE_NLTE_PROVIDER_CONFIG:
+            raise ValueError(f"Unknown profile-NLTE provider '{provider}'")
+
+        provider_cfg = _PROFILE_NLTE_PROVIDER_CONFIG[provider]
+        if provider_cfg["element"] != element:
+            raise ValueError(
+                f"Profile-NLTE provider '{provider}' is configured for element '{provider_cfg['element']}', not '{element}'"
+            )
+
+        sme.profile_nlte.enabled = True
+        sme.profile_nlte.element = element
+        sme.profile_nlte.provider = provider
+        return provider, provider_cfg
+
+    def _prepare_profile_nlte(self, sme):
+        legacy_requested = bool(getattr(sme, "tdnlte_H", False))
+        sme.tdnlte_H_correction = None
+        sme.tdnlte_H = False
+        if legacy_requested:
+            sme.tdnlte_H = True
+        provider, provider_cfg = self._normalize_profile_nlte_request(sme)
+        sme.tdnlte_H = False
+        if provider is None:
+            return
+
+        summary = self._profile_nlte_summary_base(
+            sme,
+            requested=True,
+            element=sme.profile_nlte.element,
+            provider=provider,
+            provider_cfg=provider_cfg,
+        )
+        sme.profile_nlte.summary = summary
+
+        applied_windows = self._provider_windows_in_wran(sme, provider_cfg)
+        if not applied_windows:
+            summary["fallback"] = True
+            summary["fallback_reason"] = "no_wavelength_overlap"
+            logger.warning(
+                "Profile-NLTE provider '%s' for element '%s' was requested but not applied: "
+                "the current synthesis wavelength range does not overlap any supported provider window.",
+                provider,
+                sme.profile_nlte.element,
+            )
+            return
+        summary["applied_windows_air"] = applied_windows
+
+        if provider == "pysme_h_3dnlte_rbf" and getattr(sme, "specific_intensities_only", False):
+            summary["fallback"] = True
+            summary["fallback_reason"] = "specific_intensities_only"
+            logger.warning(
+                "Profile-NLTE provider '%s' for element '%s' was requested but not applied: "
+                "the current hydrogen profile correction is defined at flux level and is disabled "
+                "when specific_intensities_only=True.",
+                provider,
+                sme.profile_nlte.element,
+            )
+            return
+
+        if not self._linelist_has_species(sme, provider_cfg["species"]):
+            summary["fallback"] = True
+            summary["fallback_reason"] = "no_matching_species_in_linelist"
+            logger.warning(
+                "Profile-NLTE provider '%s' for element '%s' was requested but not applied: "
+                "the current linelist does not contain species '%s'.",
+                provider,
+                sme.profile_nlte.element,
+                provider_cfg["species"],
+            )
+            return
+
+        if provider == "pysme_h_3dnlte_rbf":
+            correction = self.get_H_3dnlte_correction_rbf(sme)
+            if correction is None:
+                summary["fallback"] = True
+                summary["fallback_reason"] = "outside_profile_grid"
+                logger.warning(
+                    "Profile-NLTE provider '%s' for element '%s' was requested but not applied: "
+                    "the stellar parameters are outside the supported provider grid.",
+                    provider,
+                    sme.profile_nlte.element,
+                )
+                return
+            sme.tdnlte_H_correction = correction
+            summary["applied"] = True
+            sme.tdnlte_H = True
+            return
+
+        raise ValueError(f"Unhandled profile-NLTE provider '{provider}'")
+
+    @staticmethod
+    def _is_profile_nlte_h_applied(sme):
+        summary = getattr(sme.profile_nlte, "summary", {})
+        return bool(
+            summary
+            and summary.get("applied")
+            and summary.get("provider") == "pysme_h_3dnlte_rbf"
+            and getattr(sme, "tdnlte_H_correction", None) is not None
+        )
 
     # def get_H_3dnlte_correction(self, sme):
     #     """

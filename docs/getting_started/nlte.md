@@ -24,3 +24,9 @@ Upon the first use of the NLTE correction, the NLTE grid will be downloaded from
 Similarly they can be disabled for each element using `sme.nlte.remove_nlte(el)`.
 
 More details on NLTE can be found in the [concept section](../concepts/nlte.md).
+
+```{note}
+PySME also contains an experimental **profile-based NLTE correction** interface.
+This is separate from the standard `sme.nlte` departure-coefficient workflow and is documented in
+[](../advance/profile_nlte.md).
+```

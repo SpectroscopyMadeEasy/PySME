@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 # TODO implement synthesis tests
 import numpy as np
+import pandas as pd
 import pytest
 
+from pysme import util
 from pysme.iliffe_vector import Iliffe_vector
 from pysme.sme import SME_Structure as SME_Struct
 from pysme.synthesize import Synthesizer, synthesize_spectrum
@@ -102,6 +104,15 @@ def _minimal_sme():
     return sme
 
 
+def _set_minimal_species_linelist(sme, species):
+    sme.linelist._lines = pd.DataFrame(
+        {
+            "species": list(species),
+            "wlcent": np.full(len(species), 6562.8, dtype=float),
+        }
+    )
+
+
 def test_synthesize_segment_prefers_user_wint_over_cache():
     dll = _DummyDLL()
     synth = Synthesizer(dll=dll)
@@ -173,6 +184,113 @@ def test_specific_intensities_only_updates_sme_and_trims_to_wran():
     assert w.size < 9
     assert sint.shape == (len(sme.mu), w.size)
     assert cint.shape == (len(sme.mu), w.size)
+
+
+def test_profile_nlte_h_summary_uses_default_provider(monkeypatch):
+    dll = _DummyDLL(transf_wave=np.linspace(6550.0, 6575.0, 9))
+    synth = Synthesizer(dll=dll)
+    sme = _minimal_sme()
+    sme.wran = [[6550.0, 6575.0]]
+    sme.profile_nlte.enabled = True
+    sme.profile_nlte.element = "H"
+    _set_minimal_species_linelist(sme, ["H 1"])
+
+    monkeypatch.setattr(
+        Synthesizer,
+        "get_H_3dnlte_correction_rbf",
+        lambda self, sme: np.ones((len(sme.mu), len(np.asarray(util.lambda_H_3DNLTE)))),
+    )
+
+    out = synth.synthesize_spectrum(
+        sme,
+        segments=[0],
+        passLineList=False,
+        passAtmosphere=False,
+        passNLTE=False,
+    )
+
+    summary = out.profile_nlte.summary
+    assert summary["requested"] is True
+    assert summary["applied"] is True
+    assert summary["element"] == "H"
+    assert summary["provider"] == "pysme_h_3dnlte_rbf"
+    assert summary["fallback_reason"] is None
+    assert summary["applied_windows_air"] == [[6550.0, 6575.0]]
+
+
+def test_profile_nlte_summary_skips_when_species_missing():
+    dll = _DummyDLL(transf_wave=np.linspace(6550.0, 6575.0, 9))
+    synth = Synthesizer(dll=dll)
+    sme = _minimal_sme()
+    sme.wran = [[6550.0, 6575.0]]
+    sme.profile_nlte.enabled = True
+    sme.profile_nlte.element = "H"
+    _set_minimal_species_linelist(sme, ["Fe 1"])
+
+    out = synth.synthesize_spectrum(
+        sme,
+        segments=[0],
+        passLineList=False,
+        passAtmosphere=False,
+        passNLTE=False,
+    )
+
+    summary = out.profile_nlte.summary
+    assert summary["requested"] is True
+    assert summary["applied"] is False
+    assert summary["fallback"] is True
+    assert summary["fallback_reason"] == "no_matching_species_in_linelist"
+
+
+def test_profile_nlte_warning_when_species_missing(caplog):
+    dll = _DummyDLL(transf_wave=np.linspace(6550.0, 6575.0, 9))
+    synth = Synthesizer(dll=dll)
+    sme = _minimal_sme()
+    sme.wran = [[6550.0, 6575.0]]
+    sme.profile_nlte.enabled = True
+    sme.profile_nlte.element = "H"
+    _set_minimal_species_linelist(sme, ["Fe 1"])
+
+    with caplog.at_level("WARNING", logger="pysme.synthesize"):
+        synth.synthesize_spectrum(
+            sme,
+            segments=[0],
+            passLineList=False,
+            passAtmosphere=False,
+            passNLTE=False,
+        )
+
+    assert "was requested but not applied" in caplog.text
+    assert "does not contain species 'H 1'" in caplog.text
+
+
+def test_profile_nlte_legacy_tdnlte_h_maps_to_profile_summary(monkeypatch):
+    dll = _DummyDLL(transf_wave=np.linspace(6550.0, 6575.0, 9))
+    synth = Synthesizer(dll=dll)
+    sme = _minimal_sme()
+    sme.wran = [[6550.0, 6575.0]]
+    sme.tdnlte_H = True
+    _set_minimal_species_linelist(sme, ["H 1"])
+
+    monkeypatch.setattr(
+        Synthesizer,
+        "get_H_3dnlte_correction_rbf",
+        lambda self, sme: np.ones((len(sme.mu), len(np.asarray(util.lambda_H_3DNLTE)))),
+    )
+
+    out = synth.synthesize_spectrum(
+        sme,
+        segments=[0],
+        passLineList=False,
+        passAtmosphere=False,
+        passNLTE=False,
+    )
+
+    summary = out.profile_nlte.summary
+    assert summary["requested"] is True
+    assert summary["applied"] is True
+    assert summary["element"] == "H"
+    assert summary["provider"] == "pysme_h_3dnlte_rbf"
 
 
 def _flag_strong_lines_by_bins_reference(wl, depth, bin_width=0.2, threshold=0.001):

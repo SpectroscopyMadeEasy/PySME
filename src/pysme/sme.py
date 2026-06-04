@@ -168,6 +168,22 @@ class Fitresults(Collection):
 
 
 @CollectionFactory
+class ProfileNLTE(Collection):
+    # fmt: off
+    _fields = Collection._fields + [
+        ("enabled", False, asbool, this,
+            "bool: Whether to apply profile-based NLTE corrections during synthesis"),
+        ("element", None, astype(str, allow_None=True), this,
+            "str or None: Element whose profile-based NLTE provider should be used"),
+        ("provider", None, astype(str, allow_None=True), this,
+            "str or None: Explicit profile-NLTE provider name; None uses the default provider for the element"),
+        ("summary", {}, this, this,
+            "dict: Runtime summary describing which profile-NLTE provider was requested and applied"),
+    ]
+    # fmt: on
+
+
+@CollectionFactory
 class SME_Structure(Parameters):
     # fmt: off
     _fields = Parameters._fields + [
@@ -283,6 +299,8 @@ class SME_Structure(Parameters):
         ("fitresults", Fitresults(), astype(Fitresults), this, "Fitresults: fit results data"),
         ("atmo", Atmosphere(), astype(Atmosphere), this, "Atmosphere: model atmosphere data"),
         ("nlte", NLTE(), astype(NLTE), this, "NLTE: nlte calculation data"),
+        ("profile_nlte", ProfileNLTE(), astype(ProfileNLTE), this,
+            "ProfileNLTE: profile-based NLTE correction configuration and runtime summary"),
         ("system_info", Version(), astype(Version), this,
             "Version: information about the host system running the calculation for debugging")
     ]
@@ -294,6 +312,7 @@ class SME_Structure(Parameters):
 
         atmo = kwargs.pop("atmo", {})
         nlte = kwargs.pop("nlte", {})
+        profile_nlte = kwargs.pop("profile_nlte", {})
         idlver = kwargs.pop("idlver", {})
         self.wave = None
         self.wran = None
@@ -339,6 +358,13 @@ class SME_Structure(Parameters):
         self.line_select_almax_bin_width = 0.2
         self.tdnlte_H = False
         # self.tdnlte_H_new = False
+        if isinstance(profile_nlte, dict):
+            self.profile_nlte = ProfileNLTE(**profile_nlte)
+        elif isinstance(profile_nlte, ProfileNLTE):
+            self.profile_nlte = profile_nlte
+        else:
+            raise TypeError("profile_nlte must be a dict or ProfileNLTE instance")
+        self.profile_nlte.summary = {}
 
         self.show_progress_bars = False
 
