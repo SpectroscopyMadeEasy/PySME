@@ -67,6 +67,13 @@ The summary currently includes:
 - `applied`
 - `element`
 - `provider`
+- `species`
+- `profile_kind`
+- `data_key`
+- `data_source`
+- `parameter_axes`
+- `reference_label`
+- `citation_info`
 - `supported_windows_air`
 - `applied_windows_air`
 - `fallback`
@@ -80,6 +87,13 @@ Example:
     "applied": True,
     "element": "H",
     "provider": "pysme_h_3dnlte_rbf",
+    "species": "H 1",
+    "profile_kind": "intensity_ratio",
+    "data_key": "data.hlineprof",
+    "data_source": "lineprof.dat",
+    "parameter_axes": ["teff", "logg", "monh", "mu"],
+    "reference_label": "PySME bundled hydrogen profile dataset",
+    "citation_info": None,
     "supported_windows_air": [
         [4335.0, 4345.0],
         [4855.0, 4868.0],
@@ -94,6 +108,40 @@ Example:
 ```
 
 This is the recommended way to determine whether a synthesis actually used the profile-based correction.
+
+## Provider Metadata
+
+Each provider is described internally by a manifest-like metadata object.
+This provider metadata is what drives:
+
+- the default provider mapping for each element
+- supported wavelength windows
+- the species check
+- summary metadata shown to the user
+- future reference / citation bookkeeping
+
+For the current hydrogen provider, PySME records:
+
+- the provider name
+- the element and species
+- the supported windows
+- the profile kind
+- the data location key
+- the bundled data-source name
+- a short reference label
+- an optional citation payload
+
+For the current hydrogen provider, the scientific reference is:
+
+- **Amarsi et al. (2018, A&A, 615, A139)**  
+  *Effective temperature determinations of late-type stars based on 3D non-LTE Balmer line formation*
+
+The provider summary therefore includes both:
+
+- `reference_label`
+- `citation_info`
+
+so the citation can be surfaced directly to users and downstream tooling.
 
 ## Fallback Behavior
 

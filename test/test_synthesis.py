@@ -214,6 +214,13 @@ def test_profile_nlte_h_summary_uses_default_provider(monkeypatch):
     assert summary["applied"] is True
     assert summary["element"] == "H"
     assert summary["provider"] == "pysme_h_3dnlte_rbf"
+    assert summary["species"] == "H 1"
+    assert summary["profile_kind"] == "intensity_ratio"
+    assert summary["data_key"] == "data.hlineprof"
+    assert summary["data_source"] == "lineprof.dat"
+    assert summary["parameter_axes"] == ["teff", "logg", "monh", "mu"]
+    assert summary["reference_label"] == "PySME bundled hydrogen profile dataset"
+    assert summary["citation_info"] is None
     assert summary["fallback_reason"] is None
     assert summary["applied_windows_air"] == [[6550.0, 6575.0]]
 

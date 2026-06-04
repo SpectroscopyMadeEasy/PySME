@@ -2,6 +2,7 @@
 """
 Spectral Synthesis Module of SME
 """
+from dataclasses import dataclass, field
 import logging
 import uuid
 import warnings
@@ -55,20 +56,56 @@ logger = logging.getLogger(__name__)
 
 clight = speed_of_light * 1e-3  # km/s
 
+
+@dataclass(frozen=True)
+class ProfileNLTEProviderManifest:
+    name: str
+    element: str
+    species: str
+    supported_windows_air: list[list[float]]
+    profile_kind: str
+    data_key: str
+    parameter_axes: list[str]
+    data_source: str
+    reference_label: str | None = None
+    citation_info: str | None = None
+    notes: list[str] = field(default_factory=list)
+
+
+H_3DNLTE_RBF_MANIFEST = ProfileNLTEProviderManifest(
+    name="pysme_h_3dnlte_rbf",
+    element="H",
+    species="H 1",
+    supported_windows_air=[
+        [4335.0, 4345.0],
+        [4855.0, 4868.0],
+        [6550.0, 6575.0],
+    ],
+    profile_kind="intensity_ratio",
+    data_key="data.hlineprof",
+    parameter_axes=["teff", "logg", "monh", "mu"],
+    data_source="lineprof.dat",
+    reference_label="Amarsi et al. (2018, A&A, 615, A139)",
+    citation_info="""@article{Amarsi2018Balmer3DNLTE,
+  author = {{Amarsi}, A. M. and {Nordlander}, T. and {Barklem}, P. S. and {Asplund}, M. and {Collet}, R. and {Lind}, K.},
+  title = {Effective temperature determinations of late-type stars based on 3D non-LTE Balmer line formation},
+  journal = {Astronomy \\& Astrophysics},
+  volume = {615},
+  pages = {A139},
+  year = {2018}
+}""",
+    notes=[
+        "Bundled hydrogen profile dataset used by the current experimental profile-NLTE implementation.",
+        "The scientific reference for the Halpha/Hbeta/Hgamma 3D non-LTE Balmer-line profiles is Amarsi et al. (2018).",
+    ],
+)
+
 _PROFILE_NLTE_PROVIDER_DEFAULTS = {
     "H": "pysme_h_3dnlte_rbf",
 }
 
 _PROFILE_NLTE_PROVIDER_CONFIG = {
-    "pysme_h_3dnlte_rbf": {
-        "element": "H",
-        "species": "H 1",
-        "supported_windows_air": [
-            [4335.0, 4345.0],
-            [4855.0, 4868.0],
-            [6550.0, 6575.0],
-        ],
-    },
+    "pysme_h_3dnlte_rbf": H_3DNLTE_RBF_MANIFEST,
 }
 
 __DLL_DICT__ = {}
@@ -2649,7 +2686,7 @@ class Synthesizer:
     def _provider_windows_in_wran(sme, provider_cfg):
         wran = np.asarray(sme.wran, dtype=float).reshape(-1, 2)
         applied = []
-        for win_lo, win_hi in provider_cfg["supported_windows_air"]:
+        for win_lo, win_hi in provider_cfg.supported_windows_air:
             overlaps = (wran[:, 1] >= win_lo) & (wran[:, 0] <= win_hi)
             if np.any(overlaps):
                 applied.append([float(win_lo), float(win_hi)])
@@ -2670,7 +2707,14 @@ class Synthesizer:
             "applied": False,
             "element": element,
             "provider": provider,
-            "supported_windows_air": deepcopy(provider_cfg["supported_windows_air"]) if provider_cfg is not None else [],
+            "species": provider_cfg.species if provider_cfg is not None else None,
+            "profile_kind": provider_cfg.profile_kind if provider_cfg is not None else None,
+            "data_key": provider_cfg.data_key if provider_cfg is not None else None,
+            "data_source": provider_cfg.data_source if provider_cfg is not None else None,
+            "parameter_axes": deepcopy(provider_cfg.parameter_axes) if provider_cfg is not None else [],
+            "reference_label": provider_cfg.reference_label if provider_cfg is not None else None,
+            "citation_info": provider_cfg.citation_info if provider_cfg is not None else None,
+            "supported_windows_air": deepcopy(provider_cfg.supported_windows_air) if provider_cfg is not None else [],
             "applied_windows_air": [],
             "fallback": False,
             "fallback_reason": None,
@@ -2707,9 +2751,9 @@ class Synthesizer:
             raise ValueError(f"Unknown profile-NLTE provider '{provider}'")
 
         provider_cfg = _PROFILE_NLTE_PROVIDER_CONFIG[provider]
-        if provider_cfg["element"] != element:
+        if provider_cfg.element != element:
             raise ValueError(
-                f"Profile-NLTE provider '{provider}' is configured for element '{provider_cfg['element']}', not '{element}'"
+                f"Profile-NLTE provider '{provider}' is configured for element '{provider_cfg.element}', not '{element}'"
             )
 
         sme.profile_nlte.enabled = True
@@ -2762,7 +2806,7 @@ class Synthesizer:
             )
             return
 
-        if not self._linelist_has_species(sme, provider_cfg["species"]):
+         if not self._linelist_has_species(sme, provider_cfg.species):
             summary["fallback"] = True
             summary["fallback_reason"] = "no_matching_species_in_linelist"
             logger.warning(
@@ -2770,7 +2814,7 @@ class Synthesizer:
                 "the current linelist does not contain species '%s'.",
                 provider,
                 sme.profile_nlte.element,
-                provider_cfg["species"],
+                provider_cfg.species,
             )
             return
 
