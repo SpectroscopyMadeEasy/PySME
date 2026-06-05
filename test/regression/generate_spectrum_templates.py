@@ -23,7 +23,7 @@ from pysme.synthesize import synthesize_spectrum
 TEMPLATE_DIR = Path(__file__).resolve().parent / "data" / "templates"
 REGRESSION_DATA = Path(__file__).resolve().parent / "data"
 HALPHA_LINELIST = REGRESSION_DATA / "halpha_window_cdr_union.lin"
-STELLAR_LINELIST = ROOT / "test" / "extract_stellar.lin"
+CA5002_LINELIST = REGRESSION_DATA / "ca5002_window.lin"
 DELTA_LAMBDA = 0.02
 
 
@@ -54,7 +54,7 @@ WINDOWS = {
         "vmic": 1.0,
         "vmac": 4.19,
         "vsini": 1.6,
-        "linelist_path": repo_relpath(STELLAR_LINELIST),
+        "linelist_path": repo_relpath(CA5002_LINELIST),
         "nlte_elements": ["Ca"],
         "template_name": "sun_ca5002_ref.npz",
     },

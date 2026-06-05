@@ -262,6 +262,7 @@ def _make_grid_for_matching_cache(selection="energy"):
     grid.linerefs = None
     grid.lineindices = None
     grid.iused = None
+    grid._active_match_key = None
     grid.first_warning = True
     return grid
 

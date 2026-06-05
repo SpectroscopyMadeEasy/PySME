@@ -2806,7 +2806,7 @@ class Synthesizer:
             )
             return
 
-         if not self._linelist_has_species(sme, provider_cfg.species):
+        if not self._linelist_has_species(sme, provider_cfg.species):
             summary["fallback"] = True
             summary["fallback_reason"] = "no_matching_species_in_linelist"
             logger.warning(

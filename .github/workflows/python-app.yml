@@ -121,11 +121,30 @@ jobs:
           restore-keys: |
             pysme-nlte-h-v1-${{ runner.os }}-
 
+      - name: Cache SMElib artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            src/pysme/lib
+            src/pysme/share/libsme
+            src/pysme/smelib/_smelib*.so
+          key: pysme-smelib-v1-${{ runner.os }}-${{ matrix.python-version }}
+          restore-keys: |
+            pysme-smelib-v1-${{ runner.os }}-
+
       - name: Prefetch H NLTE grid
         run: |
           python - <<'PY'
           from pysme.large_file_storage import setup_nlte
           setup_nlte().get("nlte_H_pysme.grd")
+          PY
+
+      - name: Prefetch SMElib
+        run: |
+          python - <<'PY'
+          from pysme.smelib.libtools import compile_interface, download_smelib
+          download_smelib()
+          compile_interface()
           PY
 
       - name: Run pytest
@@ -193,11 +212,30 @@ jobs:
           restore-keys: |
             pysme-nlte-h-v1-${{ runner.os }}-
 
+      - name: Cache SMElib artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            src/pysme/lib
+            src/pysme/share/libsme
+            src/pysme/smelib/_smelib*.so
+          key: pysme-smelib-v1-${{ runner.os }}-${{ matrix.python-version }}
+          restore-keys: |
+            pysme-smelib-v1-${{ runner.os }}-
+
       - name: Prefetch H NLTE grid
         run: |
           python - <<'PY'
           from pysme.large_file_storage import setup_nlte
           setup_nlte().get("nlte_H_pysme.grd")
+          PY
+
+      - name: Prefetch SMElib
+        run: |
+          python - <<'PY'
+          from pysme.smelib.libtools import compile_interface, download_smelib
+          download_smelib()
+          compile_interface()
           PY
 
       - name: Run pytest

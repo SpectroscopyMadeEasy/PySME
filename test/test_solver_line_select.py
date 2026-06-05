@@ -9,6 +9,7 @@ import pysme.synthesize as synth_mod
 from pysme.sme import SME_Structure as SME_Struct
 from pysme.solve import solve
 from pysme.synthesize import Synthesizer, synthesize_spectrum
+from .conftest import skipif_smelib
 
 
 cwd = dirname(__file__)
@@ -54,6 +55,7 @@ def _run_solve(method):
         ("cdr", ["central_depth", "line_range_s", "line_range_e", "strong"]),
     ],
 )
+@skipif_smelib
 def test_solve_line_select_methods_run(method, required_cols):
     out, _, flux = _run_solve(method)
     cols = set(out.linelist._lines.columns)
@@ -64,6 +66,7 @@ def test_solve_line_select_methods_run(method, required_cols):
         assert col in cols
 
 
+@skipif_smelib
 def test_solve_line_select_methods_match_internal_flux():
     _, wave_ref, flux_ref = _run_solve("internal")
 
@@ -74,6 +77,7 @@ def test_solve_line_select_methods_match_internal_flux():
         assert np.max(np.abs(diff)) < 1e-10
 
 
+@skipif_smelib
 def test_line_precompute_database_separates_method_and_linelist_hash(tmp_path):
     db = str(tmp_path)
 

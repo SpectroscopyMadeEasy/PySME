@@ -8,8 +8,10 @@ from pysme import util
 from pysme.iliffe_vector import Iliffe_vector
 from pysme.sme import SME_Structure as SME_Struct
 from pysme.synthesize import Synthesizer, synthesize_spectrum
+from .conftest import skipif_smelib
 
 
+@skipif_smelib
 def test_synthesis_simple(sme_2segments):
     sme = sme_2segments
     sme2 = synthesize_spectrum(sme)
@@ -27,6 +29,7 @@ def test_synthesis_simple(sme_2segments):
     assert sme.spec is None
 
 
+@skipif_smelib
 def test_synthesis_segment(sme_2segments):
     sme = sme_2segments
     # Out of range
@@ -60,6 +63,7 @@ class _DummyDLL:
     def __init__(self, transf_wave=None):
         self.last_wave = "unset"
         self.transf_wave = transf_wave
+        self._nlines = 0
 
     def SetLibraryPath(self):
         return None
@@ -72,6 +76,10 @@ class _DummyDLL:
 
     def SetLineInfoMode(self, *_):
         return None
+
+    def InputLineList(self, linelist):
+        self._nlines = len(linelist)
+        return np.zeros(self._nlines, dtype=bool)
 
     def Transf(self, mu, accrt, accwi, keep_lineop, wave=None):
         self.last_wave = wave
@@ -92,6 +100,9 @@ class _DummyDLL:
     def GetLineRange(self):
         return np.zeros((0, 2), dtype=float)
 
+    def GetNLTEflags(self):
+        return np.zeros(self._nlines, dtype=bool)
+
 
 def _minimal_sme():
     sme = SME_Struct()
@@ -111,6 +122,7 @@ def _set_minimal_species_linelist(sme, species):
             "wlcent": np.full(len(species), 6562.8, dtype=float),
         }
     )
+    sme.line_ion_mask = np.zeros(len(species), dtype=bool)
 
 
 def test_synthesize_segment_prefers_user_wint_over_cache():
@@ -162,7 +174,6 @@ def test_specific_intensities_only_updates_sme_and_trims_to_wran():
     out = synth.synthesize_spectrum(
         sme,
         segments=[0],
-        passLineList=False,
         passAtmosphere=False,
         passNLTE=False,
     )
@@ -191,6 +202,7 @@ def test_profile_nlte_h_summary_uses_default_provider(monkeypatch):
     synth = Synthesizer(dll=dll)
     sme = _minimal_sme()
     sme.wran = [[6550.0, 6575.0]]
+    sme.specific_intensities_only = False
     sme.profile_nlte.enabled = True
     sme.profile_nlte.element = "H"
     _set_minimal_species_linelist(sme, ["H 1"])
@@ -204,7 +216,6 @@ def test_profile_nlte_h_summary_uses_default_provider(monkeypatch):
     out = synth.synthesize_spectrum(
         sme,
         segments=[0],
-        passLineList=False,
         passAtmosphere=False,
         passNLTE=False,
     )
@@ -219,8 +230,8 @@ def test_profile_nlte_h_summary_uses_default_provider(monkeypatch):
     assert summary["data_key"] == "data.hlineprof"
     assert summary["data_source"] == "lineprof.dat"
     assert summary["parameter_axes"] == ["teff", "logg", "monh", "mu"]
-    assert summary["reference_label"] == "PySME bundled hydrogen profile dataset"
-    assert summary["citation_info"] is None
+    assert summary["reference_label"] == "Amarsi et al. (2018, A&A, 615, A139)"
+    assert "Amarsi2018Balmer3DNLTE" in summary["citation_info"]
     assert summary["fallback_reason"] is None
     assert summary["applied_windows_air"] == [[6550.0, 6575.0]]
 
@@ -230,6 +241,7 @@ def test_profile_nlte_summary_skips_when_species_missing():
     synth = Synthesizer(dll=dll)
     sme = _minimal_sme()
     sme.wran = [[6550.0, 6575.0]]
+    sme.specific_intensities_only = False
     sme.profile_nlte.enabled = True
     sme.profile_nlte.element = "H"
     _set_minimal_species_linelist(sme, ["Fe 1"])
@@ -237,7 +249,6 @@ def test_profile_nlte_summary_skips_when_species_missing():
     out = synth.synthesize_spectrum(
         sme,
         segments=[0],
-        passLineList=False,
         passAtmosphere=False,
         passNLTE=False,
     )
@@ -254,6 +265,7 @@ def test_profile_nlte_warning_when_species_missing(caplog):
     synth = Synthesizer(dll=dll)
     sme = _minimal_sme()
     sme.wran = [[6550.0, 6575.0]]
+    sme.specific_intensities_only = False
     sme.profile_nlte.enabled = True
     sme.profile_nlte.element = "H"
     _set_minimal_species_linelist(sme, ["Fe 1"])
@@ -262,7 +274,6 @@ def test_profile_nlte_warning_when_species_missing(caplog):
         synth.synthesize_spectrum(
             sme,
             segments=[0],
-            passLineList=False,
             passAtmosphere=False,
             passNLTE=False,
         )
@@ -276,6 +287,7 @@ def test_profile_nlte_legacy_tdnlte_h_maps_to_profile_summary(monkeypatch):
     synth = Synthesizer(dll=dll)
     sme = _minimal_sme()
     sme.wran = [[6550.0, 6575.0]]
+    sme.specific_intensities_only = False
     sme.tdnlte_H = True
     _set_minimal_species_linelist(sme, ["H 1"])
 
@@ -288,7 +300,6 @@ def test_profile_nlte_legacy_tdnlte_h_maps_to_profile_summary(monkeypatch):
     out = synth.synthesize_spectrum(
         sme,
         segments=[0],
-        passLineList=False,
         passAtmosphere=False,
         passNLTE=False,
     )

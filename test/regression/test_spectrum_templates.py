@@ -15,6 +15,10 @@ from pysme.abund import Abund
 from pysme.linelist.vald import ValdFile
 from pysme.sme import SME_Structure
 from pysme.synthesize import synthesize_spectrum
+from test.conftest import skipif_smelib
+
+
+pytestmark = skipif_smelib
 
 
 TEMPLATE_DIR = Path(__file__).resolve().parent / "data" / "templates"
