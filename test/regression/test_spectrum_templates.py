@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import pickle
 import sys
 from pathlib import Path
 
@@ -18,7 +17,6 @@ from pysme.sme import SME_Structure
 from pysme.synthesize import synthesize_spectrum
 
 
-H_TEMP_LINE_PKL = Path("/home/mingjie/researches/4GP/workspace/test/H_temp_line.pkl")
 TEMPLATE_DIR = Path(__file__).resolve().parent / "data" / "templates"
 MEAN_ABS_LIMIT = 5e-4
 MAX_ABS_LIMIT = 3e-3
@@ -33,14 +31,7 @@ def load_template(name: str) -> tuple[np.ndarray, np.ndarray, dict]:
 
 def load_linelist(metadata: dict):
     w0, w1 = metadata["wave_range"]
-    if metadata["linelist_mode"] == "pickle_segment":
-        with H_TEMP_LINE_PKL.open("rb") as fh:
-            ll = pickle.load(fh)
-        if not hasattr(ll, "cdr_paras"):
-            ll.cdr_paras = None
-        wl = np.asarray(ll["wlcent"], dtype=float)
-        return ll[(wl >= w0 - 3.0) & (wl <= w1 + 3.0)]
-    ll = ValdFile(metadata["linelist_path"])
+    ll = ValdFile(ROOT / metadata["linelist_path"])
     wl = np.asarray(ll["wlcent"], dtype=float)
     return ll[(wl >= w0 - 3.0) & (wl <= w1 + 3.0)]
 
@@ -87,8 +78,8 @@ def test_regression_sun_halpha():
     assert_template("sun_halpha_ref.npz")
 
 
-def test_regression_sun_ca6162():
-    assert_template("sun_ca6162_ref.npz")
+def test_regression_sun_ca5002():
+    assert_template("sun_ca5002_ref.npz")
 
 
 def test_regression_arcturus_halpha():
