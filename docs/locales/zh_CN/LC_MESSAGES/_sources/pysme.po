@@ -1,0 +1,3123 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2025, Jeff Valenti, Nikolai Piskunov, Mingjie Jian, Ansgar
+# Wehrhahn
+# This file is distributed under the same license as the PySME package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PySME 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-03-29 22:44+0900\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: zh_CN\n"
+"Language-Team: zh_CN <LL@li.org>\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: ../../_sources/pysme.rst:2
+msgid "pysme package"
+msgstr ""
+
+#: ../../_sources/pysme.rst:5
+msgid "Subpackages"
+msgstr ""
+
+#: ../../_sources/pysme.rst:12
+msgid "Submodules"
+msgstr ""
+
+#: ../../_sources/pysme.rst:15
+msgid "pysme.abund module"
+msgstr ""
+
+#: of pysme.abund:1
+msgid "Elemental abundance data handling module"
+msgstr ""
+
+#: of pysme.abund.Abund:1
+msgid "Bases: :py:class:`~pysme.persistence.IPersist`"
+msgstr ""
+
+#: of pysme.abund.Abund:1
+msgid "Elemental abundance data and methods. Valid abundance pattern types are:"
+msgstr ""
+
+#: of pysme.abund.Abund:4
+msgid "'sme' - For hydrogen, the abundance value is the fraction of all"
+msgstr ""
+
+#: of pysme.abund.Abund:5
+msgid ""
+"nuclei that are hydrogen, including all ionization states and treating "
+"molecules as constituent atoms. For the other elements, the abundance "
+"values are log10 of the fraction of nuclei of each element in any form "
+"relative to the total for all elements in any form. For the Sun, the "
+"abundance values of H, He, and Li are approximately 0.92, -1.11, and "
+"-11.0."
+msgstr ""
+
+#: of pysme.abund.Abund:11
+msgid "'n/nTot' - Abundance values are the fraction of nuclei"
+msgstr ""
+
+#: of pysme.abund.Abund:12
+msgid ""
+"of each element in any form relative to the total for all elements in any"
+" form. For the Sun, the abundance values of H, He, and Li are "
+"approximately 0.92, 0.078, and 1.03e-11."
+msgstr ""
+
+#: of pysme.abund.Abund:15
+msgid "'n/nH' - Abundance values are the fraction of nuclei"
+msgstr ""
+
+#: of pysme.abund.Abund:16
+msgid ""
+"of each element in any form relative to the number of hydrogen nuclei in "
+"any form. For the Sun, the abundance values of H, He, and Li are "
+"approximately 1, 0.085, and 1.12e-11."
+msgstr ""
+
+#: of pysme.abund.Abund:20
+msgid "'H=12' - Abundance values are log10 of the fraction of nuclei of"
+msgstr ""
+
+#: of pysme.abund.Abund:21
+msgid ""
+"each element in any form relative to the number of hydrogen in any form "
+"plus an offset of 12. For the Sun, the nuclei abundance values of H, He, "
+"and Li are approximately 12, 10.9, and 1.05."
+msgstr ""
+
+#: of pysme.abund.Abund.empty_pattern:1
+msgid "Return an abundance pattern with value None for all elements."
+msgstr ""
+
+#: of pysme.abund.Abund.fromtype:1
+msgid ""
+"Return a copy of the input abundance pattern, transformed from the input "
+"type to the 'H=12' type. Valid abundance pattern types are 'sme', "
+"'n/nTot', 'n/nH', 'n/nFe', and 'H=12'."
+msgstr ""
+
+#: of pysme.abund.Abund.get_pattern:1
+msgid ""
+"Transform the specified abundance pattern from type used internally by "
+"SME to the requested type. Valid abundance pattern types are: 'sme', "
+"'n/nTot', 'n/nH', 'H=12'"
+msgstr ""
+
+#: ../../_sources/pysme.rst of pysme.util.load_bool_sparse
+#: pysme.util.save_bool_sparse
+msgid "Parameters"
+msgstr ""
+
+#: of pysme.abund.Abund.get_pattern:5
+msgid ""
+"The pattern format to retrieve the pattern as. Defaults to the original "
+"input format."
+msgstr ""
+
+#: of pysme.abund.Abund.get_pattern:8
+msgid ""
+"If True will return the pattern as a numpy array, with indices as defined"
+" in elem dict. Otherwise the return value is a dictionary, with the "
+"elements as keys."
+msgstr ""
+
+#: of pysme.abund.Abund.set_pattern_by_name:1
+msgid "Set the abundance pattern to one of the predefined options"
+msgstr ""
+
+#: of pysme.abund.Abund.set_pattern_by_name:3
+msgid ""
+"Name of the predefined option to use. One of: 'grevesse2007', "
+"'asplund2009', 'asplund2021', 'asplund2005', 'lodders2003', 'anders1989',"
+" 'grevesse1996', 'grevesse1998', ,'lodders2010', 'empty'"
+msgstr ""
+
+#: ../../_sources/pysme.rst of pysme.util.load_bool_sparse
+msgid "Raises"
+msgstr ""
+
+#: of pysme.abund.Abund.set_pattern_by_name:9
+msgid "If an undefined pattern_name was given"
+msgstr ""
+
+#: of pysme.abund.Abund.solar:1
+msgid "Return solar abundances of Grevesse 2007"
+msgstr ""
+
+#: of pysme.abund.Abund.totype:1
+msgid ""
+"Return a copy of the input abundance pattern, transformed from the 'H=12'"
+" type to the output type. Valid abundance pattern types are 'sme', "
+"'kurucz', 'n/nTot', 'n/nH', and 'H=12'."
+msgstr ""
+
+#: of pysme.abund.Abund.update_pattern:1
+msgid "Update the abundance pattern for several elements at once"
+msgstr ""
+
+#: of pysme.abund.Abund.update_pattern:3
+msgid ""
+"The abundance is first converted into the initially specified format, "
+"before being converted back to the internal format"
+msgstr ""
+
+#: of pysme.abund.Abund.update_pattern:6
+msgid "the elements to update"
+msgstr ""
+
+#: of pysme.abund.Abund.update_pattern:9
+msgid "If any of the element keys is not valid"
+msgstr ""
+
+#: of pysme.abund.Abund.elem:1
+msgid ""
+"Return the standard abbreviation for each element. Use property so user "
+"will not redefine elements."
+msgstr ""
+
+#: of pysme.abund.Abund.elem_dict:1
+msgid "Return the position of each element in the raw array"
+msgstr ""
+
+#: of pysme.abund.Abund.monh:1
+msgid ""
+"Metallicity, the logarithmic offset added to the abundance pattern for "
+"all elements except hydrogen and helium."
+msgstr ""
+
+#: ../../../docstring of pysme.abund.Abund.monh pysme.abund.Abund.pattern
+#: pysme.large_file_storage.LargeFileStorage.pointers
+#: pysme.large_file_storage.LargeFileStorage.server
+#: pysme.large_file_storage.LargeFileStorage.servers
+#: pysme.nlte.Grid.abund_format pysme.nlte.Grid.bgrid
+#: pysme.nlte.Grid.citation_info pysme.nlte.Grid.depth
+#: pysme.nlte.Grid.depth_name pysme.nlte.Grid.directory pysme.nlte.Grid.elem
+#: pysme.nlte.Grid.fname pysme.nlte.Grid.grid_name pysme.nlte.Grid.iused
+#: pysme.nlte.Grid.limits pysme.nlte.Grid.lineindices pysme.nlte.Grid.linelist
+#: pysme.nlte.Grid.linerefs pysme.nlte.Grid.min_energy_diff
+#: pysme.nlte.Grid.selection pysme.nlte.Grid.species
+#: pysme.nlte.Grid.subgrid_size pysme.nlte.NLTE.abund_format
+#: pysme.nlte.NLTE.citation_info pysme.nlte.NLTE.elements pysme.nlte.NLTE.flags
+#: pysme.nlte.NLTE.grids pysme.nlte.NLTE.min_energy_diff
+#: pysme.nlte.NLTE.selection pysme.nlte.NLTE.solar pysme.nlte.NLTE.subgrid_size
+#: pysme.sme.Fitresults.chisq pysme.sme.Fitresults.citation_info
+#: pysme.sme.Fitresults.covariance pysme.sme.Fitresults.derivative
+#: pysme.sme.Fitresults.fit_uncertainties pysme.sme.Fitresults.gradient
+#: pysme.sme.Fitresults.iterations pysme.sme.Fitresults.parameters
+#: pysme.sme.Fitresults.residuals pysme.sme.Fitresults.uncertainties
+#: pysme.sme.Fitresults.values pysme.sme.Parameters.abund
+#: pysme.sme.Parameters.citation_info pysme.sme.Parameters.logg
+#: pysme.sme.Parameters.monh pysme.sme.Parameters.teff
+#: pysme.sme.Parameters.vmac pysme.sme.Parameters.vmic
+#: pysme.sme.Parameters.vsini pysme.sme.SME_Structure.abund
+#: pysme.sme.SME_Structure.accrt pysme.sme.SME_Structure.accwi
+#: pysme.sme.SME_Structure.atmo pysme.sme.SME_Structure.atomic
+#: pysme.sme.SME_Structure.cint pysme.sme.SME_Structure.citation_info
+#: pysme.sme.SME_Structure.cont pysme.sme.SME_Structure.cscale
+#: pysme.sme.SME_Structure.cscale_bounds pysme.sme.SME_Structure.cscale_degree
+#: pysme.sme.SME_Structure.cscale_flag pysme.sme.SME_Structure.cscale_ftol
+#: pysme.sme.SME_Structure.cscale_gtol pysme.sme.SME_Structure.cscale_jac
+#: pysme.sme.SME_Structure.cscale_loss pysme.sme.SME_Structure.cscale_method
+#: pysme.sme.SME_Structure.cscale_type pysme.sme.SME_Structure.cscale_xtol
+#: pysme.sme.SME_Structure.fitparameters pysme.sme.SME_Structure.fitresults
+#: pysme.sme.SME_Structure.gam6 pysme.sme.SME_Structure.h2broad
+#: pysme.sme.SME_Structure.id pysme.sme.SME_Structure.ip_x
+#: pysme.sme.SME_Structure.ip_y pysme.sme.SME_Structure.ipres
+#: pysme.sme.SME_Structure.iptype pysme.sme.SME_Structure.leastsquares_ftol
+#: pysme.sme.SME_Structure.leastsquares_gtol
+#: pysme.sme.SME_Structure.leastsquares_jac
+#: pysme.sme.SME_Structure.leastsquares_loss
+#: pysme.sme.SME_Structure.leastsquares_method
+#: pysme.sme.SME_Structure.leastsquares_xscale
+#: pysme.sme.SME_Structure.leastsquares_xtol pysme.sme.SME_Structure.linelist
+#: pysme.sme.SME_Structure.logg pysme.sme.SME_Structure.mask
+#: pysme.sme.SME_Structure.meta pysme.sme.SME_Structure.mu
+#: pysme.sme.SME_Structure.nlte pysme.sme.SME_Structure.normalize_by_continuum
+#: pysme.sme.SME_Structure.nseg pysme.sme.SME_Structure.sint
+#: pysme.sme.SME_Structure.spec pysme.sme.SME_Structure.species
+#: pysme.sme.SME_Structure.specific_intensities_only
+#: pysme.sme.SME_Structure.synth pysme.sme.SME_Structure.system_info
+#: pysme.sme.SME_Structure.teff pysme.sme.SME_Structure.telluric
+#: pysme.sme.SME_Structure.uncs pysme.sme.SME_Structure.version
+#: pysme.sme.SME_Structure.vmac pysme.sme.SME_Structure.vmic
+#: pysme.sme.SME_Structure.vrad pysme.sme.SME_Structure.vrad_bounds
+#: pysme.sme.SME_Structure.vrad_flag pysme.sme.SME_Structure.vrad_ftol
+#: pysme.sme.SME_Structure.vrad_gtol pysme.sme.SME_Structure.vrad_jac
+#: pysme.sme.SME_Structure.vrad_loss pysme.sme.SME_Structure.vrad_method
+#: pysme.sme.SME_Structure.vrad_xscale pysme.sme.SME_Structure.vrad_xtol
+#: pysme.sme.SME_Structure.vsini pysme.sme.SME_Structure.wave
+#: pysme.sme.SME_Structure.wint pysme.sme.SME_Structure.wran
+#: pysme.sme.Version.arch pysme.sme.Version.build_date
+#: pysme.sme.Version.citation_info pysme.sme.Version.host
+#: pysme.sme.Version.memory_bits pysme.sme.Version.os
+#: pysme.sme.Version.os_family pysme.sme.Version.os_name
+#: pysme.sme.Version.release pysme.sme_synth.SME_DLL.datadir
+#: pysme.sme_synth.SME_DLL.file
+msgid "type"
+msgstr ""
+
+#: ../../../docstring of pysme.abund.Abund.monh:4
+#: pysme.nlte.Grid.abund_format:3 pysme.nlte.Grid.min_energy_diff:3
+#: pysme.nlte.NLTE.min_energy_diff:3 pysme.sme.Fitresults.chisq:3
+#: pysme.sme.Parameters.logg:3 pysme.sme.Parameters.monh:3
+#: pysme.sme.Parameters.teff:3 pysme.sme.Parameters.vmac:3
+#: pysme.sme.Parameters.vmic:3 pysme.sme.Parameters.vsini:3
+#: pysme.sme.SME_Structure.accrt:3 pysme.sme.SME_Structure.accwi:3
+#: pysme.sme.SME_Structure.cscale_ftol:3 pysme.sme.SME_Structure.cscale_gtol:3
+#: pysme.sme.SME_Structure.cscale_xtol:3 pysme.sme.SME_Structure.gam6:3
+#: pysme.sme.SME_Structure.leastsquares_ftol:3
+#: pysme.sme.SME_Structure.leastsquares_gtol:3
+#: pysme.sme.SME_Structure.leastsquares_xtol:3 pysme.sme.SME_Structure.logg:3
+#: pysme.sme.SME_Structure.teff:3 pysme.sme.SME_Structure.vmac:3
+#: pysme.sme.SME_Structure.vmic:3 pysme.sme.SME_Structure.vrad_bounds:3
+#: pysme.sme.SME_Structure.vrad_ftol:3 pysme.sme.SME_Structure.vrad_gtol:3
+#: pysme.sme.SME_Structure.vrad_xtol:3 pysme.sme.SME_Structure.vsini:3
+msgid "float"
+msgstr ""
+
+#: of pysme.abund.Abund.pattern:1
+msgid "Abundance pattern in the initial format"
+msgstr ""
+
+#: ../../../docstring of pysme.abund.Abund.pattern:3 pysme.nlte.Grid.bgrid:3
+#: pysme.nlte.Grid.depth:3 pysme.nlte.Grid.iused:3
+#: pysme.nlte.Grid.lineindices:3 pysme.nlte.Grid.linerefs:3
+#: pysme.nlte.NLTE.flags:3 pysme.sme.Fitresults.fit_uncertainties:3
+#: pysme.sme.Fitresults.values:3 pysme.sme.SME_Structure.ip_x:3
+#: pysme.sme.SME_Structure.ip_y:3
+msgid "array"
+msgstr ""
+
+#: ../../_sources/pysme.rst:23
+msgid "pysme.atmosphere module"
+msgstr ""
+
+#: ../../_sources/pysme.rst:31
+msgid "pysme.broadening module"
+msgstr ""
+
+#: of pysme.broadening.apply_broadening:1
+msgid "Broaden a spectrum by instrument resolution, with a given broadening type"
+msgstr ""
+
+#: of pysme.broadening.apply_broadening:3
+msgid "instrument resolution"
+msgstr ""
+
+#: of pysme.broadening.apply_broadening:5
+msgid "x values (wavelength) of the spectrum to broaden"
+msgstr ""
+
+#: of pysme.broadening.apply_broadening:7
+msgid "y values (intensities) of the spectrum to broaden"
+msgstr ""
+
+#: of pysme.broadening.apply_broadening:9
+msgid ""
+"broadening type to apply. Options are \"gauss\", \"sinc\", \"table\", "
+"None. If None, will try to use sme.iptype to determine type. \"table\" "
+"requires keyword sme to be passed as well. See functions the respective "
+"for details. (default: \"gauss\")"
+msgstr ""
+
+#: of pysme.broadening.apply_broadening:14
+msgid ""
+"sme structure with instrument profile data, required only for "
+"type=\"table\" or type=None (default: None)"
+msgstr ""
+
+#: of pysme.broadening.apply_broadening:18
+msgid ""
+"if type requires SME_Struct, but its missing     passed type not "
+"recognized"
+msgstr ""
+
+#: ../../_sources/pysme.rst of pysme.util.load_bool_sparse
+msgid "Returns"
+msgstr ""
+
+#: of pysme.broadening.apply_broadening:20
+msgid "**y_seg** -- broadened intensity spectrum"
+msgstr ""
+
+#: ../../_sources/pysme.rst of pysme.util.load_bool_sparse
+msgid "Return type"
+msgstr ""
+
+#: of pysme.broadening.gaussbroad:1
+msgid "Smooths a spectrum by convolution with a gaussian of specified hwhm."
+msgstr ""
+
+#: of pysme.broadening.gaussbroad:3 pysme.broadening.sincbroad:3
+#: pysme.broadening.tablebroad:3
+msgid "wavelength scale of spectrum to be smoothed"
+msgstr ""
+
+#: of pysme.broadening.gaussbroad:5 pysme.broadening.sincbroad:5
+#: pysme.broadening.tablebroad:5
+msgid "spectrum to be smoothed"
+msgstr ""
+
+#: of pysme.broadening.gaussbroad:7 pysme.broadening.sincbroad:7
+msgid "half width at half maximum of smoothing gaussian."
+msgstr ""
+
+#: of pysme.broadening.gaussbroad:10
+msgid "**sout** -- the gaussian-smoothed spectrum."
+msgstr ""
+
+#: of pysme.broadening.sincbroad:1
+msgid "Smooths a spectrum by convolution with a sinc function of specified hwhm."
+msgstr ""
+
+#: of pysme.broadening.sincbroad:10
+msgid "**sout** -- the sinc-smoothed spectrum."
+msgstr ""
+
+#: of pysme.broadening.tablebroad:1
+msgid "Convolves a spectrum with an arbitrary instrumental profile."
+msgstr ""
+
+#: of pysme.broadening.tablebroad:7
+msgid "x points of the instrument profile"
+msgstr ""
+
+#: of pysme.broadening.tablebroad:9
+msgid "y points of the instrument profile"
+msgstr ""
+
+#: of pysme.broadening.tablebroad:12
+msgid "**sout** -- the smoothed spectrum."
+msgstr ""
+
+#: ../../_sources/pysme.rst:39
+msgid "pysme.config module"
+msgstr ""
+
+#: of pysme.config:1
+msgid ""
+"Handle the Json configuration file At the moment it is only used for the "
+"LargeFileStorage"
+msgstr ""
+
+#: of pysme.config.Config:1
+#: pysme.continuum_and_radial_velocity.ContinuumNormalizationAbstract:1
+#: pysme.cwrapper.IDL_DLL:1 pysme.large_file_storage.LargeFileStorage:1
+#: pysme.nlte.DirectAccessFile:1 pysme.nlte.Grid:1 pysme.persistence.IPersist:1
+#: pysme.sme_synth.SME_DLL:1 pysme.solve.SME_Solver:1 pysme.util.Scalar:1
+#: pysme.util.getter:1 pysme.util.setter:1
+msgid "Bases: :py:class:`object`"
+msgstr ""
+
+#: ../../_sources/pysme.rst:47
+msgid "pysme.continuum\\_and\\_radial\\_velocity module"
+msgstr ""
+
+#: of pysme.continuum_and_radial_velocity:1
+msgid ""
+"Determine continuum based on continuum mask and fit best radial velocity "
+"to observation"
+msgstr ""
+
+#: of pysme.continuum_and_radial_velocity.ContinuumNormalizationMCMC:1
+#: pysme.continuum_and_radial_velocity.ContinuumNormalizationMask:1
+#: pysme.continuum_and_radial_velocity.ContinuumNormalizationMatch:1
+#: pysme.continuum_and_radial_velocity.ContinuumNormalizationSpline:1
+msgid ""
+"Bases: "
+":py:class:`~pysme.continuum_and_radial_velocity.ContinuumNormalizationAbstract`"
+msgstr ""
+
+#: of
+#: pysme.continuum_and_radial_velocity.ContinuumNormalizationMask.get_continuum_mask:1
+msgid ""
+"Use the effective wavelength range of the lines, to find wavelength "
+"points that should be unaffected by lines However one usually has to "
+"ignore the weak lines, as most points are affected by one line or another"
+" Therefore keep increasing the threshold until enough lines have been "
+"found (>10%)"
+msgstr ""
+
+#: of
+#: pysme.continuum_and_radial_velocity.ContinuumNormalizationMask.get_continuum_mask:6
+msgid "wavelength points"
+msgstr ""
+
+#: of
+#: pysme.continuum_and_radial_velocity.ContinuumNormalizationMask.get_continuum_mask:8
+msgid "LineList object that was input into the Radiative Transfer"
+msgstr ""
+
+#: of
+#: pysme.continuum_and_radial_velocity.ContinuumNormalizationMask.get_continuum_mask:10
+msgid ""
+"starting threshold, lines with depth below this value are ignored the "
+"actual threshold is increased until enough points are found (default: "
+"0.1)"
+msgstr ""
+
+#: of
+#: pysme.continuum_and_radial_velocity.ContinuumNormalizationMask.get_continuum_mask:14
+msgid ""
+"**mask** -- True for points between lines and False for points within "
+"lines"
+msgstr ""
+
+#: of pysme.continuum_and_radial_velocity.ContinuumNormalizationMatchLines:1
+#: pysme.continuum_and_radial_velocity.ContinuumNormalizationMatchMask:1
+msgid ""
+"Bases: "
+":py:class:`~pysme.continuum_and_radial_velocity.ContinuumNormalizationMatch`"
+msgstr ""
+
+#: of
+#: pysme.continuum_and_radial_velocity.ContinuumNormalizationMatchLinesMask:1
+msgid ""
+"Bases: "
+":py:class:`~pysme.continuum_and_radial_velocity.ContinuumNormalizationMatchLines`"
+msgstr ""
+
+#: of pysme.continuum_and_radial_velocity.ContinuumNormalizationSplineMask:1
+msgid ""
+"Bases: "
+":py:class:`~pysme.continuum_and_radial_velocity.ContinuumNormalizationSpline`"
+msgstr ""
+
+#: of pysme.continuum_and_radial_velocity.apply_continuum:1
+msgid "Apply continuum to the spectra according to cscale."
+msgstr ""
+
+#: of pysme.continuum_and_radial_velocity.apply_radial_velocity_and_continuum:1
+msgid ""
+"Apply the radial velocity and continuum corrections to a syntheic "
+"spectrum to match the observation"
+msgstr ""
+
+#: of pysme.continuum_and_radial_velocity.apply_radial_velocity_and_continuum:4
+msgid "final wavelength array of the observation"
+msgstr ""
+
+#: of pysme.continuum_and_radial_velocity.apply_radial_velocity_and_continuum:6
+msgid "wavelength array of the synthethic spectrum"
+msgstr ""
+
+#: of pysme.continuum_and_radial_velocity.apply_radial_velocity_and_continuum:8
+msgid "flux array of the synthetic spectrum"
+msgstr ""
+
+#: of
+#: pysme.continuum_and_radial_velocity.apply_radial_velocity_and_continuum:10
+msgid "radial velocities in km/s for each segment"
+msgstr ""
+
+#: of
+#: pysme.continuum_and_radial_velocity.apply_radial_velocity_and_continuum:12
+msgid "continnum scales for each segment, exact meaning depends on cscale_type"
+msgstr ""
+
+#: of
+#: pysme.continuum_and_radial_velocity.apply_radial_velocity_and_continuum:14
+msgid "defines the continuum correction behaviour"
+msgstr ""
+
+#: of
+#: pysme.continuum_and_radial_velocity.apply_radial_velocity_and_continuum:16
+msgid "the segments to apply the correction to"
+msgstr ""
+
+#: of
+#: pysme.continuum_and_radial_velocity.apply_radial_velocity_and_continuum:19
+msgid "**smod** -- the corrected synthetic spectrum"
+msgstr ""
+
+#: of pysme.continuum_and_radial_velocity.determine_radial_velocity:1
+msgid ""
+"Calculate radial velocity by using cross correlation and least-squares "
+"between observation and synthetic spectrum"
+msgstr ""
+
+#: of pysme.continuum_and_radial_velocity.determine_radial_velocity:4
+msgid "sme structure with observed spectrum and flags"
+msgstr ""
+
+#: of pysme.continuum_and_radial_velocity.determine_radial_velocity:6
+msgid "which wavelength segment to handle, -1 if its using the whole spectrum"
+msgstr ""
+
+#: of pysme.continuum_and_radial_velocity.determine_radial_velocity:8
+msgid "continuum coefficients, as determined by e.g. determine_continuum"
+msgstr ""
+
+#: of pysme.continuum_and_radial_velocity.determine_radial_velocity:10
+#: pysme.continuum_and_radial_velocity.match_rv_continuum:9
+msgid "wavelength of the synthetic spectrum"
+msgstr ""
+
+#: of pysme.continuum_and_radial_velocity.determine_radial_velocity:12
+msgid "intensity of the synthetic spectrum"
+msgstr ""
+
+#: of pysme.continuum_and_radial_velocity.determine_radial_velocity:15
+msgid "if sme.vrad_flag is not recognized"
+msgstr ""
+
+#: of pysme.continuum_and_radial_velocity.determine_radial_velocity:17
+msgid ""
+"**rvel** -- best fit radial velocity for this segment/whole spectrum or "
+"None if no observation is present"
+msgstr ""
+
+#: of pysme.continuum_and_radial_velocity.match_rv_continuum:1
+msgid ""
+"Match both the continuum and the radial velocity of observed/synthetic "
+"spectrum"
+msgstr ""
+
+#: of pysme.continuum_and_radial_velocity.match_rv_continuum:3
+msgid ""
+"Note that the parameterization of the continuum is different to old SME "
+"!!!"
+msgstr ""
+
+#: of pysme.continuum_and_radial_velocity.match_rv_continuum:5
+msgid "input sme structure with all the parameters"
+msgstr ""
+
+#: of pysme.continuum_and_radial_velocity.match_rv_continuum:7
+msgid ""
+"index of the wavelength segment to match, or -1 when dealing with the "
+"whole spectrum"
+msgstr ""
+
+#: of pysme.continuum_and_radial_velocity.match_rv_continuum:11
+msgid "intensitz of the synthetic spectrum"
+msgstr ""
+
+#: of pysme.continuum_and_radial_velocity.match_rv_continuum:14
+msgid ""
+"* **rvel** (*float*) -- new radial velocity * **cscale** (*array of size "
+"(ndeg + 1,)*) -- new continuum coefficients"
+msgstr ""
+
+#: of pysme.continuum_and_radial_velocity.match_rv_continuum:14
+msgid "**rvel** (*float*) -- new radial velocity"
+msgstr ""
+
+#: of pysme.continuum_and_radial_velocity.match_rv_continuum:15
+msgid "**cscale** (*array of size (ndeg + 1,)*) -- new continuum coefficients"
+msgstr ""
+
+#: ../../_sources/pysme.rst:55
+msgid "pysme.cwrapper module"
+msgstr ""
+
+#: of pysme.cwrapper:1
+#, python-brace-format
+msgid ""
+"Wrapper for IDL style C libary code ``{return_type} {func_name}(int argv,"
+" void *argc[]);``"
+msgstr ""
+
+#: of pysme.cwrapper:4
+msgid ""
+"with argv - number of parameters and argc - list of pointers to those "
+"parameters"
+msgstr ""
+
+#: of pysme.cwrapper.GlobalState:1 pysme.cwrapper.IDL_String:1
+msgid "Bases: :py:class:`~_ctypes.Structure`"
+msgstr ""
+
+#: ../../../docstring of pysme.cwrapper.GlobalState.ABUND:1
+#: pysme.cwrapper.GlobalState.ACOOL:1 pysme.cwrapper.GlobalState.AH2P:1
+#: pysme.cwrapper.GlobalState.AHE1:1 pysme.cwrapper.GlobalState.AHE2:1
+#: pysme.cwrapper.GlobalState.AHEMIN:1 pysme.cwrapper.GlobalState.AHMIN:1
+#: pysme.cwrapper.GlobalState.AHOT:1 pysme.cwrapper.GlobalState.AHYD:1
+#: pysme.cwrapper.GlobalState.ALMAX:1 pysme.cwrapper.GlobalState.ALUKE:1
+#: pysme.cwrapper.GlobalState.ANSTEE:1 pysme.cwrapper.GlobalState.ATOTAL:1
+#: pysme.cwrapper.GlobalState.AUTOION:1 pysme.cwrapper.GlobalState.AVOIGT:1
+#: pysme.cwrapper.GlobalState.BNLTE_low:1
+#: pysme.cwrapper.GlobalState.BNLTE_upp:1 pysme.cwrapper.GlobalState.BNU:1
+#: pysme.cwrapper.GlobalState.COPBLU:1 pysme.cwrapper.GlobalState.COPRED:1
+#: pysme.cwrapper.GlobalState.COPSTD:1 pysme.cwrapper.GlobalState.EHVKT:1
+#: pysme.cwrapper.GlobalState.ENL4:1 pysme.cwrapper.GlobalState.ENU4:1
+#: pysme.cwrapper.GlobalState.EXCIT:1 pysme.cwrapper.GlobalState.EXCUP:1
+#: pysme.cwrapper.GlobalState.FRACT:1 pysme.cwrapper.GlobalState.FREQ:1
+#: pysme.cwrapper.GlobalState.FREQLG:1 pysme.cwrapper.GlobalState.GAMQST:1
+#: pysme.cwrapper.GlobalState.GAMRAD:1 pysme.cwrapper.GlobalState.GAMVW:1
+#: pysme.cwrapper.GlobalState.GF:1 pysme.cwrapper.GlobalState.GRAV:1
+#: pysme.cwrapper.GlobalState.H1FRACT:1 pysme.cwrapper.GlobalState.H2molFRACT:1
+#: pysme.cwrapper.GlobalState.HE1FRACT:1 pysme.cwrapper.GlobalState.HKT:1
+#: pysme.cwrapper.GlobalState.IDLHEL:1 pysme.cwrapper.GlobalState.IFOP:1
+#: pysme.cwrapper.GlobalState.INDX_C:1 pysme.cwrapper.GlobalState.ION:1
+#: pysme.cwrapper.GlobalState.IXAL1:1 pysme.cwrapper.GlobalState.IXC1:1
+#: pysme.cwrapper.GlobalState.IXCA1:1 pysme.cwrapper.GlobalState.IXCA2:1
+#: pysme.cwrapper.GlobalState.IXCH:1 pysme.cwrapper.GlobalState.IXFE1:1
+#: pysme.cwrapper.GlobalState.IXH1:1 pysme.cwrapper.GlobalState.IXH2:1
+#: pysme.cwrapper.GlobalState.IXH2mol:1 pysme.cwrapper.GlobalState.IXH2pl:1
+#: pysme.cwrapper.GlobalState.IXHE1:1 pysme.cwrapper.GlobalState.IXHE2:1
+#: pysme.cwrapper.GlobalState.IXHE3:1 pysme.cwrapper.GlobalState.IXHMIN:1
+#: pysme.cwrapper.GlobalState.IXMG1:1 pysme.cwrapper.GlobalState.IXMG2:1
+#: pysme.cwrapper.GlobalState.IXN1:1 pysme.cwrapper.GlobalState.IXNH:1
+#: pysme.cwrapper.GlobalState.IXO1:1 pysme.cwrapper.GlobalState.IXOH:1
+#: pysme.cwrapper.GlobalState.IXSI1:1 pysme.cwrapper.GlobalState.IXSI2:1
+#: pysme.cwrapper.GlobalState.LINEOP:1 pysme.cwrapper.GlobalState.LTE_b:1
+#: pysme.cwrapper.GlobalState.MARK:1 pysme.cwrapper.GlobalState.MOLWEIGHT:1
+#: pysme.cwrapper.GlobalState.MOTYPE:1 pysme.cwrapper.GlobalState.NLINES:1
+#: pysme.cwrapper.GlobalState.NRHOX:1
+#: pysme.cwrapper.GlobalState.NRHOX_allocated:1
+#: pysme.cwrapper.GlobalState.NWAVE_C:1 pysme.cwrapper.GlobalState.N_SPLIST:1
+#: pysme.cwrapper.GlobalState.NumberSpectralSegments:1
+#: pysme.cwrapper.GlobalState.PARTITION_FUNCTIONS:1
+#: pysme.cwrapper.GlobalState.PATH:1 pysme.cwrapper.GlobalState.PATHLEN:1
+#: pysme.cwrapper.GlobalState.POTION:1 pysme.cwrapper.GlobalState.RADIUS:1
+#: pysme.cwrapper.GlobalState.RAD_ATMO:1 pysme.cwrapper.GlobalState.RHO:1
+#: pysme.cwrapper.GlobalState.RHOX:1 pysme.cwrapper.GlobalState.RHO_eos:1
+#: pysme.cwrapper.GlobalState.SIGEL:1 pysme.cwrapper.GlobalState.SIGH:1
+#: pysme.cwrapper.GlobalState.SIGH2:1 pysme.cwrapper.GlobalState.SIGHE:1
+#: pysme.cwrapper.GlobalState.SPINDEX:1 pysme.cwrapper.GlobalState.SPLIST:1
+#: pysme.cwrapper.GlobalState.STIM:1 pysme.cwrapper.GlobalState.T:1
+#: pysme.cwrapper.GlobalState.TEFF:1 pysme.cwrapper.GlobalState.TK:1
+#: pysme.cwrapper.GlobalState.TKEV:1 pysme.cwrapper.GlobalState.TLOG:1
+#: pysme.cwrapper.GlobalState.VTURB:1 pysme.cwrapper.GlobalState.VVOIGT:1
+#: pysme.cwrapper.GlobalState.VW_SCALE:1 pysme.cwrapper.GlobalState.WFIRST:1
+#: pysme.cwrapper.GlobalState.WLAST:1 pysme.cwrapper.GlobalState.WLCENT:1
+#: pysme.cwrapper.GlobalState.WLSTD:1 pysme.cwrapper.GlobalState.Wlim_left:1
+#: pysme.cwrapper.GlobalState.Wlim_right:1 pysme.cwrapper.GlobalState.XMASS:1
+#: pysme.cwrapper.GlobalState.XNA:1 pysme.cwrapper.GlobalState.XNA_eos:1
+#: pysme.cwrapper.GlobalState.XNE:1 pysme.cwrapper.GlobalState.XNE_eos:1
+#: pysme.cwrapper.GlobalState.YABUND:1
+#: pysme.cwrapper.GlobalState.allocated_NLTE_lines:1
+#: pysme.cwrapper.GlobalState.change_byte_order:1
+#: pysme.cwrapper.GlobalState.debug_print:1
+#: pysme.cwrapper.GlobalState.flagABUND:1
+#: pysme.cwrapper.GlobalState.flagCONTIN:1
+#: pysme.cwrapper.GlobalState.flagH2broad:1
+#: pysme.cwrapper.GlobalState.flagIONIZ:1
+#: pysme.cwrapper.GlobalState.flagLINELIST:1
+#: pysme.cwrapper.GlobalState.flagMODEL:1 pysme.cwrapper.GlobalState.flagNLTE:1
+#: pysme.cwrapper.GlobalState.flagWLRANGE:1
+#: pysme.cwrapper.GlobalState.initNLTE:1
+#: pysme.cwrapper.GlobalState.lineOPACITIES:1
+#: pysme.cwrapper.GlobalState.result:1 pysme.cwrapper.GlobalState.spname:1
+#: pysme.cwrapper.IDL_String.s:1 pysme.cwrapper.IDL_String.slen:1
+#: pysme.cwrapper.IDL_String.stype:1
+msgid "Structure/Union member"
+msgstr ""
+
+#: of pysme.cwrapper.IDL_DLL.call:1
+msgid "run idl_call_external and check for errors in the output"
+msgstr ""
+
+#: of pysme.cwrapper.IDL_DLL.call:3
+msgid "name of the external C function to call"
+msgstr ""
+
+#: of pysme.cwrapper.IDL_DLL.call:5
+msgid "parameters for the function"
+msgstr ""
+
+#: of pysme.cwrapper.IDL_DLL.call:6
+msgid "keywords for the function"
+msgstr ""
+
+#: of pysme.cwrapper.IDL_DLL.call:8
+msgid ""
+"If the returned string is not empty, it means an error occured in the C "
+"library"
+msgstr ""
+
+#: of pysme.cwrapper.IDL_String:1
+msgid ""
+"IDL strings are actually structures like this one, for correct passing of"
+" values we need to define this structure NOTE: the definition might have "
+"changed with IDL version, so make sure to use the same one as in the C "
+"code"
+msgstr ""
+
+#: of pysme.cwrapper.get_dtype:1
+msgid "Get the ctypes dtype appropiate for the passed type string"
+msgstr ""
+
+#: of pysme.cwrapper.get_dtype:3
+msgid ""
+"One of 'int', 'short', 'long', 'float', 'double', 'unicode' or one of the"
+" first letters 'islfdu'"
+msgstr ""
+
+#: of pysme.cwrapper.get_dtype:7
+msgid "**type** -- corresponding ctypes type"
+msgstr ""
+
+#: of pysme.cwrapper.get_lib_name:1
+msgid "Get the name of the sme C library"
+msgstr ""
+
+#: of pysme.cwrapper.get_typenames:1
+msgid ""
+"Return internal typename based on the type of the argument strings -> "
+"\"unicode\" floating points -> \"double\" integers -> \"int\""
+msgstr ""
+
+#: of pysme.cwrapper.idl_call_external:1
+msgid ""
+"Call an external C library (here the SME lib) function that uses the IDL "
+"type interface i.e. restype func(int n, void \\*args[]), where n is the "
+"number of arguments, and args is a list of pointers to the arguments"
+msgstr ""
+
+#: of pysme.cwrapper.idl_call_external:4
+msgid ""
+"Input arrays will be converted to the required datatype for the C "
+"function (see type keyword), and any changes to input arrays will be "
+"written back if possible. Input arrays that are already in the correct "
+"datatype will not be copied (and the values can therefore change in the C"
+" call)"
+msgstr ""
+
+#: of pysme.cwrapper.idl_call_external:8
+msgid ""
+"Note that all strings are converted into IDL_String objects, even those "
+"that are in arrays"
+msgstr ""
+
+#: of pysme.cwrapper.idl_call_external:10
+msgid "Name of the function to call in the library"
+msgstr ""
+
+#: of pysme.cwrapper.idl_call_external:12
+msgid "expected type of the return value (default: \"str\")"
+msgstr ""
+
+#: of pysme.cwrapper.idl_call_external:14
+msgid ""
+"type of the input parameters, will default to int/double for all "
+"integer/floating point values. Accepted values are ('short', 'int', "
+"'long', 'float', 'double', 'unicode') or their respective first letters. "
+"This means one can use a string as shorthand, e.g. \"iidds\""
+msgstr ""
+
+#: of pysme.cwrapper.idl_call_external:19
+msgid "**value** -- return value of the function call"
+msgstr ""
+
+#: ../../_sources/pysme.rst:63
+msgid "pysme.echelle module"
+msgstr ""
+
+#: of pysme.echelle:1
+msgid ""
+"Contains functions to read and modify echelle structures, just as in "
+"reduce"
+msgstr ""
+
+#: of pysme.echelle:3
+msgid "Mostly for compatibility reasons"
+msgstr ""
+
+#: of pysme.echelle.calc_1dpolynomials:1
+msgid "Expand a set of 1d polynomials (one per order) seperately"
+msgstr ""
+
+#: of pysme.echelle.calc_1dpolynomials:3
+msgid "number of columns"
+msgstr ""
+
+#: of pysme.echelle.calc_1dpolynomials:5
+msgid "polynomial coefficients"
+msgstr ""
+
+#: of pysme.echelle.calc_1dpolynomials:8
+msgid "**poly** -- expanded polynomials"
+msgstr ""
+
+#: of pysme.echelle.calc_2dpolynomial:1
+msgid ""
+"Expand a 2d polynomial, where the data is given in a REDUCE make_wave "
+"format Note that the coefficients are for order/100 and column/1000 "
+"respectively, where the order is counted from order base up"
+msgstr ""
+
+#: of pysme.echelle.calc_2dpolynomial:4
+msgid ""
+"data in a REDUCE make_wave format: 0: version 1: number of columns 2: "
+"number of orders 3: order base, i.e. 0th order number 4-6: empty 7: "
+"number of cross coefficients 8: number of column only coefficients 9: "
+"number of order only coefficients 10: coefficient - constant 11-x: column"
+" coefficients x-y : order coefficients z-  : cross coefficients (xy, xy2,"
+" x2y, x2y2, xy3, x3y), with x = orders, y = columns"
+msgstr ""
+
+#: of pysme.echelle.calc_2dpolynomial:19
+msgid "**poly** -- expanded polynomial"
+msgstr ""
+
+#: of pysme.echelle.expand_polynomial:1
+msgid "Checks if and how to expand data poly, then expands the data if necessary"
+msgstr ""
+
+#: of pysme.echelle.expand_polynomial:3
+msgid "number of columns in the image"
+msgstr ""
+
+#: of pysme.echelle.expand_polynomial:5
+msgid "polynomial coefficients to expand, or already expanded data"
+msgstr ""
+
+#: of pysme.echelle.expand_polynomial:8
+msgid "**poly** -- expanded data"
+msgstr ""
+
+#: of pysme.echelle.read:1
+msgid ""
+"Read data from an echelle file Expand wavelength and continuum "
+"polynomials Apply barycentric/radial velocity correction Apply continuum "
+"normalization"
+msgstr ""
+
+#: of pysme.echelle.read:6
+msgid ""
+"Will load any fields in the binary table, however special attention is "
+"given only to specific names: \"SPEC\"    : Spectrum \"SIG\"     : Sigma,"
+" i.e. (absolute) uncertainty \"CONT\"    : Continuum \"WAVE\"    : "
+"Wavelength solution \"COLUMNS\" : Column range"
+msgstr ""
+
+#: of pysme.echelle.read:13
+msgid "filename to load"
+msgstr ""
+
+#: of pysme.echelle.read:15
+msgid "fits extension of the data within the file (default: 1)"
+msgstr ""
+
+#: of pysme.echelle.read:17
+msgid "if true apply no corrections to the data (default: False)"
+msgstr ""
+
+#: of pysme.echelle.read:19
+msgid "apply continuum normalization (default: True)"
+msgstr ""
+
+#: of pysme.echelle.read:21
+msgid "apply barycentric correction (default: True)"
+msgstr ""
+
+#: of pysme.echelle.read:23
+msgid "apply radial velocity correction (default: True)"
+msgstr ""
+
+#: of pysme.echelle.read:26
+msgid "**ech** -- Echelle structure, with data contained in attributes"
+msgstr ""
+
+#: of pysme.echelle.save:1
+msgid ""
+"Save data in an Echelle fits, i.e. a fits file with a Binary Table in "
+"Extension 1"
+msgstr ""
+
+#: of pysme.echelle.save:3
+msgid ""
+"The data is passed in kwargs, with the name of the binary table column as"
+" the key Floating point data is saved as float32 (E), Integer data as "
+"int16 (I)"
+msgstr ""
+
+#: of pysme.echelle.save:6
+msgid "filename"
+msgstr ""
+
+#: of pysme.echelle.save:8
+msgid "FITS header"
+msgstr ""
+
+#: of pysme.echelle.save:10
+msgid "data to be saved in the file"
+msgstr ""
+
+#: ../../_sources/pysme.rst:71
+msgid "pysme.iliffe\\_vector module"
+msgstr ""
+
+#: of pysme.iliffe_vector.Iliffe_vector:1
+msgid ""
+"Bases: :py:class:`~numpy.lib.mixins.NDArrayOperatorsMixin`, "
+":py:class:`~flex.extensions.bindata.MultipleDataExtension`"
+msgstr ""
+
+#: of pysme.iliffe_vector.Iliffe_vector:1
+msgid ""
+"Illiffe vectors are multidimensional (here 2D) but not necessarily "
+"rectangular Instead the index is a pointer to segments of a 1D array with"
+" varying sizes"
+msgstr ""
+
+#: of pysme.iliffe_vector.Iliffe_vector.from_dict:1
+msgid "Convert from a dictionary"
+msgstr ""
+
+#: of pysme.iliffe_vector.Iliffe_vector.to_dict:1
+msgid "Convert into a dictionary"
+msgstr ""
+
+#: of pysme.iliffe_vector.implements:1
+msgid "Register an __array_function__ implementation for DiagonalArray objects."
+msgstr ""
+
+#: ../../_sources/pysme.rst:79
+msgid "pysme.large\\_file\\_storage module"
+msgstr ""
+
+#: of pysme.large_file_storage:1
+msgid ""
+"System to store large data files on a server Load them whem required by "
+"the user Update the pointer file on github when new datafiles become "
+"available"
+msgstr ""
+
+#: of pysme.large_file_storage:5
+msgid "Pro: Versioning is effectively done by Git Con: Need to run server"
+msgstr ""
+
+#: of pysme.large_file_storage.LargeFileStorage:1
+msgid ""
+"Download large data files from data server when needed New versions of "
+"the datafiles are indicated in a 'pointer' file that includes the hash of"
+" the newest version of the files"
+msgstr ""
+
+#: of pysme.large_file_storage.LargeFileStorage:5
+msgid "If the datafiles can't be located anywhere"
+msgstr ""
+
+#: of pysme.large_file_storage.LargeFileStorage.clean_cache:1
+msgid "Remove unused cache files (from old versions)"
+msgstr ""
+
+#: of pysme.large_file_storage.LargeFileStorage.delete_file:1
+msgid "Delete a file, including the cache file"
+msgstr ""
+
+#: of pysme.large_file_storage.LargeFileStorage.get:1
+msgid ""
+"Request a datafile from the LargeFileStorage Assures that tracked files "
+"are at the specified version And downloads data from the server if "
+"necessary"
+msgstr ""
+
+#: of pysme.large_file_storage.LargeFileStorage.get:5
+msgid "Name of the requested datafile"
+msgstr ""
+
+#: of pysme.large_file_storage.LargeFileStorage.get:8
+msgid "If the requested datafile can not be found anywhere"
+msgstr ""
+
+#: of pysme.large_file_storage.LargeFileStorage.get:10
+msgid "**fullpath** -- Absolute path to the datafile"
+msgstr ""
+
+#: of pysme.large_file_storage.LargeFileStorage.get_urls:1
+msgid "Return ordered candidate URLs/URIs for a tracked key."
+msgstr ""
+
+#: of pysme.large_file_storage.LargeFileStorage.get_urls:3
+msgid ""
+"For tracked files: - pointer value may be a string or a list of strings -"
+" each pointer string may be a full URI (http/https/file) or relative path"
+" - relative paths are combined with every configured mirror server in "
+"order"
+msgstr ""
+
+#: of pysme.large_file_storage.LargeFileStorage.move_to_cache:1
+msgid ""
+"Move currently used files into cache directory and use symlinks instead, "
+"just as if downloaded from a server"
+msgstr ""
+
+#: ../../../docstring of pysme.large_file_storage.LargeFileStorage.pointers:1
+msgid "points from a filename to the current newest object id, usually a hash"
+msgstr ""
+
+#: ../../../docstring of pysme.large_file_storage.LargeFileStorage.pointers:3
+msgid "dict(fname"
+msgstr ""
+
+#: ../../../docstring of pysme.large_file_storage.LargeFileStorage.pointers:5
+msgid "hash)"
+msgstr ""
+
+#: ../../../docstring of pysme.large_file_storage.LargeFileStorage.server:1
+msgid "legacy single-server alias (first mirror)"
+msgstr ""
+
+#: ../../../docstring of pysme.large_file_storage.LargeFileStorage.server:3
+#: pysme.nlte.Grid.citation_info:3 pysme.nlte.Grid.depth_name:3
+#: pysme.nlte.Grid.elem:3 pysme.nlte.Grid.fname:3 pysme.nlte.Grid.grid_name:3
+#: pysme.nlte.NLTE.abund_format:3 pysme.nlte.NLTE.citation_info:3
+#: pysme.nlte.NLTE.selection:3 pysme.nlte.NLTE.solar:3
+#: pysme.sme.Fitresults.citation_info:3 pysme.sme.Parameters.citation_info:3
+#: pysme.sme.SME_Structure.citation_info:3
+#: pysme.sme.SME_Structure.cscale_flag:10 pysme.sme.SME_Structure.cscale_jac:3
+#: pysme.sme.SME_Structure.cscale_loss:3
+#: pysme.sme.SME_Structure.cscale_method:3
+#: pysme.sme.SME_Structure.cscale_type:9 pysme.sme.SME_Structure.id:3
+#: pysme.sme.SME_Structure.iptype:3 pysme.sme.SME_Structure.leastsquares_jac:3
+#: pysme.sme.SME_Structure.leastsquares_loss:3
+#: pysme.sme.SME_Structure.leastsquares_method:3
+#: pysme.sme.SME_Structure.version:3 pysme.sme.SME_Structure.vrad_flag:8
+#: pysme.sme.SME_Structure.vrad_jac:3 pysme.sme.SME_Structure.vrad_loss:3
+#: pysme.sme.SME_Structure.vrad_method:3 pysme.sme.Version.arch:3
+#: pysme.sme.Version.build_date:3 pysme.sme.Version.citation_info:3
+#: pysme.sme.Version.host:3 pysme.sme.Version.os:3
+#: pysme.sme.Version.os_family:3 pysme.sme.Version.os_name:3
+#: pysme.sme.Version.release:3 pysme.sme_synth.SME_DLL.datadir:3
+#: pysme.sme_synth.SME_DLL.file:3
+msgid "str"
+msgstr ""
+
+#: ../../../docstring of pysme.large_file_storage.LargeFileStorage.servers:1
+msgid "ordered mirrors to try"
+msgstr ""
+
+#: ../../../docstring of pysme.large_file_storage.LargeFileStorage.servers:3
+msgid "list[str]"
+msgstr ""
+
+#: ../../_sources/pysme.rst:87
+msgid "pysme.linelist module"
+msgstr ""
+
+#: ../../_sources/pysme.rst:95
+msgid "pysme.nlte module"
+msgstr ""
+
+#: of pysme.nlte:1
+msgid ""
+"NLTE module of SME reads and interpolates departure coefficients from "
+"library files"
+msgstr ""
+
+#: of pysme.nlte.DirectAccessFile:1
+msgid ""
+"This function reads a single record from binary file that has the "
+"following structure: Version string              - 64 byte long # of "
+"directory bocks        - short int directory block length      - short "
+"int # of used directory blocks  - short int 1st directory block key      "
+"- string of up to 256 characters padded with ' ' datatype - 32-bit int "
+"23-element array returned by SIZE pointer  - 64-bit int pointer to the "
+"beginning of the record"
+msgstr ""
+
+#: of pysme.nlte.DirectAccessFile:12
+msgid ""
+"2nd directory block ... last directory block 1st data record ... last "
+"data record"
+msgstr ""
+
+#: of pysme.nlte.DirectAccessFile.get:1
+msgid "get field from file"
+msgstr ""
+
+#: of pysme.nlte.DirectAccessFile.get_typecode:1
+#: pysme.nlte.DirectAccessFile.idl_typecode:1
+msgid ""
+"relevant IDL typecodes and corresponding Numpy Codes Most specify a byte "
+"size, but not all"
+msgstr ""
+
+#: of pysme.nlte.DirectAccessFile.read_header:1
+msgid "parse Header data"
+msgstr ""
+
+#: of pysme.nlte.Grid:1
+msgid "NLTE Grid class that handles all NLTE data reading and interpolation"
+msgstr ""
+
+#: of pysme.nlte.Grid.interpolate:1
+msgid "interpolate nlte coefficients on the model grid"
+msgstr ""
+
+#: of pysme.nlte.Grid.interpolate:3 pysme.nlte.Grid.read_grid:4
+msgid "relative (to solar) abundance of the element"
+msgstr ""
+
+#: of pysme.nlte.Grid.interpolate:5 pysme.nlte.Grid.read_grid:6
+msgid "temperature in Kelvin"
+msgstr ""
+
+#: of pysme.nlte.Grid.interpolate:7 pysme.nlte.Grid.read_grid:8
+msgid "surface gravity in log(cgs)"
+msgstr ""
+
+#: of pysme.nlte.Grid.interpolate:9 pysme.nlte.Grid.read_grid:10
+msgid "Metallicity in H=12"
+msgstr ""
+
+#: of pysme.nlte.Grid.interpolate:12
+msgid "**subgrid** -- interpolated grid values"
+msgstr ""
+
+#: of pysme.nlte.Grid.read_grid:1
+msgid ""
+"Read the NLTE coefficients from the nlte_grid files for the given element"
+" The class will cache subgrid_size points around the target values as "
+"well"
+msgstr ""
+
+#: of pysme.nlte.Grid.read_grid:13
+msgid ""
+"* **nlte_grid** (*dict*) -- collection of nlte coefficient data "
+"(memmapped) * **linerefs** (*array (nlines,)*) -- linelevel descriptions "
+"(Energy level terms) * **lineindices** (*array (nlines,)*) -- indices of "
+"the used lines in the linelist"
+msgstr ""
+
+#: of pysme.nlte.Grid.read_grid:13
+msgid "**nlte_grid** (*dict*) -- collection of nlte coefficient data (memmapped)"
+msgstr ""
+
+#: of pysme.nlte.Grid.read_grid:14
+msgid ""
+"**linerefs** (*array (nlines,)*) -- linelevel descriptions (Energy level "
+"terms)"
+msgstr ""
+
+#: of pysme.nlte.Grid.read_grid:15
+msgid ""
+"**lineindices** (*array (nlines,)*) -- indices of the used lines in the "
+"linelist"
+msgstr ""
+
+#: of pysme.nlte.Grid.scaled_rel_abund:1
+msgid "Get the abundance of self.elem relative to Fe, i.e. [X/Fe]"
+msgstr ""
+
+#: of pysme.nlte.Grid.select_levels:1
+msgid "Match our NLTE terms to transitions in the vald3-format linelist."
+msgstr ""
+
+#: of pysme.nlte.Grid.select_levels:3
+msgid ""
+"Level descriptions in the vald3 long format look like this: 'LS"
+"                 2p6.3s               2S' 'LS                 2p6.3p"
+"               2P*' These are stored in line_term_low and line_term_upp. "
+"The array line_extra has dimensions [3 x nlines]. It stores J_low, E_up, "
+"J_up The sme.atomic array stores: 0) atomic number, 1) ionization state, "
+"2) wavelength (in A), 3) excitation energy of lower level (in eV), 4) "
+"log(gf), 5) radiative, 6) Stark, 7) and van der Waals damping parameters"
+msgstr ""
+
+#: of pysme.nlte.Grid.select_levels:13
+msgid "electronic configuration (for identification), e.g., 2p6.5s"
+msgstr ""
+
+#: of pysme.nlte.Grid.select_levels:15
+msgid "term designations (for identification), e.g., a5F"
+msgstr ""
+
+#: of pysme.nlte.Grid.select_levels:17
+msgid "Element and ion for each atomic level (for identification), e.g. Na 1."
+msgstr ""
+
+#: of pysme.nlte.Grid.select_levels:19
+msgid "rotational number J of atomic state (for identification)."
+msgstr ""
+
+#: of pysme.nlte.Grid.select_levels:22
+msgid ""
+"* **lineindices** (*array of shape (nl,)*) -- Indices of the used lines "
+"in the linelist * **linerefs** (*array of shape (2, nlines,)*) -- Cross "
+"references for the lower and upper level in each transition,   to their "
+"indices in the list of atomic levels.   Missing levels use indices of -1."
+" * **iused** (*array of shape (nl,)*) -- Indices used in the subgrid"
+msgstr ""
+
+#: of pysme.nlte.Grid.select_levels:22
+msgid ""
+"**lineindices** (*array of shape (nl,)*) -- Indices of the used lines in "
+"the linelist"
+msgstr ""
+
+#: of pysme.nlte.Grid.select_levels:23
+msgid ""
+"**linerefs** (*array of shape (2, nlines,)*) -- Cross references for the "
+"lower and upper level in each transition, to their indices in the list of"
+" atomic levels. Missing levels use indices of -1."
+msgstr ""
+
+#: of pysme.nlte.Grid.select_levels:26
+msgid "**iused** (*array of shape (nl,)*) -- Indices used in the subgrid"
+msgstr ""
+
+#: of pysme.nlte.Grid.solar_rel_abund:1
+msgid "Get the abundance of elem relative to H, i.e. [X/H]"
+msgstr ""
+
+#: ../../../docstring of pysme.nlte.Grid.abund_format:1
+msgid "Solar Abundance of the element"
+msgstr ""
+
+#: ../../../docstring of pysme.nlte.Grid.bgrid:1
+msgid "NLTE data array"
+msgstr ""
+
+#: ../../../docstring of pysme.nlte.Grid.citation_info:1
+msgid "citations in bibtex format, if known"
+msgstr ""
+
+#: ../../../docstring of pysme.nlte.Grid.depth:1
+msgid "Depth points of the NLTE data"
+msgstr ""
+
+#: ../../../docstring of pysme.nlte.Grid.depth_name:1
+msgid "Which parameter is used as the depth axis"
+msgstr ""
+
+#: ../../../docstring of pysme.nlte.Grid.directory:1
+msgid "The NLTE data file"
+msgstr ""
+
+#: ../../../docstring of pysme.nlte.Grid.directory:3
+msgid "DirectAccessFile"
+msgstr ""
+
+#: ../../../docstring of pysme.nlte.Grid.elem:1
+msgid "Element of the NLTE grid"
+msgstr ""
+
+#: ../../../docstring of pysme.nlte.Grid.fname:1
+msgid "complete filename of the NLTE grid data file"
+msgstr ""
+
+#: ../../../docstring of pysme.nlte.Grid.grid_name:1
+msgid "Name of the grid"
+msgstr ""
+
+#: ../../../docstring of pysme.nlte.Grid.iused:1
+msgid "Indices of the lines in the bgrid"
+msgstr ""
+
+#: ../../../docstring of pysme.nlte.Grid.limits:1
+msgid "upper and lower parameters covered by the grid"
+msgstr ""
+
+#: ../../../docstring of pysme.nlte.Grid.limits:3 pysme.nlte.NLTE.grids:3
+#: pysme.sme.SME_Structure.meta:3
+msgid "dict"
+msgstr ""
+
+#: ../../../docstring of pysme.nlte.Grid.lineindices:1
+msgid "Indices of the lines in the LineList"
+msgstr ""
+
+#: ../../../docstring of pysme.nlte.Grid.linelist:1
+msgid "Whole LineList that was passed to the C library"
+msgstr ""
+
+#: ../../../docstring of pysme.nlte.Grid.linelist:3
+#: pysme.sme.SME_Structure.linelist:3
+msgid "LineList"
+msgstr ""
+
+#: ../../../docstring of pysme.nlte.Grid.linerefs:1
+msgid "Indices of the lines in the NLTE data"
+msgstr ""
+
+#: ../../../docstring of pysme.nlte.Grid.min_energy_diff:1
+msgid ""
+"Minimum difference between energy levels to match, only relevant for "
+"selection=='energy'"
+msgstr ""
+
+#: ../../../docstring of pysme.nlte.Grid.selection:1
+msgid "Selection algorithm to match lines in grid with linelist"
+msgstr ""
+
+#: ../../../docstring of pysme.nlte.Grid.selection:3
+#, python-brace-format
+msgid "{\"levels\", \"energy\"}"
+msgstr ""
+
+#: ../../../docstring of pysme.nlte.Grid.species:1
+msgid "Elemental Species Names for the linelist"
+msgstr ""
+
+#: ../../../docstring of pysme.nlte.Grid.species:3
+msgid "array(str)"
+msgstr ""
+
+#: ../../../docstring of pysme.nlte.Grid.subgrid_size:1
+msgid ""
+"number of points in the grid to cache for each parameter, order; abund, "
+"teff, logg, monh"
+msgstr ""
+
+#: ../../../docstring of pysme.nlte.Grid.subgrid_size:3
+msgid "list(int)"
+msgstr ""
+
+#: of pysme.nlte.NLTE:1 pysme.sme.Fitresults:1 pysme.sme.Parameters:1
+#: pysme.sme.Version:1
+msgid "Bases: :py:class:`~pysme.data_structure.Collection`"
+msgstr ""
+
+#: of pysme.nlte.NLTE.get_grid:1 pysme.nlte.nlte:1
+msgid "Read and interpolate the NLTE grid for the current element and parameters"
+msgstr ""
+
+#: of pysme.nlte.NLTE.remove_nlte:1
+msgid "Remove an element from the NLTE calculations"
+msgstr ""
+
+#: of pysme.nlte.NLTE.remove_nlte:3
+msgid "Abbreviation of the element to remove from NLTE"
+msgstr ""
+
+#: of pysme.nlte.NLTE.set_nlte:1
+msgid "Add an element to the NLTE calculations"
+msgstr ""
+
+#: of pysme.nlte.NLTE.set_nlte:3
+msgid "The abbreviation of the element to add to the NLTE calculations"
+msgstr ""
+
+#: of pysme.nlte.NLTE.set_nlte:5
+msgid ""
+"Filename of the NLTE data grid to use for this element the file must be "
+"in nlte_grids directory Defaults to a set of \"known\" files for some "
+"elements"
+msgstr ""
+
+#: of pysme.nlte.NLTE.update_coefficients:1
+msgid ""
+"pass departure coefficients to C library; If bmat, linerefs, lineindices "
+"are given, use those instead of recalculating them and the code will not "
+"check if the line level, energy is matched or not."
+msgstr ""
+
+#: of pysme.nlte.NLTE.abund_format:1
+msgid "which abundance format to use for comparison"
+msgstr ""
+
+#: of pysme.nlte.NLTE.citation_info:1 pysme.sme.Fitresults.citation_info:1
+#: pysme.sme.Parameters.citation_info:1 pysme.sme.SME_Structure.citation_info:1
+#: pysme.sme.Version.citation_info:1
+msgid "Bibtex representation of the citation"
+msgstr ""
+
+#: of pysme.nlte.NLTE.elements:1
+msgid "elements for which nlte calculations will be performed"
+msgstr ""
+
+#: of pysme.nlte.NLTE.elements:3 pysme.sme.Fitresults.parameters:3
+msgid "list"
+msgstr ""
+
+#: of pysme.nlte.NLTE.flags:1
+msgid ""
+"contains a flag for each line, whether it was calculated in NLTE (True) "
+"or not (False)"
+msgstr ""
+
+#: of pysme.nlte.NLTE.grids:1
+msgid "nlte grid datafiles for each element"
+msgstr ""
+
+#: of pysme.nlte.NLTE.min_energy_diff:1
+msgid ""
+"difference between energy levels that are still matched. If None will "
+"default to the smallest non zero difference between energy levels in the "
+"grid."
+msgstr ""
+
+#: of pysme.nlte.NLTE.selection:1
+msgid ""
+"which selection algorithm to use to match linelist and departure "
+"coefficients"
+msgstr ""
+
+#: of pysme.nlte.NLTE.solar:1
+msgid "defines which default to use as the solar metallicitiies"
+msgstr ""
+
+#: of pysme.nlte.NLTE.subgrid_size:1
+msgid ""
+"defines size of nlte grid cache.Each entry is for one parameter abund, "
+"teff, logg, monh"
+msgstr ""
+
+#: of pysme.nlte.NLTE.subgrid_size:3
+msgid "array of shape (4,)"
+msgstr ""
+
+#: of pysme.nlte.update_nlte_coefficients:1
+msgid "pass departure coefficients to C library"
+msgstr ""
+
+#: ../../_sources/pysme.rst:103
+msgid "pysme.persistence module"
+msgstr ""
+
+#: of pysme.persistence.get_typecode:1
+msgid "Get the IDL typecode for a given dtype"
+msgstr ""
+
+#: of pysme.persistence.load:1
+msgid "Load the SME Structure from disk"
+msgstr ""
+
+#: of pysme.persistence.load:3
+msgid "file to load"
+msgstr ""
+
+#: of pysme.persistence.load:5
+msgid "empty sme structure with default values set"
+msgstr ""
+
+#: of pysme.persistence.load:8
+msgid "**sme** -- loaded sme structure"
+msgstr ""
+
+#: of pysme.persistence.save:1
+msgid "Create a folder structure inside a tarfile See flex-format for details"
+msgstr ""
+
+#: of pysme.persistence.save:4
+msgid "Filename of the final file"
+msgstr ""
+
+#: of pysme.persistence.save:6
+msgid "sme structure to save"
+msgstr ""
+
+#: of pysme.persistence.save:8 pysme.persistence.save_v1:14
+msgid "whether to compress the output"
+msgstr ""
+
+#: of pysme.persistence.save_as_idl:1
+msgid "Save the SME structure to disk as an idl save file"
+msgstr ""
+
+#: of pysme.persistence.save_as_idl:3
+msgid ""
+"This writes a IDL script to a temporary file, which is then run with idl "
+"as a seperate process. Therefore this reqires a working idl installation."
+msgstr ""
+
+#: of pysme.persistence.save_as_idl:7
+msgid ""
+"There are two steps to this. First all the fields from the sme, structure"
+" need to be transformed into simple idl readable structures. All large "
+"arrays are stored in seperate binary files, for performance. The script "
+"then reads those files back into idl."
+msgstr ""
+
+#: of pysme.persistence.save_v1:1
+msgid ""
+"Create a folder structure inside a zipfile Add .json and .npy and .npz "
+"files with the correct names And subfolders for more complicated objects "
+"with the same layout Each class should have a save and a load method "
+"which can be used for this purpose"
+msgstr ""
+
+#: of pysme.persistence.save_v1:8
+msgid "Filename of the final zipfile"
+msgstr ""
+
+#: of pysme.persistence.save_v1:10
+msgid "data to save"
+msgstr ""
+
+#: of pysme.persistence.save_v1:12
+msgid "subfolder to save data to"
+msgstr ""
+
+#: of pysme.persistence.write_as_idl:1
+msgid ""
+"Write SME structure into and idl format data arrays are stored in "
+"seperate temp files, and only the filename is passed to idl"
+msgstr ""
+
+#: ../../_sources/pysme.rst:111
+msgid "pysme.sme module"
+msgstr ""
+
+#: of pysme.sme.CONT_OPTIONS:1 pysme.sme.CONT_SCALE:1 pysme.sme.VRAD_OPTIONS:1
+msgid "Bases: :py:class:`~enum.Enum`"
+msgstr ""
+
+#: of pysme.sme.Fitresults.clear:1
+msgid "Reset all values to None"
+msgstr ""
+
+#: of pysme.sme.Fitresults.chisq:1
+msgid "reduced chi-square of the solution"
+msgstr ""
+
+#: of pysme.sme.Fitresults.covariance:1
+msgid "covariance matrix"
+msgstr ""
+
+#: of pysme.sme.Fitresults.covariance:3
+msgid "array of size (nfree, nfree)"
+msgstr ""
+
+#: of pysme.sme.Fitresults.derivative:1
+msgid "final Jacobian of each point and each parameter"
+msgstr ""
+
+#: of pysme.sme.Fitresults.derivative:3
+msgid "array of size (npoints, nfree)"
+msgstr ""
+
+#: of pysme.sme.Fitresults.fit_uncertainties:1
+msgid "uncertainties based solely on the least_squares fit"
+msgstr ""
+
+#: of pysme.sme.Fitresults.gradient:1
+msgid "final gradients of the free parameters on the cost function"
+msgstr ""
+
+#: of pysme.sme.Fitresults.gradient:3
+msgid "array of size (nfree,)"
+msgstr ""
+
+#: of pysme.sme.Fitresults.iterations:1
+msgid "maximum number of iterations in the solver"
+msgstr ""
+
+#: of pysme.sme.Fitresults.iterations:3 pysme.sme.SME_Structure.cscale_degree:3
+#: pysme.sme.SME_Structure.nseg:3 pysme.sme.Version.memory_bits:3
+msgid "int"
+msgstr ""
+
+#: of pysme.sme.Fitresults.parameters:1
+msgid "parameter names"
+msgstr ""
+
+#: of pysme.sme.Fitresults.residuals:1
+msgid "final residuals of the fit"
+msgstr ""
+
+#: of pysme.sme.Fitresults.residuals:3
+msgid "array of size (npoints,)"
+msgstr ""
+
+#: of pysme.sme.Fitresults.uncertainties:1
+msgid "uncertainties of the free parameters bases on SME statistics"
+msgstr ""
+
+#: of pysme.sme.Fitresults.uncertainties:3
+msgid "array of size(nfree,)"
+msgstr ""
+
+#: of pysme.sme.Fitresults.values:1
+msgid "best fit values for the fit parameters"
+msgstr ""
+
+#: of pysme.sme.MASK_VALUES:1
+msgid "Bases: :py:class:`~enum.IntFlag`"
+msgstr ""
+
+#: of pysme.sme.MASK_VALUES:1
+msgid "Mask value specifier used in mob"
+msgstr ""
+
+#: of pysme.sme.MASK_VALUES:3
+msgid ""
+"Values can be combined to mark a point as e.g. line and vrad If cont or "
+"vrad are not used it will fallback to the line mask"
+msgstr ""
+
+#: of pysme.sme.Parameters.abund:1 pysme.sme.SME_Structure.abund:1
+msgid "elemental abundances"
+msgstr ""
+
+#: of pysme.sme.Parameters.abund:3 pysme.sme.SME_Structure.abund:3
+msgid "Abund"
+msgstr ""
+
+#: of pysme.sme.Parameters.logg:1 pysme.sme.SME_Structure.logg:1
+#: pysme.sme_synth.SME_DLL.InputModel:5
+msgid "surface gravity in log10(cgs)"
+msgstr ""
+
+#: of pysme.sme.Parameters.monh:1
+msgid "metallicity in log scale relative to the base abundances"
+msgstr ""
+
+#: of pysme.sme.Parameters.teff:1 pysme.sme.SME_Structure.teff:1
+msgid "effective temperature in Kelvin"
+msgstr ""
+
+#: of pysme.sme.Parameters.vmac:1 pysme.sme.SME_Structure.vmac:1
+msgid "macro turbulence in km/s"
+msgstr ""
+
+#: of pysme.sme.Parameters.vmic:1 pysme.sme.SME_Structure.vmic:1
+msgid "micro turbulence in km/s"
+msgstr ""
+
+#: of pysme.sme.Parameters.vsini:1 pysme.sme.SME_Structure.vsini:1
+msgid "projected rotational velocity in km/s"
+msgstr ""
+
+#: of pysme.sme.SME_Structure:1
+msgid "Bases: :py:class:`~pysme.sme.Parameters`"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.citation:1
+msgid ""
+"Create a citation string for use in papers, or other places. The "
+"citations are from all components that contribute to the SME structure. "
+"SME and PySME, the linelist, the abundance, the atmosphere, and the NLTE "
+"grids. The default output is plaintext, but it is also possible to get "
+"bibtex format."
+msgstr ""
+
+#: of pysme.sme.SME_Structure.citation:8
+msgid ""
+"the output format, options are: [\"string\", \"bibtex\", \"html\", "
+"\"markdown\"], by default \"string\""
+msgstr ""
+
+#: of pysme.sme.SME_Structure.citation:11
+msgid "**citation** -- citation string in the desired output format"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.import_mask:1
+msgid ""
+"Import the mask of another sme structure and apply it to this one "
+"Conversion is based on the wavelength"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.import_mask:4
+msgid "the sme structure to import the mask from"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.import_mask:7
+msgid "**self** -- this sme structure"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.load:1
+msgid "Load SME data from disk"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.load:3
+msgid "Currently supported file formats:"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.load:4
+msgid "\".npy\": Numpy save file of an SME_Struct"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.load:5
+msgid "\".sav\", \".inp\", \".out\": IDL save file with an sme structure"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.load:6
+msgid "\".ech\": Echelle file from (Py)REDUCE"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.load:8
+msgid "name of the file to load (default: 'sme.npy')"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.load:11
+msgid "**sme** -- Loaded SME structure"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.load:14
+msgid "If the file format extension is not recognized"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.save:1
+msgid "Save the whole SME structure to disk."
+msgstr ""
+
+#: of pysme.sme.SME_Structure.save:3
+msgid ""
+"The file format is zip file, with one info.json file for simple values, "
+"and numpy save files for large arrays. Substructures (linelist, "
+"abundance, etc.) have their own folder within the zip file."
+msgstr ""
+
+#: of pysme.sme.SME_Structure.save:8
+msgid "filename to save the structure at"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.save:10
+msgid "whether to compress the output, by default False"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.accrt:1
+msgid ""
+"minimum accuracy for synthethized spectrum at wavelength grid points in "
+"sme.wint."
+msgstr ""
+
+#: of pysme.sme.SME_Structure.accwi:1
+msgid "minimum accuracy for linear spectrum interpolation vs. wavelength."
+msgstr ""
+
+#: of pysme.sme.SME_Structure.atmo:1
+msgid "model atmosphere data"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.atmo:3
+msgid "Atmosphere"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.atomic:1
+msgid ""
+"Atomic linelist data, usually passed to the C library Use sme.linelist "
+"instead for other purposes"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.atomic:4
+msgid "array of size (nlines, 8)"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.cint:1
+msgid "continuum specific intensities from Transf"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.cint:3 pysme.sme.SME_Structure.sint:3
+msgid "Iliffe_vector of shape (nseg, nmu, ...)"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.cont:1
+msgid "continuum intensities"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.cont:3 pysme.sme.SME_Structure.mask:3
+#: pysme.sme.SME_Structure.spec:3 pysme.sme.SME_Structure.synth:3
+#: pysme.sme.SME_Structure.uncs:3 pysme.sme.SME_Structure.wave:3
+#: pysme.sme.SME_Structure.wint:3
+msgid "Iliffe_vector of shape (nseg, ...)"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.cscale:1
+msgid ""
+"Continumm polynomial coefficients for each wavelength segment The x "
+"coordinates of each polynomial are chosen so that x = 0, at the first "
+"wavelength point, i.e. x is shifted by wave[segment][0]"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.cscale:5
+msgid "array of size (nseg, ndegree)"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.cscale_bounds:1
+msgid "bounds for the continuum parameters"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.cscale_bounds:3
+msgid "array(2, cscale_degree)"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.cscale_degree:1
+msgid "Polynomial degree of the continuum as determined by cscale_flag"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.cscale_flag:1
+msgid "Flag that describes how to correct for the continuum"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.cscale_flag:3
+#: pysme.sme.SME_Structure.cscale_type:5 pysme.sme.SME_Structure.vrad_flag:3
+msgid "allowed values are:"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.cscale_flag:4
+msgid "\"none\": No continuum correction"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.cscale_flag:5
+msgid "\"fix\": Use whatever continuum scale has been set, but don't change it"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.cscale_flag:6
+msgid "\"constant\": Zeroth order polynomial, i.e. scale everything by a factor"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.cscale_flag:7
+msgid ""
+"\"linear\": First order polynomial, i.e. approximate continuum by a "
+"straight line"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.cscale_flag:8
+msgid ""
+"\"quadratic\": Second order polynomial, i.e. approximate continuum by a "
+"quadratic polynomial"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.cscale_ftol:1
+#: pysme.sme.SME_Structure.cscale_gtol:1 pysme.sme.SME_Structure.cscale_xtol:1
+msgid "tolerance for the continuum least squares fit"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.cscale_jac:1
+msgid "jacobian approximation used in the continuum fit"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.cscale_loss:1
+msgid "loss function for the continuum fit"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.cscale_method:1
+msgid "least squares method used in the continuum fit"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.cscale_type:1
+msgid "Flag that determines the algorithm to determine the continuum"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.cscale_type:3
+msgid ""
+"This is used in combination with cscale_flag, which determines the degree"
+" of the fit, if any."
+msgstr ""
+
+#: of pysme.sme.SME_Structure.cscale_type:6
+msgid ""
+"\"whole\": Fit the whole synthetic spectrum to the observation to "
+"determine the best fit"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.cscale_type:7
+msgid "\"mask\": Fit a polynomial to the pixels marked as continuum in the mask"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.cscale_xscale:1
+msgid "array of 'jac', Scale of each continuum parameter"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.fitparameters:1
+msgid "Names of the free parameters"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.fitparameters:3
+msgid "array of size (nfree)"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.fitresults:1
+msgid "fit results data"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.fitresults:3
+msgid "Fitresults"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.gam6:1 pysme.sme_synth.SME_DLL.SetVWscale:3
+msgid "van der Waals scaling factor"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.h2broad:1
+msgid "Whether to use H2 broadening or not"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.h2broad:3
+#: pysme.sme.SME_Structure.normalize_by_continuum:3
+#: pysme.sme.SME_Structure.specific_intensities_only:3
+msgid "bool"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.id:1
+msgid "DateTime when this structure was created"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.ip_x:1
+msgid "Instrumental broadening table in x direction"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.ip_y:1
+msgid "Instrumental broadening table in y direction"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.ipres:1
+msgid "Instrumental resolution for instrumental broadening"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.ipres:3
+msgid "float, array"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.iptype:1
+msgid "instrumental broadening type"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.leastsquares_ftol:1
+msgid "minimum accuracy of the best fit cost"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.leastsquares_gtol:1
+msgid "minimum accuracy of the gradient of the least squares fit"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.leastsquares_jac:1
+msgid "'2-point'"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.leastsquares_jac:5
+msgid ""
+"leastsquares jacobian calculation, see scipy least_squares for details, "
+"default"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.leastsquares_loss:1
+msgid "'linear'"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.leastsquares_loss:5
+msgid "leastsquares loss to use, see scipy least_squares for details, default"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.leastsquares_method:1
+msgid "'dogbox'."
+msgstr ""
+
+#: of pysme.sme.SME_Structure.leastsquares_method:5
+msgid "leastsquares method to use, see scipy least_squares for details, default"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.leastsquares_xscale:1
+#: pysme.sme_synth.SME_DLL.Ionization
+msgid "1"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.leastsquares_xscale:3
+msgid "str, arraylike"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.leastsquares_xscale:5
+msgid "leastsquare x-scale to use, see scipy least_squares for details, default"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.leastsquares_xtol:1
+msgid "minimum accuracy of the parameters in the fitting procedure"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.linelist:1
+msgid "spectral line information"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.mask:1
+msgid "mask defining good and bad points for the fit"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.meta:1
+msgid "Arbitrary extra information"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.mu:1
+msgid ""
+"Mu values to calculate radiative transfer at mu values describe the "
+"distance from the center of the stellar disk to the edge with mu = "
+"cos(theta), where theta is the angle of the observation, i.e. mu = 1 at "
+"the center of the disk and 0 at the edge"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.mu:6
+msgid "array of size (nmu,)"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.nlte:1
+msgid "nlte calculation data"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.nlte:3
+msgid "NLTE"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.normalize_by_continuum:1
+msgid ""
+"Whether to normalize the synthetic spectrum by the synthetic continuum "
+"spectrum or not"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.nseg:1
+msgid "Number of wavelength segments"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.sint:1
+msgid "specific intensities from Transf"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.spec:1
+msgid "observed spectrum"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.species:1
+msgid "Names of the species of each spectral line"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.species:3
+msgid "array of size (nlines,)"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.specific_intensities_only:1
+msgid "Whether to keep the specific intensities or integrate them together"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.synth:1
+msgid "synthetic spectrum"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.system_info:1
+msgid "information about the host system running the calculation for debugging"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.system_info:3
+msgid "Version"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.telluric:1
+msgid "telluric spectrum that is multiplied with synth during the fit"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.telluric:3
+msgid "Illife_vector of shape (nseg, ...)"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.uncs:1
+msgid "uncertainties of the observed spectrum"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.version:1
+msgid "PySME version used to create this structure"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.vrad:1
+msgid "radial velocity of each segment in km/s"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.vrad:3
+msgid "array of size (nseg,)"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.vrad_bounds:1
+msgid "radial velocity limits in km/s"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.vrad_flag:1
+msgid "flag that determines how the radial velocity is determined"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.vrad_flag:4
+msgid "\"none\": No radial velocity correction"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.vrad_flag:5
+msgid "\"each\": Determine radial velocity for each segment individually"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.vrad_flag:6
+msgid "\"whole\": Determine one radial velocity for the whole spectrum"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.vrad_ftol:1 pysme.sme.SME_Structure.vrad_gtol:1
+#: pysme.sme.SME_Structure.vrad_xtol:1
+msgid "tolerance for the radial velocity least squares fit"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.vrad_jac:1
+msgid "jacobian approximation used in the radial velocity fit"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.vrad_loss:1
+msgid "loss function for the radial velocity fit"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.vrad_method:1
+msgid "least squares method used in the radial velocity fit"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.vrad_xscale:1
+msgid "scale of the vrad parameter"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.vrad_xscale:3
+msgid "array or 'jac'"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.wave:1
+msgid "wavelength"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.wint:1
+msgid "optional wavelength grid passed to SMElib Transf"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.wran:1
+msgid "beginning and end wavelength points of each segment"
+msgstr ""
+
+#: of pysme.sme.SME_Structure.wran:3
+msgid "array of size (nseg, 2)"
+msgstr ""
+
+#: of pysme.sme.Version.update:1
+msgid "Update version info with current machine data"
+msgstr ""
+
+#: of pysme.sme.Version.arch:1
+msgid "system architecture"
+msgstr ""
+
+#: of pysme.sme.Version.build_date:1
+msgid "build date of the Python version used"
+msgstr ""
+
+#: of pysme.sme.Version.host:1
+msgid "name of the machine that created the SME Structure"
+msgstr ""
+
+#: of pysme.sme.Version.memory_bits:1
+msgid "Platform architecture bit size (usually 32 or 64)"
+msgstr ""
+
+#: of pysme.sme.Version.os:1
+msgid "operating system"
+msgstr ""
+
+#: of pysme.sme.Version.os_family:1
+msgid "operating system family"
+msgstr ""
+
+#: of pysme.sme.Version.os_name:1
+msgid "os name"
+msgstr ""
+
+#: of pysme.sme.Version.release:1
+msgid "python version"
+msgstr ""
+
+#: ../../_sources/pysme.rst:119
+msgid "pysme.sme\\_synth module"
+msgstr ""
+
+#: of pysme.sme_synth:1
+msgid "Wrapper for SME C library"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL:1
+msgid "Object Oriented interface for the SME C library"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.ALMAXRange:1
+msgid "Compute first-stage ALMAX and line ranges from SMElib preselection logic."
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.ALMAXRange:3
+msgid "Opacity-ratio threshold (same role as accrt in Transf preselection)."
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.ALMAXRange:6
+msgid ""
+"* **almax** (*array of size (nlines,)*) -- Line-center opacity-ratio "
+"proxy from the first-stage screening. * **linerange** (*array of size "
+"(nlines, 2)*) -- Preselection range for each line."
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.ALMAXRange:6
+msgid ""
+"**almax** (*array of size (nlines,)*) -- Line-center opacity-ratio proxy "
+"from the first-stage screening."
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.ALMAXRange:7
+msgid ""
+"**linerange** (*array of size (nlines, 2)*) -- Preselection range for "
+"each line."
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.CentralDepth:1
+msgid ""
+"This subroutine explicitly solves the transfer equation for a set of "
+"nodes on the star disk in the centers of spectral lines. The results are "
+"specific intensities."
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.CentralDepth:5
+msgid "mu values along the stellar disk to calculate"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.CentralDepth:7
+msgid "precision of the radiative transfer calculation"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.CentralDepth:10
+msgid "**table** -- Centeral depth (i.e. specific intensity) of each line"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.ClearH2broad:1
+msgid "Clear flag for H2 molecule"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.GetContributionfunction:1
+msgid "Get the contribution function for a wavelength grid."
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.GetDataFiles:1
+msgid "Get the required data files"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.GetDensity:1
+msgid "Retrieve density in each layer"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.GetDensity:3
+msgid "**density** -- Density of the atmosphere in each layer"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.GetDepartureCoefficients:1
+msgid "Get the NLTE departure coefficients as stored in the C library"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.GetDepartureCoefficients:3
+msgid "requested line index, i.e. between 0 and number of lines"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.GetDepartureCoefficients:6
+msgid "**bmat** -- departure coefficients for the given line index"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.GetFraction:1
+msgid "Get species fraction/partition function/number density."
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.GetFraction:3
+msgid "Species name in SPLIST (e.g., 'Fe', 'Fe+', 'CO')"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.GetFraction:5
+msgid "0: number density (FRACT * PF) 1: partition function other: FRACT"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.GetHlinopWarnings:1
+msgid "Return and clear the last HLINPROF->HLINOP warning summary, if any."
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.GetLibraryPath:1
+msgid "Get the data file directory"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.GetLineOpacity:1
+msgid "Retrieve line opacity data from the C library"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.GetLineOpacity:3
+msgid "Wavelength of the line opacity to retrieve"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.GetLineOpacity:6
+msgid ""
+"* **lop** (*array*) -- line opacity * **cop** (*array*) -- continuum "
+"opacity including scatter * **scr** (*array*) -- Scatter * **tsf** "
+"(*array*) -- Total source function * **csf** (*array*) -- Continuum "
+"source function"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.GetLineOpacity:6
+msgid "**lop** (*array*) -- line opacity"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.GetLineOpacity:7
+msgid "**cop** (*array*) -- continuum opacity including scatter"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.GetLineOpacity:8
+msgid "**scr** (*array*) -- Scatter"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.GetLineOpacity:9
+msgid "**tsf** (*array*) -- Total source function"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.GetLineOpacity:10
+msgid "**csf** (*array*) -- Continuum source function"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.GetLineRange:1
+msgid ""
+"Get the effective wavelength range for each line i.e. the wavelengths for"
+" which the line has significant impact"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.GetLineRange:4
+msgid "**linerange** -- lower and upper wavelength for each spectral line"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.GetNLTEflags:1
+msgid "Get an array that tells us which lines have been used with NLTE correction"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.GetNLTEflags:3
+msgid ""
+"**nlte_flags** -- True if line was used with NLTE, False if line is only "
+"LTE"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.GetNatom:1
+msgid "Get XNA"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.GetNatom:3
+msgid "**XNA** -- XNA in each layer"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.GetNelec:1
+msgid "Get XNE (Electron number density) for each layer in the atmosphere"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.GetNelec:3
+msgid "**XNE** -- XNE in each layer"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.GetOpacity:1
+msgid "Returns specific cont. opacity, different output depending on the input"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.GetOpacity:3
+msgid ""
+"one of [COPSTD, COPRED, COPBLU, AHYD, AH2P, AHMIN, SIGH, AHE1, AHE2, "
+"AHEMIN, SIGHE, ACOOL, ALUKE, AHOT, SIGEL, SIGH2]"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.GetOpacity:6
+msgid "for ACOOL, one of [new, old, fraction]"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.GetOpacity:8
+msgid ""
+"for ACOOL and ALUKE it specifies the element ACOOL: C1, Mg1, Al1, Si1, "
+"Fe1, CH, NH, OH ALUKE: N1, O1, Mg2, Si2, Ca2"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.InputAbund:1
+msgid "Pass abundances to radiative transfer code."
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.InputAbund:3
+msgid ""
+"Calculate elemental abundances from abundance pattern and metallicity. "
+"Metallicity adjustment is not applied to H or He. Renormalize abundances "
+"after applying metallicity. Introduced limiter in case the proposed step "
+"in abundance is too large."
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.InputAbund:8
+msgid "abundance structure to be passed (see Abund for more details)"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.InputDepartureCoefficients:1
+msgid "Input NLTE departure coefficients"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.InputDepartureCoefficients:3
+msgid "departure coefficient matrix"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.InputDepartureCoefficients:5
+msgid "index of the line in the linelist"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.InputLineList:1
+msgid "Read in line list"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.InputLineList:3
+#: pysme.sme_synth.SME_DLL.UpdateLineList:3
+msgid ""
+"atomic linelist data for each line fields are: atom_number, ionization, "
+"wlcent, excit, gflog, gamrad, gamqst, gamvw"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.InputLineList:6
+#: pysme.sme_synth.SME_DLL.UpdateLineList:6
+msgid "names of the elements (with Ionization level)"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.InputLinePrecomputedInfo:1
+msgid "Input precomputed line ranges and strong mask to SMElib."
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.InputModel:1
+msgid "Read in model atmosphere"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.InputModel:3
+msgid "effective Temperature in Kelvin"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.InputModel:7
+msgid "turbulence velocity in km/s"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.InputModel:9
+msgid "atmosphere structure (see Atmo for details)"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.InputWaveRange:1
+msgid "Read in Wavelength range"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.InputWaveRange:3
+msgid "Will raise an exception if wfirst is larger than wlast"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.InputWaveRange:5
+msgid "first wavelength of the segment"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.InputWaveRange:7
+msgid "last wavelength of the segment"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.Ionization:1
+msgid ""
+"Calculate ionization balance for current atmosphere and abundances. "
+"Ionization state is stored in the external library. Ion is a bit flag "
+"with values (add them together to use multiple):"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.Ionization:5
+msgid "adopt particle number densities from EOS"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.Ionization
+msgid "2"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.Ionization:6
+msgid "adopt electron number densities from EOS"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.Ionization
+msgid "4"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.Ionization:7
+msgid "adopt gas densities (g/cm^3) from EOS"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.Ionization:9
+msgid ""
+"instead of using values from model atmosphere. Different abundance "
+"patterns in the model atmosphere (usually scaled solar) and SME (may be "
+"non-solar) can affect line shape, e.g. shape of hydrogen lines."
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.Ionization:13
+msgid "flag that determines the behaviour of the C function"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.Opacity:1
+msgid "Calculate opacities"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.OutputLineList:1
+msgid "Return line list"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.OutputLineList:3
+msgid ""
+"**atomic** -- relevant data of the linelist wlcent, excit, gflog, gamrad,"
+" gamqst, gamvw"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.ResetDepartureCoefficients:1
+msgid ""
+"Reset departure coefficients from any previous call, to ensure LTE as "
+"default"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.SMELibraryVersion:1
+msgid "Return SME library version"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.SetH2broad:1
+msgid "Set flag for H2 molecule"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.SetHlinopWarningMode:1
+msgid "Set HLINPROF->HLINOP warning mode (0=stderr, 1=record-only, 2=off)."
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.SetLibraryPath:1
+msgid "Set the path to the library"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.SetLineInfoMode:1
+msgid ""
+"Set handling mode for precomputed line info (0=internal, 1=use_if_valid, "
+"2=trust)."
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.SetVWscale:1
+msgid "Set van der Waals scaling factor"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.Transf:1
+msgid "Radiative Transfer Calculation"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.Transf:3
+msgid ""
+"Perform the radiative transfer calculation thorugh the atmosphere "
+"Requires that all parameters have been set beforehand"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.Transf:6
+msgid ""
+"mu angles (1 - cos(phi)) of different limb points along the stellar "
+"surface"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.Transf:8
+msgid "accuracy of the radiative transfer integration"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.Transf:10
+msgid "accuracy of the interpolation on the wavelength grid"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.Transf:12
+msgid "if True do not recompute the line opacities (default: False)"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.Transf:14
+msgid "if True the continuum is calculated at every wavelength (default: True)"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.Transf:16
+msgid ""
+"maximum number of wavelength points if wavelength grid is not set with "
+"wave (default: 400000)"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.Transf:18
+msgid ""
+"wavelength grid to use for the calculation, if not set will use an "
+"adaptive wavelength grid with no constant step size (default: None)"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.Transf:22
+msgid ""
+"* **nw** (*int*) -- number of actual wavelength points, i.e. size of "
+"wint_seg * **wint_seg** (*array of shape (nwave,)*) -- wavelength grid, "
+"the number of wavelengthpoints is equal to the number of lines * 2 - 1   "
+"One point in the center of each line + plus one between the next line * "
+"**sint_seg** (*array of shape (nmu, nwave)*) -- spectrum for each mu "
+"point * **cint_seg** (*array of shape (nmu, nwave)*) -- continuum for "
+"each mu point"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.Transf:22
+msgid ""
+"**nw** (*int*) -- number of actual wavelength points, i.e. size of "
+"wint_seg"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.Transf:23
+msgid ""
+"**wint_seg** (*array of shape (nwave,)*) -- wavelength grid, the number "
+"of wavelengthpoints is equal to the number of lines * 2 - 1 One point in "
+"the center of each line + plus one between the next line"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.Transf:25
+msgid "**sint_seg** (*array of shape (nmu, nwave)*) -- spectrum for each mu point"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.Transf:26
+msgid ""
+"**cint_seg** (*array of shape (nmu, nwave)*) -- continuum for each mu "
+"point"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.UpdateLineList:1
+msgid "Change line list parameters"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.UpdateLineList:8
+msgid "indices of the lines to update relative to the overall linelist"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.check_data_files_exist:1
+msgid ""
+"Checks if required data files for the SME library exist. If they dont "
+"exist, SME will just segfault, without any hint."
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.check_data_files_exist:4
+msgid "If any of the files don't exist"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.datadir:1
+msgid "Expected directory of the data files"
+msgstr ""
+
+#: of pysme.sme_synth.SME_DLL.file:1
+msgid "(Expected) Location of the library file"
+msgstr ""
+
+#: ../../_sources/pysme.rst:127
+msgid "pysme.solve module"
+msgstr ""
+
+#: of pysme.solve:1
+msgid ""
+"Calculates the spectrum, based on a set of stellar parameters And also "
+"determines the best fit parameters"
+msgstr ""
+
+#: of pysme.solve.SME_Solver.estimate_uncertainties:1
+msgid ""
+"Estimate the uncertainties by fitting the cumulative distribution of "
+"derivative / uncertainties vs. residual / derivative with the generalized"
+" normal distribution and use the 68% percentile as the 1 sigma "
+"approximation for a normally distributed variable"
+msgstr ""
+
+#: of pysme.solve.SME_Solver.estimate_uncertainties:6
+msgid "uncertainties"
+msgstr ""
+
+#: of pysme.solve.SME_Solver.estimate_uncertainties:8
+msgid "residuals of the least squares fit"
+msgstr ""
+
+#: of pysme.solve.SME_Solver.estimate_uncertainties:10
+msgid "derivatives (jacobian) of the least squares fit for each parameter"
+msgstr ""
+
+#: of pysme.solve.SME_Solver.estimate_uncertainties:13
+msgid ""
+"**freep_unc** -- uncertainties for each free paramater, in the same order"
+" as self.parameter_names"
+msgstr ""
+
+#: of pysme.solve.SME_Solver.get_bounds:1
+msgid "Create Bounds based on atmosphere grid and general rules"
+msgstr ""
+
+#: of pysme.solve.SME_Solver.get_bounds:3
+msgid ""
+"Note that bounds define by definition a cube in the parameter space, but "
+"the grid might not be a cube. I.e. Not all combinations of teff, logg, "
+"monh are valid This method will choose the outerbounds of that space as "
+"the boundary, which means that we can still run into problems when "
+"interpolating the atmospheres"
+msgstr ""
+
+#: of pysme.solve.SME_Solver.get_bounds:8
+msgid "names of the parameters to vary"
+msgstr ""
+
+#: of pysme.solve.SME_Solver.get_bounds:10
+msgid "sme structure to get bounds for"
+msgstr ""
+
+#: of pysme.solve.SME_Solver.get_bounds:13
+msgid ""
+"If the atmosphere file can't be read, allowed types     are IDL savefiles"
+" (.sav), and .krz files"
+msgstr ""
+
+#: of pysme.solve.SME_Solver.get_bounds:15
+msgid "**bounds** -- Bounds for the given parameters"
+msgstr ""
+
+#: of pysme.solve.SME_Solver.get_default_values:1
+msgid "Default parameter values for each name"
+msgstr ""
+
+#: of pysme.solve.SME_Solver.get_scale:1
+msgid "Returns scales for each parameter so that values are on order ~1"
+msgstr ""
+
+#: of pysme.solve.SME_Solver.get_scale:3
+msgid "names of the parameters"
+msgstr ""
+
+#: of pysme.solve.SME_Solver.get_scale:6
+msgid "**scales** -- scales of the parameters in the same order as input array"
+msgstr ""
+
+#: of pysme.solve.SME_Solver.solve:1
+msgid "Find the least squares fit parameters to an observed spectrum"
+msgstr ""
+
+#: of pysme.solve.SME_Solver.solve:3
+msgid "NOTE: intermediary results will be saved in filename (\"sme.npy\")"
+msgstr ""
+
+#: of pysme.solve.SME_Solver.solve:5
+msgid "sme struct containing all input (and output) parameters"
+msgstr ""
+
+#: of pysme.solve.SME_Solver.solve:7
+msgid ""
+"the names of the parameters to fit (default: [\"teff\", \"logg\", "
+"\"monh\"])"
+msgstr ""
+
+#: of pysme.solve.SME_Solver.solve:9
+msgid ""
+"the sme structure will be saved to this file, use None to suppress this "
+"behaviour (default: \"sme.npy\")"
+msgstr ""
+
+#: of pysme.solve.SME_Solver.solve:12
+msgid ""
+"**sme** -- same sme structure with fit results in sme.fitresults, and "
+"best fit spectrum in sme.smod"
+msgstr ""
+
+#: of pysme.solve.VariableNumber:1
+msgid "Bases: :py:class:`~numpy.lib.mixins.NDArrayOperatorsMixin`"
+msgstr ""
+
+#: of pysme.solve.VariableNumber:1
+msgid ""
+"This is essentially a pointer to the value, but will interact with "
+"operators as though it was the value. This is useful to pass one f_scale "
+"parameter to the least squares fit, that can then be modified during the "
+"iterations."
+msgstr ""
+
+#: ../../_sources/pysme.rst:135
+msgid "pysme.uncertainties module"
+msgstr ""
+
+#: of pysme.uncertainties.gaussfit:1
+msgid "Fit a simple gaussian to data"
+msgstr ""
+
+#: of pysme.uncertainties.gaussfit:3
+msgid "gauss(x, a, mu, sigma) = a * exp(-z**2/2) with z = (x - mu) / sigma"
+msgstr ""
+
+#: of pysme.uncertainties.gaussfit:6
+msgid "x values"
+msgstr ""
+
+#: of pysme.uncertainties.gaussfit:8
+msgid "y values"
+msgstr ""
+
+#: of pysme.uncertainties.gaussfit:11
+msgid "fitted values for x, fit paramters (a, mu, sigma)"
+msgstr ""
+
+#: ../../_sources/pysme.rst:143
+msgid "pysme.util module"
+msgstr ""
+
+#: of pysme.util:1
+msgid "Utility functions for SME"
+msgstr ""
+
+#: of pysme.util:3
+msgid "safe interpolation"
+msgstr ""
+
+#: of pysme.util.Scalar:1
+msgid ""
+"Scalar class used to scale data. Can create a scalar, scale input data, "
+"save and load previous scalars."
+msgstr ""
+
+#: of pysme.util.Scalar.fit:1
+msgid "Create scalar."
+msgstr ""
+
+#: of pysme.util.Scalar.fit:3 pysme.util.Scalar.transform:3
+#: pysme.util.Scalar.untransform:3
+msgid "Needs to be in the form [num of objects x num of parameters]."
+msgstr ""
+
+#: of pysme.util.Scalar.load:1
+msgid "Load scalar."
+msgstr ""
+
+#: of pysme.util.Scalar.load:3
+msgid "The name of the saved scalar."
+msgstr ""
+
+#: of pysme.util.Scalar.save:1
+msgid "Save scalar"
+msgstr ""
+
+#: of pysme.util.Scalar.save:3
+msgid "The name to save the scalar under."
+msgstr ""
+
+#: of pysme.util.Scalar.transform:1
+msgid "Scale input data."
+msgstr ""
+
+#: of pysme.util.Scalar.transform:6
+msgid ""
+"**scaled_data** -- The scaled data in the form [num of objects x num of "
+"parameters]."
+msgstr ""
+
+#: of pysme.util.Scalar.untransform:1
+msgid "Unscale input data."
+msgstr ""
+
+#: of pysme.util.Scalar.untransform:6
+msgid ""
+"**unscaled_data** -- The unscaled data in the form [num of objects x num "
+"of parameters]."
+msgstr ""
+
+#: of pysme.util.absolute:1 pysme.util.lowercase:1 pysme.util.uppercase:1
+msgid "Bases: :py:class:`~pysme.util.oftype`"
+msgstr ""
+
+#: of pysme.util.apply:1
+msgid "Bases: :py:class:`~pysme.util.getter`"
+msgstr ""
+
+#: of pysme.util.ofarray:1 pysme.util.ofsize:1 pysme.util.oftype:1
+#: pysme.util.oneof:1
+msgid "Bases: :py:class:`~pysme.util.setter`"
+msgstr ""
+
+#: of pysme.util.air2vac:1
+msgid ""
+"Convert wavelengths in air to vacuum wavelength in Angstrom Author: "
+"Nikolai Piskunov"
+msgstr ""
+
+#: of pysme.util.compress_one_grid:1
+msgid ""
+"对一个格点: - 使用 strong_idx 裁剪 line_info（只保留强线） - 计算 line_width = e - "
+"s，并做字典编码: unique_widths + codes - 从 strong_idx 构造完整 bool mask, 再 bit-pack"
+" 成 uint8 串"
+msgstr ""
+
+#: of pysme.util.compress_one_grid:6
+msgid "自动根据数据推断 n_lines_total，避免 off-by-one。"
+msgstr ""
+
+#: of pysme.util.interpolate_3DNLTEH_intensity_continuum_RBF:1
+msgid ""
+"Interpolate the 3D NLTE H line intensity and continuum profiles at the "
+"given parameters. :param Teff: Effective temperature. :type Teff: float "
+":param logg: Surface gravity. :type logg: float :param FeH: Metallicity. "
+":type FeH: float :param mu: Cosine of the viewing angle. :type mu: float "
+":param Returns:"
+msgstr ""
+
+#: of pysme.util.interpolate_3DNLTEH_spectrum_RBF:1
+msgid "Interpolate the normalized 3D NLTE H line profile at the given parameters."
+msgstr ""
+
+#: of pysme.util.load_bool_sparse:1
+msgid "Load a boolean array previously saved with `save_bool_sparse`."
+msgstr ""
+
+#: of pysme.util.load_bool_sparse:3
+msgid ""
+"This reconstructs the full boolean mask by allocating a flat array of "
+"length 'size', marking positions in 'idx' as True, and reshaping to "
+"'shape'."
+msgstr ""
+
+#: of pysme.util.load_bool_sparse:6
+msgid "Path to the .npz file produced by `save_bool_sparse`."
+msgstr ""
+
+#: of pysme.util.load_bool_sparse:9
+msgid "The reconstructed boolean array with the original shape."
+msgstr ""
+
+#: of pysme.util.load_bool_sparse:12
+msgid "If the file does not contain the expected keys: 'idx', 'shape', 'size'."
+msgstr ""
+
+#: of pysme.util.load_bool_sparse:15 pysme.util.save_bool_sparse:16
+msgid "Notes"
+msgstr ""
+
+#: of pysme.util.load_bool_sparse:16
+msgid ""
+"The reconstruction uses C-order (row-major) flattening/reshaping, "
+"matching the behavior of `np.flatnonzero` used during saving."
+msgstr ""
+
+#: of pysme.util.load_bool_sparse:18
+msgid ""
+"This function assumes the file structure created by `save_bool_sparse` "
+"(i.e., it is not a general-purpose sparse loader)."
+msgstr ""
+
+#: of pysme.util.load_bool_sparse:22 pysme.util.save_bool_sparse:24
+msgid "Examples"
+msgstr ""
+
+#: of pysme.util.load_cdr_to_linelist:1
+msgid ""
+"Load a compressed .npz CDR file and assign its content to "
+"sme.linelist._lines."
+msgstr ""
+
+#: of pysme.util.load_cdr_to_linelist:3
+msgid ""
+"Parameters: - sme: SME object with .linelist._lines dictionary - "
+"filepath: full path to the .npz file with 'line_info' inside"
+msgstr ""
+
+#: of pysme.util.log_version:1
+msgid "For Debug purposes"
+msgstr ""
+
+#: of pysme.util.parse_args:1
+msgid "Parse command line arguments"
+msgstr ""
+
+#: of pysme.util.parse_args:3
+msgid ""
+"* **sme** (*str*) -- filename to input sme structure * **vald** (*str*) "
+"-- filename of input linelist or None * **fitparameters** (*list(str)*) "
+"-- names of the parameters to fit, empty list if none are specified"
+msgstr ""
+
+#: of pysme.util.parse_args:3
+msgid "**sme** (*str*) -- filename to input sme structure"
+msgstr ""
+
+#: of pysme.util.parse_args:4
+msgid "**vald** (*str*) -- filename of input linelist or None"
+msgstr ""
+
+#: of pysme.util.parse_args:5
+msgid ""
+"**fitparameters** (*list(str)*) -- names of the parameters to fit, empty "
+"list if none are specified"
+msgstr ""
+
+#: of pysme.util.redirect_output_to_file:1
+msgid "Redirect ALL output that would go to the commandline, to a file instead"
+msgstr ""
+
+#: of pysme.util.redirect_output_to_file:3
+msgid "output filename"
+msgstr ""
+
+#: of pysme.util.safe_interpolation:1
+msgid ""
+"'Safe' interpolation method that should avoid the common pitfalls of "
+"spline interpolation"
+msgstr ""
+
+#: of pysme.util.safe_interpolation:4
+msgid ""
+"masked arrays are compressed, i.e. only non masked entries are used "
+"remove NaN input in x_old and y_old only unique x values are used, "
+"corresponding y values are 'random' if all else fails, revert to linear "
+"interpolation"
+msgstr ""
+
+#: of pysme.util.safe_interpolation:9
+msgid "x values of the data"
+msgstr ""
+
+#: of pysme.util.safe_interpolation:11
+msgid "y values of the data"
+msgstr ""
+
+#: of pysme.util.safe_interpolation:13
+msgid ""
+"x values of the interpolated values if None will return the interpolator "
+"object (default: None)"
+msgstr ""
+
+#: of pysme.util.safe_interpolation:18
+msgid ""
+"**y_new** -- if x_new was given, return the interpolated values otherwise"
+" return the interpolator object"
+msgstr ""
+
+#: of pysme.util.save_bool_sparse:1
+msgid "Save a boolean NumPy array in a space-efficient sparse format."
+msgstr ""
+
+#: of pysme.util.save_bool_sparse:3
+msgid ""
+"This function stores only the flat indices of True values together with "
+"the original array shape and size, then writes them into a compressed "
+".npz file. It is typically more space-efficient than bit-packing when the"
+" number of True entries k is much smaller than N/8, where N is the total "
+"number of elements in the array."
+msgstr ""
+
+#: of pysme.util.save_bool_sparse:9
+msgid "Output file path (e.g., 'mask_sparse.npz')."
+msgstr ""
+
+#: of pysme.util.save_bool_sparse:11
+msgid ""
+"Boolean array to save. It will be flattened in C-order to obtain the "
+"index list (via `np.flatnonzero(arr)`)."
+msgstr ""
+
+#: of pysme.util.save_bool_sparse:17
+msgid ""
+"The file contains three arrays: 'idx' (1D int indices of True entries), "
+"'shape' (the original array shape), and 'size' (the total number of "
+"elements)."
+msgstr ""
+
+#: of pysme.util.save_bool_sparse:19
+msgid ""
+"The array is reconstructed by creating a flat boolean array of length "
+"'size', setting True at positions 'idx', and reshaping to 'shape'."
+msgstr ""
+
+#: of pysme.util.save_bool_sparse:21
+msgid "For dense masks, consider bit-packing or direct compression instead."
+msgstr ""
+
+#: of pysme.util.save_compressed_grid:1
+msgid ""
+"把一个格点压缩后的数据保存为 npz: - mask_bits: uint8 bit-packed bool mask - "
+"unique_widths: float32 - codes: uint8/uint16/uint32"
+msgstr ""
+
+#: of pysme.util.start_logging:1
+msgid "Start logging to log file and command line"
+msgstr ""
+
+#: of pysme.util.start_logging:3
+msgid "name of the logging file (default: \"log.log\")"
+msgstr ""
+
+#: of pysme.util.vac2air:1
+msgid ""
+"Convert vacuum wavelengths to wavelengths in air in Angstrom Author: "
+"Nikolai Piskunov"
+msgstr ""
+
+#: ../../_sources/pysme.rst:152
+msgid "Module contents"
+msgstr ""
+

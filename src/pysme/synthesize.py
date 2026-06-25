@@ -2,6 +2,7 @@
 """
 Spectral Synthesis Module of SME
 """
+from dataclasses import dataclass, field
 import logging
 import uuid
 import warnings
@@ -54,6 +55,58 @@ pd.options.mode.chained_assignment = None  # None means no warning will be shown
 logger = logging.getLogger(__name__)
 
 clight = speed_of_light * 1e-3  # km/s
+
+
+@dataclass(frozen=True)
+class ProfileNLTEProviderManifest:
+    name: str
+    element: str
+    species: str
+    supported_windows_air: list[list[float]]
+    profile_kind: str
+    data_key: str
+    parameter_axes: list[str]
+    data_source: str
+    reference_label: str | None = None
+    citation_info: str | None = None
+    notes: list[str] = field(default_factory=list)
+
+
+H_3DNLTE_RBF_MANIFEST = ProfileNLTEProviderManifest(
+    name="pysme_h_3dnlte_rbf",
+    element="H",
+    species="H 1",
+    supported_windows_air=[
+        [4335.0, 4345.0],
+        [4855.0, 4868.0],
+        [6550.0, 6575.0],
+    ],
+    profile_kind="intensity_ratio",
+    data_key="data.hlineprof",
+    parameter_axes=["teff", "logg", "monh", "mu"],
+    data_source="lineprof.dat",
+    reference_label="Amarsi et al. (2018, A&A, 615, A139)",
+    citation_info="""@article{Amarsi2018Balmer3DNLTE,
+  author = {{Amarsi}, A. M. and {Nordlander}, T. and {Barklem}, P. S. and {Asplund}, M. and {Collet}, R. and {Lind}, K.},
+  title = {Effective temperature determinations of late-type stars based on 3D non-LTE Balmer line formation},
+  journal = {Astronomy \\& Astrophysics},
+  volume = {615},
+  pages = {A139},
+  year = {2018}
+}""",
+    notes=[
+        "Bundled hydrogen profile dataset used by the current experimental profile-NLTE implementation.",
+        "The scientific reference for the Halpha/Hbeta/Hgamma 3D non-LTE Balmer-line profiles is Amarsi et al. (2018).",
+    ],
+)
+
+_PROFILE_NLTE_PROVIDER_DEFAULTS = {
+    "H": "pysme_h_3dnlte_rbf",
+}
+
+_PROFILE_NLTE_PROVIDER_CONFIG = {
+    "pysme_h_3dnlte_rbf": H_3DNLTE_RBF_MANIFEST,
+}
 
 __DLL_DICT__ = {}
 __DLL_IDS__ = {}
@@ -131,9 +184,19 @@ def _same_path(a, b):
     )
 
 
-def _resolve_line_precompute_database(sme, line_precompute_database=None, cdr_database=None):
-    if line_precompute_database is False:
-        return None
+def _normalize_line_precompute_database_arg(
+    line_precompute_database=None,
+    cdr_database=None,
+    *,
+    stacklevel=3,
+):
+    if cdr_database is not None:
+        warnings.warn(
+            "'cdr_database' is deprecated and will be removed in a future release; "
+            "use 'line_precompute_database' instead.",
+            DeprecationWarning,
+            stacklevel=stacklevel,
+        )
     if (
         line_precompute_database is not None
         and cdr_database is not None
@@ -145,8 +208,19 @@ def _resolve_line_precompute_database(sme, line_precompute_database=None, cdr_da
         )
     if line_precompute_database is not None:
         return line_precompute_database
-    if cdr_database is not None:
-        return cdr_database
+    return cdr_database
+
+
+def _resolve_line_precompute_database(sme, line_precompute_database=None, cdr_database=None):
+    if line_precompute_database is False:
+        return None
+    line_precompute_database = _normalize_line_precompute_database_arg(
+        line_precompute_database=line_precompute_database,
+        cdr_database=cdr_database,
+        stacklevel=4,
+    )
+    if line_precompute_database is not None:
+        return line_precompute_database
     if getattr(sme, "line_precompute_database", None) is not None:
         return getattr(sme, "line_precompute_database")
     return getattr(sme, "line_select_cdr_database", None)
@@ -742,6 +816,14 @@ class Synthesizer:
             dll_id = self.dll
         if dll_id in __DLL_DICT__:
             return __DLL_DICT__[dll_id]
+        elif isinstance(dll_id, uuid.UUID):
+            # Child processes spawned for pqdm do not inherit the parent's
+            # module-level DLL registry, so only the UUID key survives pickling.
+            # Recreate and register a fresh SME_DLL instance in that process.
+            dll = SME_DLL()
+            __DLL_DICT__[dll_id] = dll
+            __DLL_IDS__[dll] = dll_id
+            return dll
         else:
             return dll_id
 
@@ -771,6 +853,13 @@ class Synthesizer:
             raise ValueError("line_select_recompute must be one of: 'if_stale', 'always', 'never'")
         if reuse not in ("none", "once", "always"):
             raise ValueError("line_select_reuse must be one of: 'none', 'once', 'always'")
+        if reuse != "none":
+            warnings.warn(
+                "'line_select_reuse' is deprecated and will be removed in a future release. "
+                "Its current effect is limited; prefer keeping the default 'none'.",
+                DeprecationWarning,
+                stacklevel=3,
+            )
         if linelist_mode == "dynamic" and method == "internal":
             raise ValueError("linelist_mode='dynamic' requires line_select_method 'cdr' or 'almax'")
 
@@ -860,6 +949,7 @@ class Synthesizer:
             "parallel": parallel,
             "n_jobs": n_jobs,
             "chunk_size": chunk_size,
+            "worker_output": bool(getattr(sme, "cdr_pysme_out", False)),
             "recompute": recompute,
             "reuse": reuse,
             "stale_thres": stale_thres,
@@ -877,6 +967,10 @@ class Synthesizer:
         threshold=None,
         use_bins=None,
         bin_width=None,
+        chunk_size=None,
+        parallel=None,
+        n_jobs=None,
+        worker_output=None,
         line_precompute_database=None,
         cdr_database=None,
         cdr_create=False,
@@ -891,18 +985,19 @@ class Synthesizer:
         'almax_ratio', 'strong', 'line_range_s', 'line_range_e'.
         """
 
-        chunk_size = int(
-            max(
-                1,
-                getattr(
-                    sme,
-                    "line_select_chunk_size",
-                    getattr(sme, "cdr_N_line_chunk", 2000),
-                ),
+        if chunk_size is None:
+            chunk_size = getattr(
+                sme,
+                "line_select_chunk_size",
+                getattr(sme, "cdr_N_line_chunk", 2000),
             )
-        )
-        parallel = bool(getattr(sme, "line_select_parallel", False))
-        n_jobs = getattr(sme, "line_select_n_jobs", None)
+        chunk_size = int(max(1, chunk_size))
+        if parallel is None:
+            parallel = bool(getattr(sme, "line_select_parallel", False))
+        else:
+            parallel = bool(parallel)
+        if n_jobs is None:
+            n_jobs = getattr(sme, "line_select_n_jobs", None)
         if n_jobs is None:
             n_jobs = int(
                 min(
@@ -913,6 +1008,10 @@ class Synthesizer:
         n_jobs = int(max(1, n_jobs))
         if n_jobs < 2:
             parallel = False
+        if worker_output is None:
+            worker_output = bool(getattr(sme, "cdr_pysme_out", False))
+        else:
+            worker_output = bool(worker_output)
 
         if threshold is None:
             threshold = getattr(sme, "line_select_almax_threshold", None)
@@ -998,7 +1097,7 @@ class Synthesizer:
                 one.linelist = sub_linelist[i]
                 sub_sme.append(one)
 
-            if getattr(sme, "cdr_pysme_out", False):
+            if worker_output:
                 results = pqdm(
                     sub_sme,
                     _compute_almax_lineinfo_for_sme,
@@ -1152,16 +1251,15 @@ class Synthesizer:
         sme : SME_Struct
             same sme structure with synthetic spectrum in sme.smod
         """
+        line_precompute_database = _normalize_line_precompute_database_arg(
+            line_precompute_database=line_precompute_database,
+            cdr_database=cdr_database,
+            stacklevel=3,
+        )
+        cdr_database = None
 
-        # Prepare 3D NLTE H profile corrections
-        if sme.tdnlte_H:
-            if sme.specific_intensities_only:
-                logger.warning(
-                    "3D NLTE H correction is defined at flux level and is not applied "
-                    "when specific_intensities_only=True."
-                )
-            else:
-                sme.tdnlte_H_correction = self.get_H_3dnlte_correction_rbf(sme)
+        # Prepare profile-based NLTE corrections before segment synthesis.
+        self._prepare_profile_nlte(sme)
 
         if sme is not self.known_sme:
             logger.debug("Synthesize spectrum")
@@ -1277,6 +1375,10 @@ class Synthesizer:
                 try:
                     sme = self.update_cdr(
                         sme,
+                        chunk_size=ls_cfg["chunk_size"],
+                        parallel=ls_cfg["parallel"],
+                        n_jobs=ls_cfg["n_jobs"],
+                        worker_output=ls_cfg["worker_output"],
                         line_precompute_database=line_precompute_database,
                         cdr_database=cdr_database,
                         cdr_create=cdr_create,
@@ -1383,6 +1485,10 @@ class Synthesizer:
                         threshold=ls_cfg["almax_threshold"],
                         use_bins=ls_cfg["almax_use_bins"],
                         bin_width=ls_cfg["almax_bin_width"],
+                        chunk_size=ls_cfg["chunk_size"],
+                        parallel=ls_cfg["parallel"],
+                        n_jobs=ls_cfg["n_jobs"],
+                        worker_output=ls_cfg["worker_output"],
                         line_precompute_database=line_precompute_database,
                         cdr_database=cdr_database,
                         cdr_create=cdr_create,
@@ -1742,6 +1848,13 @@ class Synthesizer:
             wave=wint_seg,
         )
 
+        # Insert the new 3DNLTE correction
+        if self._is_profile_nlte_h_applied(sme):
+            interpolator = interp1d(util.lambda_H_3DNLTE, sme.tdnlte_H_correction, kind="linear", fill_value=1, bounds_error=False, assume_sorted=True)
+            correction_3dnlte_H_interp = interpolator(wint)
+
+            sint *= correction_3dnlte_H_interp
+
         # # Assign the nlte flags
         # nlte_flags = dll.GetNLTEflags()
         # sme.nlte.flags = nlte_flags
@@ -1779,7 +1892,7 @@ class Synthesizer:
                 sint = broadening.apply_broadening(ipres, wint, sint, type=sme.iptype, sme=sme)
 
             # Apply the correction on Ha, Hb and Hgamma line here.
-            if sme.tdnlte_H:
+            if self._is_profile_nlte_h_applied(sme):
                 correction_resample = safe_interpolation(sme.tdnlte_H_correction[0], sme.tdnlte_H_correction[1], wint, fill_value=1)
                 sint *= correction_resample
 
@@ -1816,6 +1929,10 @@ class Synthesizer:
     def update_cdr(
         self,
         sme,
+        chunk_size=None,
+        parallel=None,
+        n_jobs=None,
+        worker_output=None,
         line_precompute_database=None,
         cdr_database=None,
         cdr_create=False,
@@ -1830,7 +1947,38 @@ class Synthesizer:
         Author: Mingjie Jian
         '''
 
-        N_line_chunk, parallel, n_jobs, pysme_out = sme.cdr_N_line_chunk, sme.cdr_parallel, sme.cdr_n_jobs, sme.cdr_pysme_out
+        if chunk_size is None:
+            chunk_size = getattr(
+                sme,
+                "line_select_chunk_size",
+                getattr(sme, "cdr_N_line_chunk", 2000),
+            )
+        N_line_chunk = int(max(1, chunk_size))
+        if parallel is None:
+            parallel = bool(
+                getattr(sme, "line_select_parallel", getattr(sme, "cdr_parallel", False))
+            )
+        else:
+            parallel = bool(parallel)
+        if n_jobs is None:
+            n_jobs = getattr(sme, "line_select_n_jobs", getattr(sme, "cdr_n_jobs", None))
+        if n_jobs is None:
+            if parallel:
+                n_jobs = int(
+                    min(
+                        os.cpu_count() or 1,
+                        int(np.ceil(max(1, len(sme.linelist)) / N_line_chunk)),
+                    )
+                )
+            else:
+                n_jobs = 1
+        n_jobs = int(max(1, n_jobs))
+        if n_jobs < 2:
+            parallel = False
+        if worker_output is None:
+            pysme_out = bool(getattr(sme, "cdr_pysme_out", False))
+        else:
+            pysme_out = bool(worker_output)
         self.update_cdr_switch = True
         try:
             line_precompute_database = _resolve_line_precompute_database(
@@ -2470,6 +2618,7 @@ class Synthesizer:
             return None
         sme_H_only.wave = np.arange(4000, 6700, 0.02)
         sme_H_only.tdnlte_H = False
+        sme_H_only.profile_nlte.enabled = False
         sme_H_only_res = self.synthesize_spectrum(sme_H_only)
 
         mu_3d = np.asarray(util.mu_H_3DNLTE, dtype=float)
@@ -2491,7 +2640,6 @@ class Synthesizer:
         
         if not in_boundary:
             logger.info(f"Outside the H 3dnlte grid, not performing correction.")
-            sme.tdnlte_H = False
             return None
         
         int_3dnlte_H = np.array(int_3dnlte_H)
@@ -2541,6 +2689,171 @@ class Synthesizer:
         ) / np.clip(sme_H_only_res.synth[0], 1e-12, None)
 
         return sme_H_only_res.wave[0], correction
+
+    @staticmethod
+    def _provider_windows_in_wran(sme, provider_cfg):
+        wran = np.asarray(sme.wran, dtype=float).reshape(-1, 2)
+        applied = []
+        for win_lo, win_hi in provider_cfg.supported_windows_air:
+            overlaps = (wran[:, 1] >= win_lo) & (wran[:, 0] <= win_hi)
+            if np.any(overlaps):
+                applied.append([float(win_lo), float(win_hi)])
+        return applied
+
+    @staticmethod
+    def _linelist_has_species(sme, species):
+        try:
+            linelist_species = np.asarray(sme.linelist["species"], dtype="U")
+        except Exception:
+            return False
+        return bool(np.any(linelist_species == species))
+
+    @staticmethod
+    def _profile_nlte_summary_base(sme, requested, element, provider, provider_cfg):
+        return {
+            "requested": bool(requested),
+            "applied": False,
+            "element": element,
+            "provider": provider,
+            "species": provider_cfg.species if provider_cfg is not None else None,
+            "profile_kind": provider_cfg.profile_kind if provider_cfg is not None else None,
+            "data_key": provider_cfg.data_key if provider_cfg is not None else None,
+            "data_source": provider_cfg.data_source if provider_cfg is not None else None,
+            "parameter_axes": deepcopy(provider_cfg.parameter_axes) if provider_cfg is not None else [],
+            "reference_label": provider_cfg.reference_label if provider_cfg is not None else None,
+            "citation_info": provider_cfg.citation_info if provider_cfg is not None else None,
+            "supported_windows_air": deepcopy(provider_cfg.supported_windows_air) if provider_cfg is not None else [],
+            "applied_windows_air": [],
+            "fallback": False,
+            "fallback_reason": None,
+        }
+
+    def _normalize_profile_nlte_request(self, sme):
+        requested = bool(getattr(sme, "tdnlte_H", False) or getattr(sme.profile_nlte, "enabled", False))
+        if not requested:
+            sme.profile_nlte.summary = {
+                "requested": False,
+                "applied": False,
+                "element": None,
+                "provider": None,
+                "supported_windows_air": [],
+                "applied_windows_air": [],
+                "fallback": False,
+                "fallback_reason": None,
+            }
+            return None, None
+
+        element = sme.profile_nlte.element
+        if element is None and getattr(sme, "tdnlte_H", False):
+            element = "H"
+        if isinstance(element, (list, tuple, set, np.ndarray)):
+            raise ValueError("Profile-NLTE currently supports only one element provider at a time")
+        if element is None:
+            raise ValueError("profile_nlte.enabled=True requires profile_nlte.element to be set")
+
+        element = str(element).strip()
+        provider = sme.profile_nlte.provider or _PROFILE_NLTE_PROVIDER_DEFAULTS.get(element)
+        if provider is None:
+            raise ValueError(f"No default profile-NLTE provider is configured for element '{element}'")
+        if provider not in _PROFILE_NLTE_PROVIDER_CONFIG:
+            raise ValueError(f"Unknown profile-NLTE provider '{provider}'")
+
+        provider_cfg = _PROFILE_NLTE_PROVIDER_CONFIG[provider]
+        if provider_cfg.element != element:
+            raise ValueError(
+                f"Profile-NLTE provider '{provider}' is configured for element '{provider_cfg.element}', not '{element}'"
+            )
+
+        sme.profile_nlte.enabled = True
+        sme.profile_nlte.element = element
+        sme.profile_nlte.provider = provider
+        return provider, provider_cfg
+
+    def _prepare_profile_nlte(self, sme):
+        legacy_requested = bool(getattr(sme, "tdnlte_H", False))
+        sme.tdnlte_H_correction = None
+        sme.tdnlte_H = False
+        if legacy_requested:
+            sme.tdnlte_H = True
+        provider, provider_cfg = self._normalize_profile_nlte_request(sme)
+        sme.tdnlte_H = False
+        if provider is None:
+            return
+
+        summary = self._profile_nlte_summary_base(
+            sme,
+            requested=True,
+            element=sme.profile_nlte.element,
+            provider=provider,
+            provider_cfg=provider_cfg,
+        )
+        sme.profile_nlte.summary = summary
+
+        applied_windows = self._provider_windows_in_wran(sme, provider_cfg)
+        if not applied_windows:
+            summary["fallback"] = True
+            summary["fallback_reason"] = "no_wavelength_overlap"
+            logger.warning(
+                "Profile-NLTE provider '%s' for element '%s' was requested but not applied: "
+                "the current synthesis wavelength range does not overlap any supported provider window.",
+                provider,
+                sme.profile_nlte.element,
+            )
+            return
+        summary["applied_windows_air"] = applied_windows
+
+        if provider == "pysme_h_3dnlte_rbf" and getattr(sme, "specific_intensities_only", False):
+            summary["fallback"] = True
+            summary["fallback_reason"] = "specific_intensities_only"
+            logger.warning(
+                "Profile-NLTE provider '%s' for element '%s' was requested but not applied: "
+                "the current hydrogen profile correction is defined at flux level and is disabled "
+                "when specific_intensities_only=True.",
+                provider,
+                sme.profile_nlte.element,
+            )
+            return
+
+        if not self._linelist_has_species(sme, provider_cfg.species):
+            summary["fallback"] = True
+            summary["fallback_reason"] = "no_matching_species_in_linelist"
+            logger.warning(
+                "Profile-NLTE provider '%s' for element '%s' was requested but not applied: "
+                "the current linelist does not contain species '%s'.",
+                provider,
+                sme.profile_nlte.element,
+                provider_cfg.species,
+            )
+            return
+
+        if provider == "pysme_h_3dnlte_rbf":
+            correction = self.get_H_3dnlte_correction_rbf(sme)
+            if correction is None:
+                summary["fallback"] = True
+                summary["fallback_reason"] = "outside_profile_grid"
+                logger.warning(
+                    "Profile-NLTE provider '%s' for element '%s' was requested but not applied: "
+                    "the stellar parameters are outside the supported provider grid.",
+                    provider,
+                    sme.profile_nlte.element,
+                )
+                return
+            sme.tdnlte_H_correction = correction
+            summary["applied"] = True
+            sme.tdnlte_H = True
+            return
+
+        raise ValueError(f"Unhandled profile-NLTE provider '{provider}'")
+
+    @staticmethod
+    def _is_profile_nlte_h_applied(sme):
+        summary = getattr(sme.profile_nlte, "summary", {})
+        return bool(
+            summary
+            and summary.get("applied")
+            and summary.get("provider") == "pysme_h_3dnlte_rbf"
+            and getattr(sme, "tdnlte_H_correction", None) is not None
+        )
 
     # def get_H_3dnlte_correction(self, sme):
     #     """
@@ -2658,5 +2971,12 @@ class Synthesizer:
     #     return [sme_H_only_res.wave[0], correction_all, sint_all, cint_all, sme_H_only_res.synth[0]]
 
 def synthesize_spectrum(sme, segments="all",**args):
+    if "cdr_database" in args:
+        args["line_precompute_database"] = _normalize_line_precompute_database_arg(
+            line_precompute_database=args.get("line_precompute_database"),
+            cdr_database=args.get("cdr_database"),
+            stacklevel=2,
+        )
+        args["cdr_database"] = None
     synthesizer = Synthesizer()
     return synthesizer.synthesize_spectrum(sme, segments, **args)

@@ -1,0 +1,66 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2025, Jeff Valenti, Nikolai Piskunov, Mingjie Jian, Ansgar
+# Wehrhahn
+# This file is distributed under the same license as the PySME package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PySME 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-03-29 22:44+0900\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: zh_CN\n"
+"Language-Team: zh_CN <LL@li.org>\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: ../../fundamentals/rv.md:1
+msgid "Radial velocity (vrad)"
+msgstr "径向速度（vrad）"
+
+#: ../../fundamentals/rv.md:3
+msgid "`vrad` in PySME is segment-aware and has two functions (with `vrad_flag`):"
+msgstr "PySME 中的 `vrad` 是按 segment 处理的，并通过 `vrad_flag` 承担两个功能："
+
+#: ../../fundamentals/rv.md:5
+msgid "fit RV from observation vs. synthetic spectrum"
+msgstr "根据观测光谱与合成光谱的比较来拟合 RV"
+
+#: ../../fundamentals/rv.md:6
+msgid "apply RV shift to synthetic spectrum before comparison"
+msgstr "在比较之前先对合成光谱施加 RV 位移"
+
+#: ../../fundamentals/rv.md:8
+msgid "Core parameters"
+msgstr "核心参数"
+
+#: ../../fundamentals/rv.md:10
+msgid "`vrad`: radial velocity in km/s for each segment"
+msgstr "`vrad`：每个 segment 的径向速度，单位为 km/s"
+
+#: ../../fundamentals/rv.md:11
+msgid "`vrad_flag`: controls how RV is determined"
+msgstr "`vrad_flag`：控制 RV 的确定方式"
+
+#: ../../fundamentals/rv.md:12
+msgid "`none`: no RV fitting"
+msgstr "`none`：不进行 RV 拟合"
+
+#: ../../fundamentals/rv.md:13
+msgid ""
+"`fix`: use the current `sme.vrad` to shift the synthetic spectra and do "
+"not change it"
+msgstr "`fix`：使用当前 `sme.vrad` 对合成光谱做位移，并且不再更新它"
+
+#: ../../fundamentals/rv.md:14
+msgid "`each`: fit one RV per segment"
+msgstr "`each`：为每个 segment 单独拟合一个 RV"
+
+#: ../../fundamentals/rv.md:15
+msgid "`whole`: fit one shared RV from all selected segments"
+msgstr "`whole`：对所有选定 segment 联合拟合一个共享的 RV"

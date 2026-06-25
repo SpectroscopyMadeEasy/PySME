@@ -1,0 +1,88 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2025, Jeff Valenti, Nikolai Piskunov, Mingjie Jian, Ansgar
+# Wehrhahn
+# This file is distributed under the same license as the PySME package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PySME 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-03-29 22:44+0900\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: zh_CN\n"
+"Language-Team: zh_CN <LL@li.org>\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: ../../getting_started/first_spectrum.md:1
+msgid "Synthesize your first spectrum"
+msgstr "合成你的第一条光谱"
+
+#: ../../getting_started/first_spectrum.md:3
+msgid "Three parts of information is needed to synthesize a spectrum:"
+msgstr "要合成一条光谱，通常需要三类信息："
+
+#: ../../getting_started/first_spectrum.md:4
+msgid "Stellar atmosphere model;"
+msgstr "恒星大气模型；"
+
+#: ../../getting_started/first_spectrum.md:5
+msgid "Stellar parameters;"
+msgstr "恒星参数；"
+
+#: ../../getting_started/first_spectrum.md:6
+msgid "Line list."
+msgstr "谱线表。"
+
+#: ../../getting_started/first_spectrum.md:8
+msgid "The first two can be handeled in PySME:"
+msgstr "前两部分都可以直接在 PySME 中设置："
+
+#: ../../getting_started/first_spectrum.md:19
+msgid ""
+"Here we defined effective temperature `teff`, surface gravity `logg`, "
+"metallicity `monh`, and solar [chemical "
+"abundance](../concepts/abundance.md) `abund`. For a full list of stellar "
+"parameters, see [](../concepts/sme_struct.md)."
+msgstr ""
+"这里我们定义了有效温度 `teff`、表面重力 `logg`、金属丰度 `monh`，以及太阳[化学丰度]"
+"(../concepts/abundance.md) `abund`。更完整的恒星参数列表可见 "
+"[SME structure](../concepts/sme_struct.md)。"
+
+#: ../../getting_started/first_spectrum.md:22
+msgid ""
+"LineList can be download from [VALD database](https://vald.astro.uu.se/)."
+" Here we provide an example line list: "
+"[sun.lin](https://raw.githubusercontent.com/SpectroscopyMadeEasy/PySME/master/examples/sun.lin)."
+" Load the line list using:"
+msgstr ""
+"谱线表可以从 [VALD database](https://vald.astro.uu.se/) 下载。这里给出一个示例谱线表："
+"[sun.lin](https://raw.githubusercontent.com/SpectroscopyMadeEasy/PySME/master/examples/sun.lin)。"
+"加载方式如下："
+
+#: ../../getting_started/first_spectrum.md:30
+msgid "Define wavelength grid or wavelength range of the synthetic spectrum:"
+msgstr "然后定义合成光谱的波长网格，或者直接给出波长范围："
+
+#: ../../getting_started/first_spectrum.md:38
+msgid "Then use the `synthesize_spectrum` function:"
+msgstr "接着调用 `synthesize_spectrum`："
+
+#: ../../getting_started/first_spectrum.md:44
+msgid "The synthesized spectra are stored in `sme.wave` and `sme.synth`:"
+msgstr "合成结果会保存在 `sme.wave` 和 `sme.synth` 中："
+
+#: ../../getting_started/first_spectrum.md:50
+msgid "and can be plot by (for example):"
+msgstr "你可以用例如下面的方式作图："
+
+#: ../../getting_started/first_spectrum.md:58
+msgid ""
+"`[0]` is required because PySME stores spectra as segments; here the "
+"result is recognized as segment 0."
+msgstr "`[0]` 是必须的，因为 PySME 以 segment 的形式存储光谱；在这个例子里，结果被识别为第 0 个 segment。"

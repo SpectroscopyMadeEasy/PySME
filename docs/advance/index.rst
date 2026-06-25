@@ -6,9 +6,11 @@ fitting, line-filtering strategies for performance, and developer-oriented notes
 
 .. toctree::
    :maxdepth: 1
-   
+
    derived_param.md
+   profile_nlte.md
    line_filtering.md
+   line_selection_reference.md
    how-to.md
    fordev.md
    faq.md

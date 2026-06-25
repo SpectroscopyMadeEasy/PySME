@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import re
+import warnings
 from os.path import basename
 
 import numpy as np
@@ -123,6 +124,16 @@ class KrzFile(Atmosphere):
                 # Read in abund
                 abun_list = ''
                 temp = file.readline()
+                abundance_scale_match = re.search(
+                    r"ABUNDANCE SCALE\s*([+-]?\d+(?:\.\d*)?(?:[Ee][+-]?\d+)?)",
+                    temp,
+                    flags=re.I,
+                )
+                abundance_scale = (
+                    float(abundance_scale_match.group(1))
+                    if abundance_scale_match is not None
+                    else None
+                )
                 abun_list = abun_list + temp[42:].replace('E', '')
                 temp = file.readline()
                 while 'ABUNDANCE CHANGE' in temp:
@@ -136,9 +147,32 @@ class KrzFile(Atmosphere):
                     model_lines.append(file.readline().split())
                 model_lines = np.array(model_lines, dtype=np.float64)
 
-            try:
-                self.monh = float(re.findall(r"\[\s*([+-]?\d+(?:\.\d*)?)\s*\]", header)[0])
-            except IndexError:
+            header_monh_match = re.search(
+                r"\[\s*([+-]?\d+(?:\.\d*)?)\s*\]", header
+            )
+            header_monh = (
+                float(header_monh_match.group(1))
+                if header_monh_match is not None
+                else None
+            )
+            self.abundance_scale = abundance_scale
+            if abundance_scale is not None and abundance_scale > 0:
+                scale_monh = float(np.log10(abundance_scale))
+                if (
+                    header_monh is not None
+                    and not np.isclose(header_monh, scale_monh, atol=1e-3)
+                ):
+                    warnings.warn(
+                        "ATLAS abundance scale and header metallicity disagree; "
+                        f"using log10(ABUNDANCE SCALE)={scale_monh:.3f} instead of "
+                        f"header [M/H]={header_monh:.3f}.",
+                        UserWarning,
+                        stacklevel=2,
+                    )
+                self.monh = scale_monh
+            elif header_monh is not None:
+                self.monh = header_monh
+            else:
                 self.monh = 0.0
 
             try:
@@ -190,25 +224,14 @@ class KrzFile(Atmosphere):
             # self.tau[1:] = np.cumsum(0.5 * (self.abross[1:] + self.abross[:-1]) * np.diff(self.rhox))
 
     def get_mu_from_abund(self):
-        abun = self.abund.pattern
-        X, Y = abun['H'], abun['He']
-        # 1. 预处理金属
-        metals = {el: 10.0**val for el, val in abun.items() if el not in ('H', 'He')}
-        R = sum(ri * atmoic_mass[el] for el, ri in metals.items())   # ∑ ri mi
-    
-        # 2. r = N_He / N_H
-        mH, mHe = atmoic_mass['H'], atmoic_mass['He']
-        r = (mH/X - mH - R) / (mHe + R)
-        if r <= 0:
-            raise ValueError("r≤0")
-    
-        # 3. 归一化取 N_H = 1
-        NH  = 1.0
-        NHe = r * NH
-        Ni = {el: (1+r) * NH * ri for el, ri in metals.items()}
-        M_metals = sum(Ni[el] * atmoic_mass[el] for el in Ni)
-        N_metals = sum(Ni.values())
-    
-        mu = (mH + r * mHe + M_metals) / (1.0 + r + N_metals)
-    
-        return  mu
+        ratios = self.abund.get_pattern(type="n/nH")
+        valid = [
+            (element, value)
+            for element, value in ratios.items()
+            if not np.isnan(value)
+        ]
+        total_number = sum(value for _, value in valid)
+        if total_number <= 0:
+            raise ValueError("abundance pattern does not define a positive number density")
+        total_mass = sum(value * atmoic_mass[element] for element, value in valid)
+        return total_mass / total_number

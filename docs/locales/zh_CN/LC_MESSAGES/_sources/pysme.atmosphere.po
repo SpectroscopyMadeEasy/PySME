@@ -1,0 +1,817 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2025, Jeff Valenti, Nikolai Piskunov, Mingjie Jian, Ansgar
+# Wehrhahn
+# This file is distributed under the same license as the PySME package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PySME 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-03-29 22:44+0900\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: zh_CN\n"
+"Language-Team: zh_CN <LL@li.org>\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: ../../_sources/pysme.atmosphere.rst:2
+msgid "pysme.atmosphere package"
+msgstr ""
+
+#: ../../_sources/pysme.atmosphere.rst:5
+msgid "Subpackages"
+msgstr ""
+
+#: ../../_sources/pysme.atmosphere.rst:8
+msgid "Submodules"
+msgstr ""
+
+#: ../../_sources/pysme.atmosphere.rst:11
+msgid "pysme.atmosphere.atmosphere module"
+msgstr ""
+
+#: of pysme.atmosphere.atmosphere:1 pysme.atmosphere.interpolation:1
+msgid "Handles reading and interpolation of atmopshere (grid) data"
+msgstr ""
+
+#: of pysme.atmosphere.atmosphere.AtmosphereError:1
+msgid "Bases: :py:class:`RuntimeError`"
+msgstr ""
+
+#: of pysme.atmosphere.atmosphere.AtmosphereError:1
+msgid "Something went wrong with the atmosphere interpolation"
+msgstr ""
+
+#: of pysme.atmosphere.atmosphere.Atmosphere:1
+msgid "Bases: :py:class:`~pysme.data_structure.Collection`"
+msgstr ""
+
+#: of pysme.atmosphere.atmosphere.Atmosphere:1
+msgid ""
+"Atmosphere structure contains all information to describe the solar "
+"atmosphere i.e. temperature etc in the different layers as well as "
+"stellar parameters and abundances"
+msgstr ""
+
+#: of pysme.atmosphere.atmosphere.Atmosphere.abund:1
+msgid "elemental abundances"
+msgstr ""
+
+#: of pysme.atmosphere.atmosphere.Atmosphere.abund
+#: pysme.atmosphere.atmosphere.Atmosphere.citation_info
+#: pysme.atmosphere.atmosphere.Atmosphere.depth
+#: pysme.atmosphere.atmosphere.Atmosphere.geom
+#: pysme.atmosphere.atmosphere.Atmosphere.height
+#: pysme.atmosphere.atmosphere.Atmosphere.interp
+#: pysme.atmosphere.atmosphere.Atmosphere.logg
+#: pysme.atmosphere.atmosphere.Atmosphere.lonh
+#: pysme.atmosphere.atmosphere.Atmosphere.method
+#: pysme.atmosphere.atmosphere.Atmosphere.monh
+#: pysme.atmosphere.atmosphere.Atmosphere.opflag
+#: pysme.atmosphere.atmosphere.Atmosphere.radius
+#: pysme.atmosphere.atmosphere.Atmosphere.rho
+#: pysme.atmosphere.atmosphere.Atmosphere.rhox
+#: pysme.atmosphere.atmosphere.Atmosphere.source
+#: pysme.atmosphere.atmosphere.Atmosphere.tau
+#: pysme.atmosphere.atmosphere.Atmosphere.teff
+#: pysme.atmosphere.atmosphere.Atmosphere.temp
+#: pysme.atmosphere.atmosphere.Atmosphere.vturb
+#: pysme.atmosphere.atmosphere.Atmosphere.wlstd
+#: pysme.atmosphere.atmosphere.Atmosphere.xna
+#: pysme.atmosphere.atmosphere.Atmosphere.xne
+#: pysme.atmosphere.atmosphere.AtmosphereGrid.abund_format
+#: pysme.atmosphere.atmosphere.AtmosphereGrid.citation_info
+#: pysme.atmosphere.atmosphere.AtmosphereGrid.depth
+#: pysme.atmosphere.atmosphere.AtmosphereGrid.geom
+#: pysme.atmosphere.atmosphere.AtmosphereGrid.interp
+#: pysme.atmosphere.atmosphere.AtmosphereGrid.method
+#: pysme.atmosphere.atmosphere.AtmosphereGrid.source
+msgid "type"
+msgstr ""
+
+#: of pysme.atmosphere.atmosphere.Atmosphere.abund:3
+msgid "Abund"
+msgstr ""
+
+#: of pysme.atmosphere.atmosphere.Atmosphere.citation_info:1
+msgid "citation for this atmosphere"
+msgstr ""
+
+#: of pysme.atmosphere.atmosphere.Atmosphere.citation_info:3
+#: pysme.atmosphere.atmosphere.Atmosphere.depth:3
+#: pysme.atmosphere.atmosphere.Atmosphere.geom:3
+#: pysme.atmosphere.atmosphere.Atmosphere.interp:3
+#: pysme.atmosphere.atmosphere.Atmosphere.method:3
+#: pysme.atmosphere.atmosphere.Atmosphere.source:3
+#: pysme.atmosphere.atmosphere.AtmosphereGrid.abund_format:3
+#: pysme.atmosphere.atmosphere.AtmosphereGrid.citation_info:3
+#: pysme.atmosphere.atmosphere.AtmosphereGrid.depth:3
+#: pysme.atmosphere.atmosphere.AtmosphereGrid.geom:3
+#: pysme.atmosphere.atmosphere.AtmosphereGrid.interp:3
+#: pysme.atmosphere.atmosphere.AtmosphereGrid.method:3
+#: pysme.atmosphere.atmosphere.AtmosphereGrid.source:3
+msgid "str"
+msgstr ""
+
+#: of pysme.atmosphere.atmosphere.Atmosphere.depth:1
+#: pysme.atmosphere.atmosphere.AtmosphereGrid.depth:1
+msgid "flag that determines whether to use RHOX or TAU for calculations"
+msgstr ""
+
+#: of pysme.atmosphere.atmosphere.Atmosphere.geom:1
+#: pysme.atmosphere.atmosphere.AtmosphereGrid.geom:1
+msgid "the geometry of the atmopshere model"
+msgstr ""
+
+#: of pysme.atmosphere.atmosphere.Atmosphere.height:1
+msgid "height of the spherical model"
+msgstr ""
+
+#: of pysme.atmosphere.atmosphere.Atmosphere.height:3
+#: pysme.atmosphere.atmosphere.Atmosphere.rho:3
+#: pysme.atmosphere.atmosphere.Atmosphere.rhox:3
+#: pysme.atmosphere.atmosphere.Atmosphere.tau:3
+#: pysme.atmosphere.atmosphere.Atmosphere.temp:3
+#: pysme.atmosphere.atmosphere.Atmosphere.xna:3
+#: pysme.atmosphere.atmosphere.Atmosphere.xne:3
+msgid "array"
+msgstr ""
+
+#: of pysme.atmosphere.atmosphere.Atmosphere.interp:1
+#: pysme.atmosphere.atmosphere.AtmosphereGrid.interp:1
+msgid "flag that determines whether to use RHOX or TAU for interpolation"
+msgstr ""
+
+#: of pysme.atmosphere.atmosphere.Atmosphere.logg:1
+msgid "surface gravity in log10(cgs)"
+msgstr ""
+
+#: of pysme.atmosphere.atmosphere.Atmosphere.logg:3
+#: pysme.atmosphere.atmosphere.Atmosphere.lonh:3
+#: pysme.atmosphere.atmosphere.Atmosphere.monh:3
+#: pysme.atmosphere.atmosphere.Atmosphere.radius:3
+#: pysme.atmosphere.atmosphere.Atmosphere.teff:3
+#: pysme.atmosphere.atmosphere.Atmosphere.vturb:3
+#: pysme.atmosphere.atmosphere.Atmosphere.wlstd:3
+msgid "float"
+msgstr ""
+
+#: of pysme.atmosphere.atmosphere.Atmosphere.lonh:1
+msgid "?"
+msgstr ""
+
+#: of pysme.atmosphere.atmosphere.Atmosphere.method:1
+#: pysme.atmosphere.atmosphere.AtmosphereGrid.method:1
+msgid "whether the data source is a grid or a fixed atmosphere"
+msgstr ""
+
+#: of pysme.atmosphere.atmosphere.Atmosphere.monh:1
+#: pysme.atmosphere.interpolation.AtmosphereInterpolator.find_corner_models:16
+#: pysme.atmosphere.interpolation.AtmosphereInterpolator.interpolate_corner_models:22
+msgid "metallicity"
+msgstr ""
+
+#: of pysme.atmosphere.atmosphere.Atmosphere.opflag:1
+msgid "opacity flags"
+msgstr ""
+
+#: of pysme.atmosphere.atmosphere.Atmosphere.opflag:3
+msgid "array of size (20,)"
+msgstr ""
+
+#: of pysme.atmosphere.atmosphere.Atmosphere.radius:1
+msgid "radius of the spherical model"
+msgstr ""
+
+#: of pysme.atmosphere.atmosphere.Atmosphere.rho:1
+msgid "density profile"
+msgstr ""
+
+#: of pysme.atmosphere.atmosphere.Atmosphere.rhox:1
+msgid "mass column density"
+msgstr ""
+
+#: of pysme.atmosphere.atmosphere.Atmosphere.source:1
+msgid "datafile name of this data, or atmosphere grid/file"
+msgstr ""
+
+#: of pysme.atmosphere.atmosphere.Atmosphere.tau:1
+msgid "continuum optical depth"
+msgstr ""
+
+#: of pysme.atmosphere.atmosphere.Atmosphere.teff:1
+msgid "effective temperature in Kelvin"
+msgstr ""
+
+#: of pysme.atmosphere.atmosphere.Atmosphere.temp:1
+msgid "temperature profile in Kelvin"
+msgstr ""
+
+#: of pysme.atmosphere.atmosphere.Atmosphere.vturb:1
+msgid "turbulence velocity in km/s"
+msgstr ""
+
+#: of pysme.atmosphere.atmosphere.Atmosphere.wlstd:1
+msgid "wavelength standard deviation"
+msgstr ""
+
+#: of pysme.atmosphere.atmosphere.Atmosphere.xna:1
+msgid "number density of atoms in 1/cm**3"
+msgstr ""
+
+#: of pysme.atmosphere.atmosphere.Atmosphere.xne:1
+msgid "number density of electrons in 1/cm**3"
+msgstr ""
+
+#: of pysme.atmosphere.atmosphere.AtmosphereGrid:1
+msgid "Bases: :py:class:`~numpy.rec.recarray`"
+msgstr ""
+
+#: of pysme.atmosphere.atmosphere.AtmosphereGrid:1
+msgid ""
+"A grid of atmospheres, used for the interpolation of model atmospheres. "
+"Each entry represents one atmosphere model."
+msgstr ""
+
+#: of pysme.atmosphere.atmosphere.AtmosphereGrid.load:1
+msgid "Load the atmosphere grid data from disk"
+msgstr ""
+
+#: of pysme.atmosphere.atmosphere.AtmosphereGrid.save:1
+msgid "Save the Atmopshere grid to a file using a numpy save format"
+msgstr ""
+
+#: of pysme.atmosphere.atmosphere.AtmosphereGrid.abund_format:1
+msgid "format of the Abundance field, as defined by the Abund class"
+msgstr ""
+
+#: of pysme.atmosphere.atmosphere.AtmosphereGrid.citation_info:1
+msgid "Citation text to cite in your papers"
+msgstr ""
+
+#: of pysme.atmosphere.atmosphere.AtmosphereGrid.source:1
+msgid "datafile name of this data"
+msgstr ""
+
+#: ../../_sources/pysme.atmosphere.rst:19
+msgid "pysme.atmosphere.interpolation module"
+msgstr ""
+
+#: of pysme.atmosphere.interpolation.AtmosphereInterpolator:1
+msgid "Bases: :py:class:`object`"
+msgstr ""
+
+#: of
+#: pysme.atmosphere.interpolation.AtmosphereInterpolator.determine_depth_scale:1
+msgid ""
+"Determine ATMO.DEPTH radiative transfer depth variable. Order of "
+"precedence:"
+msgstr ""
+
+#: of
+#: pysme.atmosphere.interpolation.AtmosphereInterpolator.determine_depth_scale:3
+msgid "Value of ATMO_IN.DEPTH, if it exists and is set"
+msgstr ""
+
+#: of
+#: pysme.atmosphere.interpolation.AtmosphereInterpolator.determine_depth_scale:4
+msgid "Value of ATMO_GRID[0].DEPTH, if it exists and is set"
+msgstr ""
+
+#: of
+#: pysme.atmosphere.interpolation.AtmosphereInterpolator.determine_depth_scale:5
+msgid "'RHOX', if ATMO_GRID.RHOX exists (preferred over 'TAU' for depth)"
+msgstr ""
+
+#: of
+#: pysme.atmosphere.interpolation.AtmosphereInterpolator.determine_depth_scale:6
+msgid "'TAU', if ATMO_GRID.TAU exists"
+msgstr ""
+
+#: of
+#: pysme.atmosphere.interpolation.AtmosphereInterpolator.determine_depth_scale:8
+#: pysme.atmosphere.interpolation.AtmosphereInterpolator.determine_interpolation_scale:8
+msgid "Check that INTERP is valid and the corresponding field exists in ATMO."
+msgstr ""
+
+#: ../../_sources/pysme.atmosphere.rst
+msgid "Parameters"
+msgstr ""
+
+#: of
+#: pysme.atmosphere.interpolation.AtmosphereInterpolator.determine_depth_scale:10
+msgid "requested value, or None for autoselection based in available grid"
+msgstr ""
+
+#: of
+#: pysme.atmosphere.interpolation.AtmosphereInterpolator.determine_depth_scale:12
+msgid "input atmosphere grid to interpolate on"
+msgstr ""
+
+#: ../../_sources/pysme.atmosphere.rst
+msgid "Returns"
+msgstr ""
+
+#: of
+#: pysme.atmosphere.interpolation.AtmosphereInterpolator.determine_depth_scale:15
+msgid "**depth** -- The chosen depth scale"
+msgstr ""
+
+#: ../../_sources/pysme.atmosphere.rst
+msgid "Return type"
+msgstr ""
+
+#: ../../_sources/pysme.atmosphere.rst
+msgid "Raises"
+msgstr ""
+
+#: of
+#: pysme.atmosphere.interpolation.AtmosphereInterpolator.determine_depth_scale:18
+msgid "If an invalid value was set in atmo_in/atmo_grid"
+msgstr ""
+
+#: of
+#: pysme.atmosphere.interpolation.AtmosphereInterpolator.determine_interpolation_scale:1
+msgid "Determine ATMO.INTERP interpolation variable. Order of precedence:"
+msgstr ""
+
+#: of
+#: pysme.atmosphere.interpolation.AtmosphereInterpolator.determine_interpolation_scale:3
+msgid "Value of ATMO_IN.INTERP, if it exists and is set"
+msgstr ""
+
+#: of
+#: pysme.atmosphere.interpolation.AtmosphereInterpolator.determine_interpolation_scale:4
+msgid "Value of ATMO_GRID[0].INTERP, if it exists and is set"
+msgstr ""
+
+#: of
+#: pysme.atmosphere.interpolation.AtmosphereInterpolator.determine_interpolation_scale:5
+msgid "'TAU', if ATMO_GRID.TAU exists (preferred over 'RHOX' for interpolation)"
+msgstr ""
+
+#: of
+#: pysme.atmosphere.interpolation.AtmosphereInterpolator.determine_interpolation_scale:6
+msgid "'RHOX', if ATMO_GRID.RHOX exists"
+msgstr ""
+
+#: of
+#: pysme.atmosphere.interpolation.AtmosphereInterpolator.determine_interpolation_scale:10
+msgid "requested interpolation axis, or None for autoselect"
+msgstr ""
+
+#: of
+#: pysme.atmosphere.interpolation.AtmosphereInterpolator.determine_interpolation_scale:12
+msgid "Atmosphere grid for interpolation"
+msgstr ""
+
+#: of
+#: pysme.atmosphere.interpolation.AtmosphereInterpolator.determine_interpolation_scale:15
+msgid "**interp** -- the interpolation axis"
+msgstr ""
+
+#: of
+#: pysme.atmosphere.interpolation.AtmosphereInterpolator.determine_interpolation_scale:18
+msgid "if a non valid parameter is set in atmo_in/atmo_grid"
+msgstr ""
+
+#: of
+#: pysme.atmosphere.interpolation.AtmosphereInterpolator.find_corner_models:1
+msgid "Find the models in the grid that bracket the given stellar parameters"
+msgstr ""
+
+#: of
+#: pysme.atmosphere.interpolation.AtmosphereInterpolator.find_corner_models:3
+msgid ""
+"The purpose of the first major set of code blocks is to find values of "
+"[M/H] in the grid that bracket the requested [M/H]. Then in this subset "
+"of models, find values of log(g) in the subgrid that bracket the "
+"requested log(g). Then in this subset of models, find values of Teff in "
+"the subgrid that bracket the requested Teff. The net result is a set of 8"
+" models in the grid that bracket the requested stellar parameters. Only "
+"these 8 \"corner\" models will be used in the interpolation that "
+"constitutes the remainder of the program."
+msgstr ""
+
+#: of
+#: pysme.atmosphere.interpolation.AtmosphereInterpolator.find_corner_models:12
+#: pysme.atmosphere.interpolation.AtmosphereInterpolator.interpolate_corner_models:18
+msgid "effective temperature"
+msgstr ""
+
+#: of
+#: pysme.atmosphere.interpolation.AtmosphereInterpolator.find_corner_models:14
+#: pysme.atmosphere.interpolation.AtmosphereInterpolator.interpolate_corner_models:20
+msgid "surface gravity"
+msgstr ""
+
+#: of
+#: pysme.atmosphere.interpolation.AtmosphereInterpolator.find_corner_models:18
+msgid "atmosphere grid to search models in"
+msgstr ""
+
+#: of
+#: pysme.atmosphere.interpolation.AtmosphereInterpolator.find_corner_models:20
+msgid "determines how many debugging messages to print, by default 0"
+msgstr ""
+
+#: of
+#: pysme.atmosphere.interpolation.AtmosphereInterpolator.interp_atmo_constrained:1
+msgid "Apply a constraint on each parameter, to have it approach zero"
+msgstr ""
+
+#: of
+#: pysme.atmosphere.interpolation.AtmosphereInterpolator.interp_atmo_constrained:3
+msgid "x data"
+msgstr ""
+
+#: of
+#: pysme.atmosphere.interpolation.AtmosphereInterpolator.interp_atmo_constrained:5
+msgid "y data"
+msgstr ""
+
+#: of
+#: pysme.atmosphere.interpolation.AtmosphereInterpolator.interp_atmo_constrained:7
+msgid "errors on y data"
+msgstr ""
+
+#: of
+#: pysme.atmosphere.interpolation.AtmosphereInterpolator.interp_atmo_constrained:9
+msgid "initial guess for fit parameters - see interp_atmo_func"
+msgstr ""
+
+#: of
+#: pysme.atmosphere.interpolation.AtmosphereInterpolator.interp_atmo_constrained:11
+#: pysme.atmosphere.interpolation.AtmosphereInterpolator.interp_atmo_func:12
+msgid "independent variable for tabulated input function"
+msgstr ""
+
+#: of
+#: pysme.atmosphere.interpolation.AtmosphereInterpolator.interp_atmo_constrained:13
+#: pysme.atmosphere.interpolation.AtmosphereInterpolator.interp_atmo_func:14
+msgid "dependent variable for tabulated input function"
+msgstr ""
+
+#: of
+#: pysme.atmosphere.interpolation.AtmosphereInterpolator.interp_atmo_constrained:15
+msgid ""
+"passes keyword arguments to interp_atmo_func  ndep : int     number of "
+"depth points in supplied quantities constraints : array[nconstraint], "
+"optional     error vector for constrained parameters.     Use errors of 0"
+" for unconstrained parameters."
+msgstr ""
+
+#: of
+#: pysme.atmosphere.interpolation.AtmosphereInterpolator.interp_atmo_constrained:15
+msgid "passes keyword arguments to interp_atmo_func"
+msgstr ""
+
+#: of
+#: pysme.atmosphere.interpolation.AtmosphereInterpolator.interp_atmo_constrained:17
+msgid "ndep"
+msgstr ""
+
+#: of
+#: pysme.atmosphere.interpolation.AtmosphereInterpolator.interp_atmo_constrained:-1
+msgid "int"
+msgstr ""
+
+#: of
+#: pysme.atmosphere.interpolation.AtmosphereInterpolator.interp_atmo_constrained:18
+msgid "number of depth points in supplied quantities"
+msgstr ""
+
+#: of
+#: pysme.atmosphere.interpolation.AtmosphereInterpolator.interp_atmo_constrained:19
+msgid "constraints"
+msgstr ""
+
+#: of
+#: pysme.atmosphere.interpolation.AtmosphereInterpolator.interp_atmo_constrained:-1
+msgid "array[nconstraint], optional"
+msgstr ""
+
+#: of
+#: pysme.atmosphere.interpolation.AtmosphereInterpolator.interp_atmo_constrained:20
+msgid ""
+"error vector for constrained parameters. Use errors of 0 for "
+"unconstrained parameters."
+msgstr ""
+
+#: of
+#: pysme.atmosphere.interpolation.AtmosphereInterpolator.interp_atmo_constrained:24
+msgid ""
+"* **ret** (*list of floats*) -- best fit parameters * **yfit** (*array of"
+" size (n,)*) -- best fit to data"
+msgstr ""
+
+#: of
+#: pysme.atmosphere.interpolation.AtmosphereInterpolator.interp_atmo_constrained:24
+msgid "**ret** (*list of floats*) -- best fit parameters"
+msgstr ""
+
+#: of
+#: pysme.atmosphere.interpolation.AtmosphereInterpolator.interp_atmo_constrained:25
+msgid "**yfit** (*array of size (n,)*) -- best fit to data"
+msgstr ""
+
+#: of pysme.atmosphere.interpolation.AtmosphereInterpolator.interp_atmo_func:1
+msgid ""
+"Apply a horizontal shift to x2. Apply a vertical shift to y2. Interpolate"
+" onto x1 the shifted y2 as a function of shifted x2."
+msgstr ""
+
+#: of pysme.atmosphere.interpolation.AtmosphereInterpolator.interp_atmo_func:5
+msgid "independent variable for output function"
+msgstr ""
+
+#: of pysme.atmosphere.interpolation.AtmosphereInterpolator.interp_atmo_func:7
+msgid ""
+"shift parameters par[0] - horizontal shift for x2 par[1] - vertical shift"
+" for y2 par[2] - vertical scale factor for y2"
+msgstr ""
+
+#: of pysme.atmosphere.interpolation.AtmosphereInterpolator.interp_atmo_func:16
+msgid "number of depth points in atmospheric structure (default is use all)"
+msgstr ""
+
+#: of pysme.atmosphere.interpolation.AtmosphereInterpolator.interp_atmo_func:18
+msgid "data values being fitted"
+msgstr ""
+
+#: of pysme.atmosphere.interpolation.AtmosphereInterpolator.interp_atmo_func:23
+msgid ""
+"Only pass y1 if you want to restrict the y-values of extrapolated data "
+"points. This is useful when solving for the shifts, but should not be "
+"used when calculating shifted functions for actual use, since this "
+"restriction can cause discontinuities."
+msgstr ""
+
+#: of pysme.atmosphere.interpolation.AtmosphereInterpolator.interp_atmo_grid:1
+msgid "General routine to interpolate in 3D grid of model atmospheres"
+msgstr ""
+
+#: of pysme.atmosphere.interpolation.AtmosphereInterpolator.interp_atmo_grid:3
+msgid "effective temperature of desired model (K)."
+msgstr ""
+
+#: of pysme.atmosphere.interpolation.AtmosphereInterpolator.interp_atmo_grid:5
+msgid "logarithmic gravity of desired model (log cm/s/s)."
+msgstr ""
+
+#: of pysme.atmosphere.interpolation.AtmosphereInterpolator.interp_atmo_grid:7
+msgid "metalicity of desired model."
+msgstr ""
+
+#: of pysme.atmosphere.interpolation.AtmosphereInterpolator.interp_atmo_grid:9
+msgid "Input atmosphere"
+msgstr ""
+
+#: of pysme.atmosphere.interpolation.AtmosphereInterpolator.interp_atmo_grid:11
+msgid "how much information to plot/print (default: 0)"
+msgstr ""
+
+#: of pysme.atmosphere.interpolation.AtmosphereInterpolator.interp_atmo_grid:13
+msgid "wether to plot debug information (default: False)"
+msgstr ""
+
+#: of pysme.atmosphere.interpolation.AtmosphereInterpolator.interp_atmo_grid:15
+msgid "wether to reload atmosphere information from disk (default: False)"
+msgstr ""
+
+#: of pysme.atmosphere.interpolation.AtmosphereInterpolator.interp_atmo_grid:18
+msgid "**atmo** -- interpolated atmosphere data"
+msgstr ""
+
+#: of pysme.atmosphere.interpolation.AtmosphereInterpolator.interp_atmo_pair:1
+msgid ""
+"Interpolate between two model atmospheres, accounting for shifts in the "
+"mass column density or optical depth scale."
+msgstr ""
+
+#: of pysme.atmosphere.interpolation.AtmosphereInterpolator.interp_atmo_pair:4
+msgid "How it works:"
+msgstr ""
+
+#: of pysme.atmosphere.interpolation.AtmosphereInterpolator.interp_atmo_pair:6
+msgid ""
+"1. The second atmosphere is fitted onto the first, individually for each "
+"of the four atmospheric quantitites: T, xne, xna, rho. The fitting uses a"
+" linear shift in both the (log) depth parameter and in the (log) "
+"atmospheric quantity. For T, the midpoint of the two atmospheres is "
+"aligned for the initial guess. The result of this fit is used as initial "
+"guess for the other quantities. A penalty function is applied to each "
+"fit, to avoid excessively large shifts on the depth scale. 2. The mean of"
+" the horizontal shift in each parameter is used to construct the common "
+"output depth scale. 3. Each atmospheric quantity is interpolated after "
+"shifting the two corner models by the amount determined in step 1), "
+"rescaled by the interpolation fraction (frac)."
+msgstr ""
+
+#: of pysme.atmosphere.interpolation.AtmosphereInterpolator.interp_atmo_pair:20
+msgid "first atmosphere to interpolate"
+msgstr ""
+
+#: of pysme.atmosphere.interpolation.AtmosphereInterpolator.interp_atmo_pair:22
+msgid "second atmosphere to interpolate"
+msgstr ""
+
+#: of pysme.atmosphere.interpolation.AtmosphereInterpolator.interp_atmo_pair:24
+msgid "interpolation fraction: 0.0 -> atmo1 and 1.0 -> atmo2"
+msgstr ""
+
+#: of pysme.atmosphere.interpolation.AtmosphereInterpolator.interp_atmo_pair:26
+msgid "atmosphere interpolation variable (default:\"RHOX\")."
+msgstr ""
+
+#: of pysme.atmosphere.interpolation.AtmosphereInterpolator.interp_atmo_pair:28
+msgid ""
+"index of top point in the atmosphere to use. default is to use all points"
+" (itop=0). use itop=1 to clip top depth point."
+msgstr ""
+
+#: of pysme.atmosphere.interpolation.AtmosphereInterpolator.interp_atmo_pair:31
+msgid ""
+"interpolated atmosphere prediction (for plots) Not needed if atmospheres "
+"are provided as structures. (default: None)"
+msgstr ""
+
+#: of pysme.atmosphere.interpolation.AtmosphereInterpolator.interp_atmo_pair:34
+msgid "diagnostic print level (default 0: no printing)"
+msgstr ""
+
+#: of pysme.atmosphere.interpolation.AtmosphereInterpolator.interp_atmo_pair:36
+msgid ""
+"diagnostic plot level. Larger absolute value yields more plots. Negative "
+"values cause a wait for keypress after each plot. (default: 0, no plots)"
+msgstr ""
+
+#: of pysme.atmosphere.interpolation.AtmosphereInterpolator.interp_atmo_pair:40
+msgid "also plot result from the old interpkrz2 algorithm. (default: False)"
+msgstr ""
+
+#: of pysme.atmosphere.interpolation.AtmosphereInterpolator.interp_atmo_pair:43
+msgid ""
+"**atmo** -- interpolated atmosphere .RHOX (vector[ndep]) mass column "
+"density (g/cm^2) .TAU  (vector[ndep]) reference optical depth (at 5000 Å)"
+" .temp (vector[ndep]) temperature (K) .xne  (vector[ndep]) electron "
+"number density (1/cm^3) .xna  (vector[ndep]) atomic number density "
+"(1/cm^3) .rho  (vector[ndep]) mass density (g/cm^3)"
+msgstr ""
+
+#: of
+#: pysme.atmosphere.interpolation.AtmosphereInterpolator.interpolate_corner_models:1
+msgid ""
+"Interpolate over the 8 corner models in the cube around the stellar "
+"parameters"
+msgstr ""
+
+#: of
+#: pysme.atmosphere.interpolation.AtmosphereInterpolator.interpolate_corner_models:3
+msgid ""
+"The code below interpolates between 8 corner models to produce the output"
+" atmosphere. In the first step, pairs of models at each of the 4 "
+"combinations of log(g) and Teff are interpolated to the desired value of "
+"[M/H]. These 4 new models are then interpolated to the desired value of "
+"log(g), yielding 2 models at the requested [M/H] and log(g). Finally, "
+"this pair of models is interpolated to the desired Teff, producing a "
+"single output model."
+msgstr ""
+
+#: of
+#: pysme.atmosphere.interpolation.AtmosphereInterpolator.interpolate_corner_models:11
+msgid ""
+"Interpolation is done on the logarithm of all quantities to improve "
+"linearity of the fitted data. Kurucz models sometimes have very small "
+"fractional steps in mass column at the top of the atmosphere. These cause"
+" wild oscillations in splines fitted to facilitate interpolation onto a "
+"common depth scale. To circumvent this problem, we ignore the top point "
+"in the atmosphere by setting itop=1."
+msgstr ""
+
+#: of
+#: pysme.atmosphere.interpolation.AtmosphereInterpolator.interpolate_corner_models:24
+msgid "indices of the corner models"
+msgstr ""
+
+#: of
+#: pysme.atmosphere.interpolation.AtmosphereInterpolator.interpolate_corner_models:26
+msgid "atmosphere grid with input models"
+msgstr ""
+
+#: of
+#: pysme.atmosphere.interpolation.AtmosphereInterpolator.interpolate_corner_models:28
+msgid "interpolation axis, by default \"RHOX\""
+msgstr ""
+
+#: of
+#: pysme.atmosphere.interpolation.AtmosphereInterpolator.interpolate_corner_models:30
+msgid "index of the topmost point in the RHOX scale, by default 1"
+msgstr ""
+
+#: of
+#: pysme.atmosphere.interpolation.AtmosphereInterpolator.interpolate_corner_models:33
+msgid "**atmo3** -- Interpolated atmosphere"
+msgstr ""
+
+#: of
+#: pysme.atmosphere.interpolation.AtmosphereInterpolator.spherical_model_correction:1
+msgid ""
+"Correct the radius of the model grids, for the stellar parameters if "
+"necessary"
+msgstr ""
+
+#: of
+#: pysme.atmosphere.interpolation.AtmosphereInterpolator.spherical_model_correction:3
+msgid ""
+"If all interpolated models were spherical, the interpolated model should "
+"also be reported as spherical. This enables spherical-symmetric radiative"
+" transfer in the spectral synthesis."
+msgstr ""
+
+#: of
+#: pysme.atmosphere.interpolation.AtmosphereInterpolator.spherical_model_correction:7
+msgid "Formulae for mass and radius at the corners of interpolation cube:"
+msgstr ""
+
+#: of
+#: pysme.atmosphere.interpolation.AtmosphereInterpolator.spherical_model_correction:8
+msgid ""
+"log(M/Msol) = log g - log g_sol - 2*log(R_sol / R) 2 * log(R / R_sol) = "
+"log g_sol - log g + log(M / M_sol)"
+msgstr ""
+
+#: of
+#: pysme.atmosphere.interpolation.AtmosphereInterpolator.spherical_model_correction:11
+msgid "complete atmosphere grid"
+msgstr ""
+
+#: of
+#: pysme.atmosphere.interpolation.AtmosphereInterpolator.spherical_model_correction:13
+msgid ""
+"indices for the corner models that were interpolated from the atmosphere "
+"grid"
+msgstr ""
+
+#: of
+#: pysme.atmosphere.interpolation.AtmosphereInterpolator.spherical_model_correction:17
+#, python-brace-format
+msgid ""
+"* **geom** (*{\"PP\", \"SPH\"}*) -- The geometry of the interpolated "
+"models * **radius** (*None, array*) -- The corrected radius of the "
+"models, if geom == \"SPH\". Otherwise None."
+msgstr ""
+
+#: of
+#: pysme.atmosphere.interpolation.AtmosphereInterpolator.spherical_model_correction:17
+#, python-brace-format
+msgid "**geom** (*{\"PP\", \"SPH\"}*) -- The geometry of the interpolated models"
+msgstr ""
+
+#: of
+#: pysme.atmosphere.interpolation.AtmosphereInterpolator.spherical_model_correction:18
+msgid ""
+"**radius** (*None, array*) -- The corrected radius of the models, if geom"
+" == \"SPH\". Otherwise None."
+msgstr ""
+
+#: ../../_sources/pysme.atmosphere.rst:27
+msgid "pysme.atmosphere.krzfile module"
+msgstr ""
+
+#: of pysme.atmosphere.krzfile.KrzFile:1
+msgid "Bases: :py:class:`~pysme.atmosphere.atmosphere.Atmosphere`"
+msgstr ""
+
+#: of pysme.atmosphere.krzfile.KrzFile:1
+msgid "Read .krz atmosphere files"
+msgstr ""
+
+#: of pysme.atmosphere.krzfile.KrzFile.load:1
+msgid ""
+"Load data from krz files. The code will automatically judge the file "
+"source of ATLAS or MARCS."
+msgstr ""
+
+#: of pysme.atmosphere.krzfile.KrzFile.load:3
+msgid "name of the file to load"
+msgstr ""
+
+#: ../../_sources/pysme.atmosphere.rst:35
+msgid "pysme.atmosphere.savfile module"
+msgstr ""
+
+#: of pysme.atmosphere.savfile.SavFile:1
+msgid "Bases: :py:class:`~pysme.atmosphere.atmosphere.AtmosphereGrid`"
+msgstr ""
+
+#: of pysme.atmosphere.savfile.SavFile:1
+msgid "IDL savefile atmosphere grid"
+msgstr ""
+

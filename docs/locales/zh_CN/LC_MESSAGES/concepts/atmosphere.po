@@ -1,0 +1,414 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2025, Jeff Valenti, Nikolai Piskunov, Mingjie Jian, Ansgar
+# Wehrhahn
+# This file is distributed under the same license as the PySME package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PySME 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-03-29 22:44+0900\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: zh_CN\n"
+"Language-Team: zh_CN <LL@li.org>\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: ../../concepts/atmosphere.md:1
+msgid "Atmosphere"
+msgstr ""
+
+#: ../../concepts/atmosphere.md:3
+msgid ""
+"For the spectral synthesis PySME needs a model atmosphere to perform the "
+"radiative transfer in. PySME does not come with a set of atmospheres in "
+"each distribution but instead uses the LFS (See [lfs](lfs.md)) to fetch "
+"only the required model atmosphere when run."
+msgstr ""
+
+#: ../../concepts/atmosphere.md:9
+msgid ""
+"If you want to provide your own model atmosphere file, it should be "
+"present in `~/.sme/atmospheres/`."
+msgstr ""
+
+#: ../../concepts/atmosphere.md:11
+msgid ""
+"Each atmosphere model file describes a grid of models, on which we then "
+"linearly interpolate to the desired stellar parameters. Sometimes we dare"
+" extrapolate from this grid as well, but in that case, we always show a "
+"warnning."
+msgstr ""
+
+#: ../../concepts/atmosphere.md:16
+msgid ""
+"Note that the atmosphere also contains a seperate set of stellar "
+"parameters, which is usually the same as that of the sme structure, but "
+"can be different, if for example the atmosphere is embedded, i.e. fixed, "
+"or has not been calculated yet."
+msgstr ""
+
+#: ../../concepts/atmosphere.md:21
+msgid "The atmopshere object has the following fields:"
+msgstr ""
+
+#: ../../concepts/atmosphere.md
+msgid "Field name"
+msgstr ""
+
+#: ../../concepts/atmosphere.md
+msgid "Description"
+msgstr ""
+
+#: ../../concepts/atmosphere.md
+msgid "Allowed values or [Unit]"
+msgstr ""
+
+#: ../../concepts/atmosphere.md
+msgid "`teff`"
+msgstr ""
+
+#: ../../concepts/atmosphere.md
+msgid "Effective Temperature"
+msgstr ""
+
+#: ../../concepts/atmosphere.md
+msgid "[K]"
+msgstr ""
+
+#: ../../concepts/atmosphere.md
+msgid "`logg`"
+msgstr ""
+
+#: ../../concepts/atmosphere.md
+msgid "Surface Gravity"
+msgstr ""
+
+#: ../../concepts/atmosphere.md
+msgid "[log(cgs)]"
+msgstr ""
+
+#: ../../concepts/atmosphere.md
+msgid "`monh`"
+msgstr ""
+
+#: ../../concepts/atmosphere.md
+msgid "Metallicity"
+msgstr ""
+
+#: ../../concepts/atmosphere.md
+msgid "`abund`"
+msgstr ""
+
+#: ../../concepts/atmosphere.md
+msgid "The individual abundances (see [abund](#abund))"
+msgstr ""
+
+#: ../../concepts/atmosphere.md
+msgid "`vsini`"
+msgstr ""
+
+#: ../../concepts/atmosphere.md
+msgid "Projected Rotational velocity"
+msgstr ""
+
+#: ../../concepts/atmosphere.md
+msgid "[km/s]"
+msgstr ""
+
+#: ../../concepts/atmosphere.md
+msgid "`vmic`"
+msgstr ""
+
+#: ../../concepts/atmosphere.md
+msgid "Microturbulence velocity"
+msgstr ""
+
+#: ../../concepts/atmosphere.md
+msgid "`vmac`"
+msgstr ""
+
+#: ../../concepts/atmosphere.md
+msgid "Macroturbulence velocity"
+msgstr ""
+
+#: ../../concepts/atmosphere.md
+msgid "`source`"
+msgstr ""
+
+#: ../../concepts/atmosphere.md
+msgid "Filename of the atmosphere grid"
+msgstr ""
+
+#: ../../concepts/atmosphere.md
+msgid "see [lfs](lfs.md)"
+msgstr ""
+
+#: ../../concepts/atmosphere.md
+msgid "`depth`"
+msgstr ""
+
+#: ../../concepts/atmosphere.md
+msgid "The depth scale to use for calculations."
+msgstr ""
+
+#: ../../concepts/atmosphere.md
+msgid "`RHOX` or `TAU`"
+msgstr ""
+
+#: ../../concepts/atmosphere.md
+msgid "`interp`"
+msgstr ""
+
+#: ../../concepts/atmosphere.md
+msgid "The depth scale to use for interpolation."
+msgstr ""
+
+#: ../../concepts/atmosphere.md
+msgid "`geom`"
+msgstr ""
+
+#: ../../concepts/atmosphere.md
+msgid "The geometry of the atmosphere."
+msgstr ""
+
+#: ../../concepts/atmosphere.md
+msgid "Plane Parallel `'PP'` or Spherical `'SPH'`"
+msgstr ""
+
+#: ../../concepts/atmosphere.md
+msgid "`method`"
+msgstr ""
+
+#: ../../concepts/atmosphere.md
+msgid "The method to use for interpolation"
+msgstr ""
+
+#: ../../concepts/atmosphere.md
+msgid ""
+"`'grid'` for a model grid or `'embedded'` if only a single atmosphere is "
+"given"
+msgstr ""
+
+#: ../../concepts/atmosphere.md
+msgid "`rhox`"
+msgstr ""
+
+#: ../../concepts/atmosphere.md
+msgid "Mass column at each tabulated depth in the atmosphere"
+msgstr ""
+
+#: ../../concepts/atmosphere.md
+msgid "[$\\mathrm{g~cm^{-2}}$]"
+msgstr ""
+
+#: ../../concepts/atmosphere.md
+msgid "`tau`"
+msgstr ""
+
+#: ../../concepts/atmosphere.md
+msgid "Continuum optical depth at each tabulated depth in the atmosphere"
+msgstr ""
+
+#: ../../concepts/atmosphere.md
+msgid "`temp`"
+msgstr ""
+
+#: ../../concepts/atmosphere.md
+msgid "Temperature at each tabulated depth in the atmosphere"
+msgstr ""
+
+#: ../../concepts/atmosphere.md
+msgid "`xna`"
+msgstr ""
+
+#: ../../concepts/atmosphere.md
+msgid ""
+"Atomic number density (including atomic components of molecules) at each "
+"tabulated depth in the atmosphere."
+msgstr ""
+
+#: ../../concepts/atmosphere.md
+msgid "[$\\mathrm{cm^{-3}}$]"
+msgstr ""
+
+#: ../../concepts/atmosphere.md
+msgid "`xne`"
+msgstr ""
+
+#: ../../concepts/atmosphere.md
+msgid "Electron number density at each tabulated depth in the atmosphere"
+msgstr ""
+
+#: ../../concepts/atmosphere.md
+msgid "`rho`"
+msgstr ""
+
+#: ../../concepts/atmosphere.md
+msgid "Mass density at each tabulated depth in the atmosphere."
+msgstr ""
+
+#: ../../concepts/atmosphere.md
+msgid "[$\\mathrm{g~cm^{-3}}$]"
+msgstr ""
+
+#: ../../concepts/atmosphere.md
+msgid "`height`"
+msgstr ""
+
+#: ../../concepts/atmosphere.md
+msgid ""
+"Height above or below `radius` at each tabulated depth in a spherical "
+"atmosphere."
+msgstr ""
+
+#: ../../concepts/atmosphere.md
+msgid "[cm]"
+msgstr ""
+
+#: ../../concepts/atmosphere.md
+msgid "`radius`"
+msgstr ""
+
+#: ../../concepts/atmosphere.md
+msgid "Stellar radius corresponding to `height` of zero in a spherical atmosphere"
+msgstr ""
+
+#: ../../concepts/atmosphere.md
+msgid "`vturb`"
+msgstr ""
+
+#: ../../concepts/atmosphere.md
+msgid "Turbulent velocity used to generate the atmosphere"
+msgstr ""
+
+#: ../../concepts/atmosphere.md
+msgid "`lonh`"
+msgstr ""
+
+#: ../../concepts/atmosphere.md
+msgid ""
+"Ratio of mixing length to pressure scale height (`/H) used to generate "
+"the atmosphere."
+msgstr ""
+
+#: ../../concepts/atmosphere.md
+msgid "`wlstd`"
+msgstr ""
+
+#: ../../concepts/atmosphere.md
+msgid "Wavelength for continuum optical depth scale."
+msgstr ""
+
+#: ../../concepts/atmosphere.md
+msgid "Å, Default value: 5000Å"
+msgstr ""
+
+#: ../../concepts/atmosphere.md
+msgid "`opflag`"
+msgstr ""
+
+#: ../../concepts/atmosphere.md
+msgid ""
+"Flags that indicate whether to enable various opacity packages during the"
+" radiative transfer calculation"
+msgstr ""
+
+#: ../../concepts/atmosphere.md:50
+msgid "Atmosphere grids:"
+msgstr ""
+
+#: ../../concepts/atmosphere.md:52
+msgid "recommended:"
+msgstr ""
+
+#: ../../concepts/atmosphere.md:53
+msgid ""
+"marcs2012.sav [(Gustafsson et al. "
+"2008)](https://ui.adsabs.harvard.edu/abs/2008A%26A...486..951G)"
+msgstr ""
+
+#: ../../concepts/atmosphere.md:54
+msgid "marcs2012p_t0.0.sav"
+msgstr ""
+
+#: ../../concepts/atmosphere.md:55
+msgid "marcs2012p_t1.0.sav"
+msgstr ""
+
+#: ../../concepts/atmosphere.md:56
+msgid "marcs2012p_t2.0.sav"
+msgstr ""
+
+#: ../../concepts/atmosphere.md:57
+msgid "marcs2012s_t1.0.sav"
+msgstr ""
+
+#: ../../concepts/atmosphere.md:58
+msgid "marcs2012s_t2.0.sav"
+msgstr ""
+
+#: ../../concepts/atmosphere.md:59
+msgid "marcs2012s_t5.0.sav"
+msgstr ""
+
+#: ../../concepts/atmosphere.md:60
+msgid "marcs2012t00cooldwarfs.sav"
+msgstr ""
+
+#: ../../concepts/atmosphere.md:61
+msgid "marcs2012t01cooldwarfs.sav"
+msgstr ""
+
+#: ../../concepts/atmosphere.md:62
+msgid "marcs2012t02cooldwarfs.sav"
+msgstr ""
+
+#: ../../concepts/atmosphere.md:64
+msgid "deprecated:"
+msgstr ""
+
+#: ../../concepts/atmosphere.md:65
+msgid "atlas12.sav"
+msgstr ""
+
+#: ../../concepts/atmosphere.md:66
+msgid "atlas9_vmic0.0.sav"
+msgstr ""
+
+#: ../../concepts/atmosphere.md:67
+msgid "atlas9_vmic2.0.sav"
+msgstr ""
+
+#: ../../concepts/atmosphere.md:68
+msgid "ll_vmic2.0.sav"
+msgstr ""
+
+#: ../../concepts/atmosphere.md:70
+msgid "Grid plots"
+msgstr ""
+
+#: ../../concepts/atmosphere.md:72
+msgid ""
+"![](../img/atmosphere/marcs2012_grid.png) "
+"![](../img/atmosphere/marcs2012p_t0.0_grid.png) "
+"![](../img/atmosphere/marcs2012p_t1.0_grid.png) "
+"![](../img/atmosphere/marcs2012p_t2.0_grid.png) "
+"![](../img/atmosphere/marcs2012s_t1.0_grid.png) "
+"![](../img/atmosphere/marcs2012s_t2.0_grid.png) "
+"![](../img/atmosphere/marcs2012s_t5.0_grid.png) "
+"![](../img/atmosphere/marcs2012t00cooldwarfs_grid.png) "
+"![](../img/atmosphere/marcs2012t01cooldwarfs_grid.png) "
+"![](../img/atmosphere/marcs2012t02cooldwarfs_grid.png) "
+"![](../img/atmosphere/atlas12_grid.png) "
+"![](../img/atmosphere/atlas9_vmic0.0_grid.png) "
+"![](../img/atmosphere/atlas9_vmic2.0_grid.png) "
+"![](../img/atmosphere/ll_vmic2.0_grid.png)"
+msgstr ""
+

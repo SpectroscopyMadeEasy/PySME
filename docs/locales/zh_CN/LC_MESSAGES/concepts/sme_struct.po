@@ -1,0 +1,511 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2025, Jeff Valenti, Nikolai Piskunov, Mingjie Jian, Ansgar
+# Wehrhahn
+# This file is distributed under the same license as the PySME package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PySME 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-03-29 22:44+0900\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: zh_CN\n"
+"Language-Team: zh_CN <LL@li.org>\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: ../../concepts/sme_struct.md:1
+msgid "The SME Structure"
+msgstr ""
+
+#: ../../concepts/sme_struct.md:3
+msgid ""
+"The SME structure contains all the information necessary to run PySME.   "
+"It is by design similar to the IDL structure of SME, but with a lot of "
+"changes for ease of use. Note that some parameters depend on the number "
+"of segments in the observation. When creating a new structure it is "
+"therefore recommended to define the wavelengths first."
+msgstr ""
+
+#: ../../concepts/sme_struct.md:9
+msgid "Stellar Parameters"
+msgstr ""
+
+#: ../../concepts/sme_struct.md:11
+msgid ""
+"Stellar parameters describe the star in general and are usually what we "
+"want to fit."
+msgstr ""
+
+#: ../../concepts/sme_struct.md:13
+msgid "`teff`: The effective temperature of the star in **Kelvin**."
+msgstr ""
+
+#: ../../concepts/sme_struct.md:14
+msgid "`logg`: The surface gravity of the star in log (cgs)."
+msgstr ""
+
+#: ../../concepts/sme_struct.md:15
+#, python-brace-format
+msgid ""
+"`monh`: The overall metallicity of the star in log₁₀ relative to the "
+"individual abundances (see {ref}`abund`)."
+msgstr ""
+
+#: ../../concepts/sme_struct.md:16
+msgid ""
+"`vsini`: The (projected) rotation velocity in km s⁻¹. Describes the "
+"rotational broadening."
+msgstr ""
+
+#: ../../concepts/sme_struct.md:17
+msgid "If `vsini` is non-zero, you should set several values for `mu`."
+msgstr ""
+
+#: ../../concepts/sme_struct.md:18
+msgid ""
+"`vmic`: The micro-turbulence velocity in km s⁻¹. Describes turbulence on "
+"scales **smaller** than the photon mean free path, adding additional line"
+" broadening."
+msgstr ""
+
+#: ../../concepts/sme_struct.md:19
+msgid ""
+"`vmac`: The macro-turbulence velocity in km s⁻¹. Describes turbulence on "
+"scales **larger** than the photon mean free path, also contributing to "
+"broadening."
+msgstr ""
+
+#: ../../concepts/sme_struct.md:20
+msgid ""
+"`mu`: Limb-angle values ($\\mu = \\cos\\theta$) at which the radiative-"
+"transfer calculation is performed. $\\mu = 1$ corresponds to disk center,"
+" $0$ to the limb."
+msgstr ""
+
+#: ../../concepts/sme_struct.md:22
+msgid "Radial velocity and Continuum"
+msgstr ""
+
+#: ../../concepts/sme_struct.md:24
+msgid ""
+"The radial velocity and continuum shift the continuum in wavelength and "
+"intensity direction respectively. How to best handle them often depends "
+"on the situation and the quality of the observation data. Therefore PySME"
+" has many options to determine them."
+msgstr ""
+
+#: ../../concepts/sme_struct.md:30
+msgid ""
+"`cscale`: The polynomial parameters for each segment, that are applied to"
+" the synthetic spectrum to match the observation."
+msgstr ""
+
+#: ../../concepts/sme_struct.md:31
+msgid ""
+"The polynomial is calculated using the wavelength grid of the "
+"observation, shifted so that the first point is 0. I.e. the polynomial is"
+" f(wave - wave[0])."
+msgstr ""
+
+#: ../../concepts/sme_struct.md:32
+msgid ""
+"`vrad`: The radial velocity in km/s that was applied to each segment of "
+"the synthethized spectrum to match the observation."
+msgstr ""
+
+#: ../../concepts/sme_struct.md:33
+msgid ""
+"`cscale_flag`: Determines how the continuum is fitted, or if it is fitted"
+" at all."
+msgstr ""
+
+#: ../../concepts/sme_struct.md:34
+msgid "none: No continuum correction"
+msgstr ""
+
+#: ../../concepts/sme_struct.md:35
+msgid "fix: Use whatever continuum scale has been set, but don't change it."
+msgstr ""
+
+#: ../../concepts/sme_struct.md:36
+msgid "constant: scale everything by a factor"
+msgstr ""
+
+#: ../../concepts/sme_struct.md:37
+msgid "linear: First order polynomial, i.e. a straight line"
+msgstr ""
+
+#: ../../concepts/sme_struct.md:38
+msgid "quadratic: Second order polynomial"
+msgstr ""
+
+#: ../../concepts/sme_struct.md:39
+msgid ""
+"`vrad_flag`: Determines how the radial velocity is fitted, or if it is "
+"fitted at all."
+msgstr ""
+
+#: ../../concepts/sme_struct.md:40
+msgid "none: No radial velocity fitting"
+msgstr ""
+
+#: ../../concepts/sme_struct.md:41
+msgid "fix: Use the set value for the radial velocity, but don't change it"
+msgstr ""
+
+#: ../../concepts/sme_struct.md:42
+msgid "each: Fit each wavelength segment individally"
+msgstr ""
+
+#: ../../concepts/sme_struct.md:43
+msgid "whole: Fit the whole spectrum at once"
+msgstr ""
+
+#: ../../concepts/sme_struct.md:46
+msgid "Spectra"
+msgstr ""
+
+#: ../../concepts/sme_struct.md:48
+msgid ""
+"Spectra are given as a list of arrays[^iliffe], where each array "
+"represents one wavelength segment of the spectrum. If there is only one "
+"segment, the list will only have one element. For legacy reasons there is"
+" also an interface to the 'old' system and names (e.g. smod instead of "
+"synth) from IDL SME. It is recommend however to use the new variables."
+msgstr ""
+
+#: ../../concepts/sme_struct.md:54
+msgid "wave"
+msgstr ""
+
+#: ../../concepts/sme_struct.md:54
+msgid "The wavelength grid of the observation and/or the synthetic spectrum"
+msgstr ""
+
+#: ../../concepts/sme_struct.md:55
+msgid "spec"
+msgstr ""
+
+#: ../../concepts/sme_struct.md:55
+msgid "The observed spectrum"
+msgstr ""
+
+#: ../../concepts/sme_struct.md:56
+msgid "uncs"
+msgstr ""
+
+#: ../../concepts/sme_struct.md:57
+msgid ""
+"The uncertainties of the observed spectrum. If None will use uncertainty "
+"1 for all points."
+msgstr ""
+
+#: ../../concepts/sme_struct.md:59
+msgid "mask"
+msgstr ""
+
+#: ../../concepts/sme_struct.md:60
+msgid ""
+"The pixel mask for the observation, with defination of 0 as bad pixel, 1 "
+"as line pixel, 2 as continuum pixel, and 4 as vrad pixel. The masks are "
+"additive, i.e., you can set mask value to 5 for line and vrad pixel. Only"
+" the good pixels will contribute to the fit, but the synthetic spectrum "
+"will still be calculated. Note that ``dtype`` of ``sme.mask`` must be "
+"int."
+msgstr ""
+
+#: ../../concepts/sme_struct.md:62
+msgid "synth"
+msgstr ""
+
+#: ../../concepts/sme_struct.md:62
+msgid "The synthetic spectrum"
+msgstr ""
+
+#: ../../concepts/sme_struct.md:64
+msgid "wran"
+msgstr ""
+
+#: ../../concepts/sme_struct.md:65
+msgid ""
+"The first and last wavelength of each segment. You only need this if you "
+"dont have an observation and dont want to specify the exact wavelength "
+"grid of the synthetic observation. Note that this is not an Illiffe "
+"vector."
+msgstr ""
+
+#: ../../concepts/sme_struct.md:69
+msgid "wint"
+msgstr ""
+
+#: ../../concepts/sme_struct.md:70
+msgid ""
+"Optional wavelength grid passed to SMElib `Transf` as adaptive grid for "
+"each segment. Accepts the same segment-aware input styles as `wave`: "
+"`numpy.ndarray` (single segment), `list` of arrays (multi-segment), or "
+"`Iliffe_vector`. If provided, `sme.wint[segment]` is used directly for "
+"synthesis. If not provided, PySME can reuse an internal cached adaptive "
+"grid when `reuse_wavelength_grid=True`; otherwise SMElib computes a new "
+"adaptive grid."
+msgstr ""
+
+#: ../../concepts/sme_struct.md:80
+msgid "Abundance"
+msgstr ""
+
+#: ../../concepts/sme_struct.md:82
+msgid ""
+"The individal abundances are stored in a seperate Abundance object, which"
+" shares the same metallicity as the overall structure. For more detailed "
+"information see [](abundance)."
+msgstr ""
+
+#: ../../concepts/sme_struct.md:86
+msgid "abund"
+msgstr ""
+
+#: ../../concepts/sme_struct.md:86
+msgid "The abundance object"
+msgstr ""
+
+#: ../../concepts/sme_struct.md:88
+msgid "Linelist"
+msgstr ""
+
+#: ../../concepts/sme_struct.md:90
+msgid ""
+"The sme structure does contain the whole linelist in the linelist "
+"property. For legacy reasons, it also provides direct access to the "
+"'species' and 'atomic' arrays. They refer directly to the linelist "
+"however. For more detailed information see "
+"[](../fundamentals/linelist.md)."
+msgstr ""
+
+#: ../../concepts/sme_struct.md:95
+msgid "linelist"
+msgstr ""
+
+#: ../../concepts/sme_struct.md:95
+msgid "The linelist object"
+msgstr ""
+
+#: ../../concepts/sme_struct.md:96
+msgid "species"
+msgstr ""
+
+#: ../../concepts/sme_struct.md:96
+msgid "Names of the species of each spectral line"
+msgstr ""
+
+#: ../../concepts/sme_struct.md:97
+msgid "atomic"
+msgstr ""
+
+#: ../../concepts/sme_struct.md:98
+msgid ""
+"Atomic linelist data with columns \"atom_number\", \"ionization\", "
+"\"wlcent\", \"excit\", \"gflog\", \"gamrad\", \"gamqst\", \"gamvw\""
+msgstr ""
+
+#: ../../concepts/sme_struct.md:101
+msgid "Atmosphere"
+msgstr ""
+
+#: ../../concepts/sme_struct.md:103
+msgid ""
+"Unlike the linelist the atmosphere is stored in an external file, that is"
+" only referenced by name in the structure. For more detailed information "
+"see [](atmosphere)."
+msgstr ""
+
+#: ../../concepts/sme_struct.md:107
+msgid "atmo"
+msgstr ""
+
+#: ../../concepts/sme_struct.md:107
+msgid "The atmosphere object"
+msgstr ""
+
+#: ../../concepts/sme_struct.md:109
+msgid "NLTE"
+msgstr ""
+
+#: ../../concepts/sme_struct.md:111
+msgid ""
+"Unlike the linelist, but similar to the atmosphere, the NLTE parameters "
+"are stored in external tables, which are only referenced by name. For "
+"more detailed information see [](nlte)."
+msgstr ""
+
+#: ../../concepts/sme_struct.md:115
+msgid "nlte"
+msgstr ""
+
+#: ../../concepts/sme_struct.md:115
+msgid "The NLTE object"
+msgstr ""
+
+#: ../../concepts/sme_struct.md:117
+msgid "Instrument Parameters"
+msgstr ""
+
+#: ../../concepts/sme_struct.md:119
+msgid ""
+"PySME can also model instrumental broadening as part of the spectral "
+"synthesis. For this you need to specify the resolution and the broadening"
+" method to use."
+msgstr ""
+
+#: ../../concepts/sme_struct.md:123
+msgid "ipres"
+msgstr ""
+
+#: ../../concepts/sme_struct.md:123
+msgid "The resolution of the instrument to simulate"
+msgstr ""
+
+#: ../../concepts/sme_struct.md:124
+msgid "iptype"
+msgstr ""
+
+#: ../../concepts/sme_struct.md:125
+msgid ""
+"The broadening profile of the instrument. One of \"gauss\", \"sinc\", "
+"\"table\""
+msgstr ""
+
+#: ../../concepts/sme_struct.md:127
+msgid "ip_x"
+msgstr ""
+
+#: ../../concepts/sme_struct.md:128
+msgid ""
+"The x points of the instrument profile. Only relevant if iptype is "
+"'table'."
+msgstr ""
+
+#: ../../concepts/sme_struct.md:130
+msgid "ip_y"
+msgstr ""
+
+#: ../../concepts/sme_struct.md:131
+msgid ""
+"The y points of the instrument profile. Only relevant if iptype is "
+"'table'."
+msgstr ""
+
+#: ../../concepts/sme_struct.md:134
+msgid "Fitresults"
+msgstr ""
+
+#: ../../concepts/sme_struct.md:136
+msgid "fitparameters"
+msgstr ""
+
+#: ../../concepts/sme_struct.md:137
+msgid ""
+"The fitparameters used for the fitting. See "
+"[fitparameters](../concepts/fitparameters.md)."
+msgstr ""
+
+#: ../../concepts/sme_struct.md:139
+msgid "fitresults"
+msgstr ""
+
+#: ../../concepts/sme_struct.md:139
+msgid "The fitresults object. See [fitresults](../concepts/fitresults.md)."
+msgstr ""
+
+#: ../../concepts/sme_struct.md:141
+msgid "System Information"
+msgstr ""
+
+#: ../../concepts/sme_struct.md:143
+msgid ""
+"The sme structure does contain information about the host system. E.g. "
+"which operating system was used. This is mostly for legacy reasons, and "
+"potential debugging information. For more information see "
+"[system_info](../concepts/system_info.md)."
+msgstr ""
+
+#: ../../concepts/sme_struct.md:148
+msgid "system_info"
+msgstr ""
+
+#: ../../concepts/sme_struct.md:148
+msgid "The system information object. It replaces the idlver object."
+msgstr ""
+
+#: ../../concepts/sme_struct.md:150
+msgid "Other Parameters"
+msgstr ""
+
+#: ../../concepts/sme_struct.md:152
+msgid "gam6"
+msgstr ""
+
+#: ../../concepts/sme_struct.md:152
+msgid "van der Waals scaling factor (usually 1)"
+msgstr ""
+
+#: ../../concepts/sme_struct.md:153
+msgid "h2broad"
+msgstr ""
+
+#: ../../concepts/sme_struct.md:153
+msgid "flag determing whether to use H2 broadening or not (usually True)"
+msgstr ""
+
+#: ../../concepts/sme_struct.md:154
+msgid "accrt"
+msgstr ""
+
+#: ../../concepts/sme_struct.md:155
+msgid ""
+"Minimum accuracy for synthethized spectrum at wavelength grid points in "
+"`sme.wint` (or SMElib adaptive grid if `sme.wint` is not set). Values "
+"below 1e-4 are not meaningful."
+msgstr ""
+
+#: ../../concepts/sme_struct.md:158
+msgid "accwi"
+msgstr ""
+
+#: ../../concepts/sme_struct.md:159
+msgid ""
+"Minimum accuracy for linear spectrum interpolation vs. wavelength. Values"
+" below 1e-4 are not meaningful."
+msgstr ""
+
+#: ../../concepts/sme_struct.md:161
+msgid "version"
+msgstr ""
+
+#: ../../concepts/sme_struct.md:161
+msgid "The version of sme used to create this structure and spectrum"
+msgstr ""
+
+#: ../../concepts/sme_struct.md:162
+msgid "id"
+msgstr ""
+
+#: ../../concepts/sme_struct.md:163
+msgid ""
+"The date and time when this structure or the last synthetic spectrum was "
+"created"
+msgstr ""
+
+#: ../../concepts/sme_struct.md:166
+msgid ""
+"They are called Illiffe vectors in the code, and they were that in IDL. "
+"But they are technically not Illiffe vectors anymore, but just lists of "
+"individal numpy arrays."
+msgstr ""
+

@@ -1,0 +1,213 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2025, Jeff Valenti, Nikolai Piskunov, Mingjie Jian, Ansgar
+# Wehrhahn
+# This file is distributed under the same license as the PySME package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PySME 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-03-29 22:44+0900\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: zh_CN\n"
+"Language-Team: zh_CN <LL@li.org>\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: ../../getting_started/installation.md:1
+msgid "Installation"
+msgstr "安装"
+
+#: ../../getting_started/installation.md:3
+msgid ""
+"PySME can be installed through PyPI (recommended; stable release) or from"
+" GitHub source."
+msgstr "PySME 可以通过 PyPI 安装（推荐，稳定版），也可以从 GitHub 源码安装。"
+
+#: ../../getting_started/installation.md:5
+msgid "Supported environments:"
+msgstr "支持的环境："
+
+#: ../../getting_started/installation.md:6
+msgid "Platforms: Linux, macOS (arm platform only)"
+msgstr "平台：Linux、macOS（仅 arm 平台）"
+
+#: ../../getting_started/installation.md:7
+msgid ""
+"The x86/Intel platform macOS is not supported anymore, but you can still "
+"install v0.6.23, the last supported PySME version, or download "
+"[SMElib](https://github.com/SpectroscopyMadeEasy/SMElib) and compile it "
+"manually."
+msgstr ""
+"x86/Intel 平台的 macOS 已不再受支持；如果你需要旧版本，可安装 v0.6.23（最后一个支持该平台的 "
+"PySME 版本），或者下载 [SMElib](https://github.com/SpectroscopyMadeEasy/SMElib) "
+"并手动编译。"
+
+#: ../../getting_started/installation.md:8
+msgid "Windows: supported via WSL2 (install/run PySME inside the Linux subsystem)"
+msgstr "Windows：通过 WSL2 支持，也就是在 Linux 子系统中安装和运行 PySME"
+
+#: ../../getting_started/installation.md:9
+msgid "Python versions:"
+msgstr "Python 版本："
+
+#: ../../getting_started/installation.md:10
+msgid "3.9–3.13."
+msgstr "3.9 到 3.13。"
+
+#: ../../getting_started/installation.md:13
+msgid "Set up virtual environment"
+msgstr "创建虚拟环境"
+
+#: ../../getting_started/installation.md:15
+msgid "This step is optional but recommended."
+msgstr "这一步不是强制的，但推荐这样做。"
+
+#: ../../getting_started/installation.md:17
+msgid "conda"
+msgstr "conda"
+
+#: ../../getting_started/installation.md:24
+msgid "venv (alternative)"
+msgstr "venv（可选）"
+
+#: ../../getting_started/installation.md:31
+msgid "Install PySME"
+msgstr "安装 PySME"
+
+#: ../../getting_started/installation.md:33
+msgid "Stable release (recommended)"
+msgstr "稳定版（推荐）"
+
+#: ../../getting_started/installation.md:39
+msgid "From GitHub source (latest)"
+msgstr "从 GitHub 源码安装（最新版本）"
+
+#: ../../getting_started/installation.md:41
+msgid "Clone the repository"
+msgstr "克隆仓库"
+
+#: ../../getting_started/installation.md:48
+msgid "Install PySME from source"
+msgstr "从源码安装 PySME"
+
+#: ../../getting_started/installation.md:55
+msgid "If you already cloned without submodules, run:"
+msgstr "如果你之前克隆仓库时没有带上 submodules，请执行："
+
+#: ../../getting_started/installation.md:61
+msgid "From GitHub source (specific release tag)"
+msgstr "从 GitHub 源码安装（指定 release tag）"
+
+#: ../../getting_started/installation.md:63
+msgid "Use this for reproducible source installs:"
+msgstr "如果你需要可复现的源码安装，可以使用下面的方式："
+
+#: ../../getting_started/installation.md:73
+msgid "Legacy source versions"
+msgstr "旧版源码"
+
+#: ../../getting_started/installation.md:75
+msgid ""
+"For older source versions that predate the new repository layout, use the"
+" legacy repository:"
+msgstr "对于更早、尚未使用当前仓库结构的源码版本，请使用 legacy 仓库："
+
+#: ../../getting_started/installation.md:85
+msgid ""
+"For very old tags, if build metadata is incomplete, follow the historical"
+" notes in the legacy docs."
+msgstr "如果是非常老的 tag，构建元数据可能不完整，这时请参考 legacy 文档中的历史说明。"
+
+#: ../../getting_started/installation.md:87
+msgid "Verify installation"
+msgstr "验证安装"
+
+#: ../../getting_started/installation.md:93
+msgid "You should see an output of `PySME version: [version]`."
+msgstr "你应该会看到类似 `PySME version: [version]` 的输出。"
+
+#: ../../getting_started/installation.md:95
+msgid "Configure data directories (optional)"
+msgstr "配置数据目录（可选）"
+
+#: ../../getting_started/installation.md:97
+msgid ""
+"PySME stores atmosphere/NLTE/cache files under `~/.sme/` by default. To "
+"use a different location, edit `~/.sme/config.json`:"
+msgstr ""
+"默认情况下，PySME 会把 atmosphere、NLTE 和缓存文件存放在 `~/.sme/` 下。如果你想使用别的位置，请编辑 "
+"`~/.sme/config.json`："
+
+#: ../../getting_started/installation.md:108
+msgid "Notes:"
+msgstr "说明："
+
+#: ../../getting_started/installation.md:110
+msgid "`~` can be used in these paths."
+msgstr "这些路径里可以使用 `~`。"
+
+#: ../../getting_started/installation.md:111
+msgid "Updating paths does not move existing downloaded files automatically."
+msgstr "修改路径不会自动搬迁已经下载的文件。"
+
+#: ../../getting_started/installation.md:113
+msgid "Uninstall"
+msgstr "卸载"
+
+#: ../../getting_started/installation.md:115
+msgid "You can uninstall PySME by:"
+msgstr "你可以用下面的命令卸载 PySME："
+
+#: ../../getting_started/installation.md:121
+msgid ""
+"Note that several files (data file, SMElib file etc) will remain after "
+"the uninstall.  They are all list in the output of the pip command, and "
+"it is recommended to remove them manually."
+msgstr ""
+"卸载后，一些文件仍然会保留在系统里，例如数据文件和 SMElib 文件。它们都会列在 `pip` 命令的输出中，通常建议手动清理。"
+
+#: ../../getting_started/installation.md:125
+msgid "The content below to be removed."
+msgstr "下面这部分内容后续应移除。"
+
+#: ../../getting_started/installation.md:127
+msgid "Running SME"
+msgstr "运行 SME"
+
+#: ../../getting_started/installation.md:128
+msgid ""
+"An simple minimum example is provided in the [examples "
+"directory](https://github.com/SpectroscopyMadeEasy/PySME/tree/master/examples)."
+" Make sure to also download the provided input structure."
+msgstr ""
+"[examples "
+"目录](https://github.com/SpectroscopyMadeEasy/PySME/tree/master/examples) "
+"中提供了一个简单的最小示例。记得同时下载配套提供的输入结构。"
+
+#: ../../getting_started/installation.md:129
+msgid "You can then run it with: `python minimum.py`"
+msgstr "然后你可以用下面的命令运行它：`python minimum.py`"
+
+#: ../../getting_started/installation.md:132
+msgid ""
+"PySME requires a **pre-compiled C++/Fortran SME library**. Wheels are "
+"currently provided for Linux and macOS.   For Windows, we recommend using"
+" **WSL2** (install PySME inside the Linux environment)."
+msgstr ""
+"PySME 运行时依赖一个**预编译的 C++/Fortran SME 库**。目前官方 wheel 支持 Linux 和 macOS。"
+"对于 Windows，我们建议使用 **WSL2**，也就是在 Linux 环境中安装并运行 PySME。"
+
+#: ../../getting_started/installation.md:136
+msgid ""
+"PySME requires the pre-compled C++/Fortran SME library to run. Currently "
+"we deliver SME library with Linux and Mac version; for Windows users, we "
+"recommend to use WSL and hence the Linux version."
+msgstr ""
+"PySME 运行时依赖预编译的 C++/Fortran SME 库。目前我们提供 Linux 和 Mac 版本的 SME 库；对于 Windows "
+"用户，建议使用 WSL，因此实际使用的是 Linux 版本。"

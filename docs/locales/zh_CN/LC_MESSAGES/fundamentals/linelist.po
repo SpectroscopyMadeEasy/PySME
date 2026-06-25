@@ -1,0 +1,361 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2025, Jeff Valenti, Nikolai Piskunov, Mingjie Jian, Ansgar
+# Wehrhahn
+# This file is distributed under the same license as the PySME package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PySME 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-03-29 22:44+0900\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: zh_CN\n"
+"Language-Team: zh_CN <LL@li.org>\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: ../../fundamentals/linelist.md:1
+msgid "Linelist"
+msgstr "谱线表"
+
+#: ../../fundamentals/linelist.md:3
+msgid ""
+"`linelist` is one of the core inputs for spectral synthesis. It stores "
+"the physical parameters of each transition (element/species, wavelength, "
+"`log gf`, damping parameters, etc.)."
+msgstr ""
+"`linelist` 是光谱合成的核心输入之一。它保存了每条跃迁对应的物理参数（元素/物种、波长、`log gf`、阻尼参数等）。"
+
+#: ../../fundamentals/linelist.md:7
+msgid "Getting a Linelist from VALD"
+msgstr "从 VALD 获取谱线表"
+
+#: ../../fundamentals/linelist.md:9
+msgid ""
+"PySME is designed to work well with all types of line lists in "
+"[VALD](https://vald.astro.uu.se/) database.  A common workflow is:"
+msgstr ""
+"PySME 的设计目标之一，就是良好支持 [VALD](https://vald.astro.uu.se/) 数据库中的各种谱线表。常见工作流如下："
+
+#: ../../fundamentals/linelist.md:12
+msgid "Download a line list from VALD (typically from `extract stellar`)."
+msgstr "从 VALD 下载一份谱线表（通常使用 `extract stellar`）。"
+
+#: ../../fundamentals/linelist.md:13
+msgid "Load it in PySME with `ValdFile`."
+msgstr "在 PySME 中使用 `ValdFile` 加载它。"
+
+#: ../../fundamentals/linelist.md:22
+msgid "Linelist is essentially a DataFrame"
+msgstr "Linelist 本质上是一个 DataFrame"
+
+#: ../../fundamentals/linelist.md:24
+msgid ""
+"Internally, PySME stores `LineList` data in a `pandas.DataFrame` "
+"(`sme.linelist._lines`). So you can use DataFrame-style operations "
+"directly: filtering, sorting, editing columns, adding flags, and so on."
+msgstr ""
+"在内部，PySME 将 `LineList` 数据存储为一个 `pandas.DataFrame` "
+"（`sme.linelist._lines`）。因此你可以直接使用 DataFrame 风格的操作：筛选、排序、修改列、添加标记等等。"
+
+#: ../../fundamentals/linelist.md:38
+msgid "Short vs Long Format"
+msgstr "Short 与 Long 格式"
+
+#: ../../fundamentals/linelist.md:40
+msgid "VALD provides two line list formats:"
+msgstr "VALD 提供两种谱线表格式："
+
+#: ../../fundamentals/linelist.md:42
+msgid "short: fewer fields, suitable for LTE."
+msgstr "short：字段较少，适合 LTE。"
+
+#: ../../fundamentals/linelist.md:43
+msgid ""
+"long: includes additional upper/lower level and quantum-number "
+"information."
+msgstr "long：包含额外的上下能级及量子数信息。"
+
+#: ../../fundamentals/linelist.md:45
+msgid ""
+"If you plan to run NLTE, you should use **VALD long format**. In PySME, "
+"NLTE relies on the extra level information available in long format; "
+"short format does not provide enough information for that workflow."
+msgstr ""
+"如果你打算进行 NLTE 计算，应使用 **VALD long format**。在 PySME 中，NLTE 依赖于 long format "
+"提供的额外能级信息；short format 不足以支撑这一工作流。"
+
+#: ../../fundamentals/linelist.md:49
+msgid "Line parameters"
+msgstr "谱线参数"
+
+#: ../../fundamentals/linelist.md:51
+msgid "The short format fields are"
+msgstr "short format 包含以下字段"
+
+#: ../../fundamentals/linelist.md:53
+msgid "species"
+msgstr "species"
+
+#: ../../fundamentals/linelist.md:54
+msgid ""
+"A string identifier including the element and ionization state or the "
+"molecule"
+msgstr "包含元素及其电离态，或者分子信息的字符串标识"
+
+#: ../../fundamentals/linelist.md:56
+msgid "wlcent"
+msgstr "wlcent"
+
+#: ../../fundamentals/linelist.md:56
+msgid "The central wavelength of the line in Angstrom"
+msgstr "谱线中心波长，单位为埃"
+
+#: ../../fundamentals/linelist.md:57
+msgid "gflog"
+msgstr "gflog"
+
+#: ../../fundamentals/linelist.md:58
+msgid ""
+"The log of the product of the statistical weight of the lower level and "
+"the oscillator strength for the transition."
+msgstr "下能级统计权重与该跃迁振子强度乘积的对数。"
+
+#: ../../fundamentals/linelist.md:60
+msgid "excit"
+msgstr "excit"
+
+#: ../../fundamentals/linelist.md:60
+msgid "The excitation energy in the lower level"
+msgstr "下能级的激发能"
+
+#: ../../fundamentals/linelist.md:61
+msgid "ionization"
+msgstr "ionization"
+
+#: ../../fundamentals/linelist.md:61
+msgid "The ionization state of the species, where 1 is neutral"
+msgstr "该物种的电离态，其中 1 表示中性态"
+
+#: ../../fundamentals/linelist.md:62
+msgid "gamrad"
+msgstr "gamrad"
+
+#: ../../fundamentals/linelist.md:62
+msgid "The radiation broadening parameter"
+msgstr "辐射展宽参数"
+
+#: ../../fundamentals/linelist.md:63
+msgid "gamqst"
+msgstr "gamqst"
+
+#: ../../fundamentals/linelist.md:63
+msgid "Stark broadening parameter"
+msgstr "Stark 展宽参数"
+
+#: ../../fundamentals/linelist.md:64
+msgid "gamvw"
+msgstr "gamvw"
+
+#: ../../fundamentals/linelist.md:64
+msgid "van der Waals broadening parameter"
+msgstr "van der Waals 展宽参数"
+
+#: ../../fundamentals/linelist.md:65
+msgid "lande"
+msgstr "lande"
+
+#: ../../fundamentals/linelist.md:65
+msgid "The lande factor"
+msgstr "Lande 因子"
+
+#: ../../fundamentals/linelist.md:66
+msgid "depth"
+msgstr "depth"
+
+#: ../../fundamentals/linelist.md:66
+msgid "An arbitrary depth estimation of the line"
+msgstr "谱线深度的一个经验估计值"
+
+#: ../../fundamentals/linelist.md:67
+msgid "reference"
+msgstr "reference"
+
+#: ../../fundamentals/linelist.md:67
+msgid "A citation where this data came from"
+msgstr "该数据来源的引用信息"
+
+#: ../../fundamentals/linelist.md:68
+msgid "atom_number"
+msgstr "atom_number"
+
+#: ../../fundamentals/linelist.md:69
+msgid "Identifies the species by the atomic number (i.e. the number of protons)"
+msgstr "使用原子序数（即质子数）来标识该物种"
+
+#: ../../fundamentals/linelist.md:72
+msgid "In addition the long format has the following fields"
+msgstr "此外，long format 还包含以下字段"
+
+#: ../../fundamentals/linelist.md:74
+msgid "lande_lower"
+msgstr "lande_lower"
+
+#: ../../fundamentals/linelist.md:74
+msgid "The lower Lande factor"
+msgstr "下能级的 Lande 因子"
+
+#: ../../fundamentals/linelist.md:75
+msgid "lande_upper"
+msgstr "lande_upper"
+
+#: ../../fundamentals/linelist.md:75
+msgid "The upper Lande factor"
+msgstr "上能级的 Lande 因子"
+
+#: ../../fundamentals/linelist.md:76
+msgid "j_lo"
+msgstr "j_lo"
+
+#: ../../fundamentals/linelist.md:76
+msgid "The spin of the lower level"
+msgstr "下能级的自旋"
+
+#: ../../fundamentals/linelist.md:77
+msgid "j_up"
+msgstr "j_up"
+
+#: ../../fundamentals/linelist.md:77
+msgid "The spin of the upper level"
+msgstr "上能级的自旋"
+
+#: ../../fundamentals/linelist.md:78
+msgid "e_upp"
+msgstr "e_upp"
+
+#: ../../fundamentals/linelist.md:78
+msgid "The energy of the upper level"
+msgstr "上能级能量"
+
+#: ../../fundamentals/linelist.md:79
+msgid "term_lower"
+msgstr "term_lower"
+
+#: ../../fundamentals/linelist.md:79
+msgid "The electron configuration of the lower level"
+msgstr "下能级的电子组态"
+
+#: ../../fundamentals/linelist.md:80
+msgid "term_upper"
+msgstr "term_upper"
+
+#: ../../fundamentals/linelist.md:80
+msgid "The electron configuration of the upper level"
+msgstr "上能级的电子组态"
+
+#: ../../fundamentals/linelist.md:81
+msgid "error"
+msgstr "error"
+
+#: ../../fundamentals/linelist.md:81
+msgid "An uncertainty estimate for this linedata"
+msgstr "该谱线数据的不确定度估计"
+
+#: ../../fundamentals/linelist.md:83
+msgid "Runtime columns"
+msgstr "运行期列"
+
+#: ../../fundamentals/linelist.md:85
+msgid "nlte_flag"
+msgstr "nlte_flag"
+
+#: ../../fundamentals/linelist.md:85
+msgid ""
+"Per-line NLTE usage flag written after synthesis. See [NLTE flags in line"
+" list](../concepts/nlte.md#nlte-flags-in-line-list)."
+msgstr ""
+"每条谱线对应的 NLTE 使用标记，在合成后写入。详见 [谱线表中的 NLTE 标记]"
+"(../concepts/nlte.md#nlte-flags-in-line-list)。"
+
+#: ../../fundamentals/linelist.md:86
+msgid "strong"
+msgstr "strong"
+
+#: ../../fundamentals/linelist.md:86
+msgid "Per-line boolean flag used by dynamic line filtering."
+msgstr "每条谱线对应的布尔标记，用于动态谱线筛选。"
+
+#: ../../fundamentals/linelist.md:87
+msgid "central_depth"
+msgstr "central_depth"
+
+#: ../../fundamentals/linelist.md:87
+msgid ""
+"Estimated central line depth used for line selection/filtering. See [Line"
+" Filtering](../advance/line_filtering.md)."
+msgstr ""
+"用于谱线选择/筛选的谱线中心深度估计。详见 [谱线筛选](../advance/line_filtering.md)。"
+
+#: ../../fundamentals/linelist.md:88
+msgid "almax_ratio"
+msgstr "almax_ratio"
+
+#: ../../fundamentals/linelist.md:88
+msgid ""
+"Estimated line-center opacity-ratio proxy used in ALMAX-based filtering. "
+"See [Line Filtering](../advance/line_filtering.md)."
+msgstr ""
+"用于基于 ALMAX 的筛选中的谱线中心不透明度比值代理估计。详见 [谱线筛选](../advance/line_filtering.md)。"
+
+#: ../../fundamentals/linelist.md:89
+msgid "line_range_s"
+msgstr "line_range_s"
+
+#: ../../fundamentals/linelist.md:89
+msgid ""
+"Start wavelength of the estimated line-contribution range. See [Line "
+"Filtering](../advance/line_filtering.md)."
+msgstr "估计谱线贡献范围的起始波长。详见 [谱线筛选](../advance/line_filtering.md)。"
+
+#: ../../fundamentals/linelist.md:90
+msgid "line_range_e"
+msgstr "line_range_e"
+
+#: ../../fundamentals/linelist.md:90
+msgid ""
+"End wavelength of the estimated line-contribution range. See [Line "
+"Filtering](../advance/line_filtering.md)."
+msgstr "估计谱线贡献范围的结束波长。详见 [谱线筛选](../advance/line_filtering.md)。"
+
+#: ../../fundamentals/linelist.md:93
+msgid "Important Note"
+msgstr "重要说明"
+
+#: ../../fundamentals/linelist.md:95
+msgid ""
+"As far as the radiative transfer code is concerned the ionization is "
+"defined as part of the species term. I.e. a line with species = \"Fe 2\" "
+"will be calculated as ionization = 2. If no number is set within the "
+"species field, SME will use an ionization of 1."
+msgstr ""
+"对于辐射转移代码而言，电离态被视为 `species` 字段的一部分。也就是说，若某条谱线的 `species = \"Fe 2\"`，则会按 "
+"`ionization = 2` 来计算。如果 `species` 字段中没有指定数字，SME 会默认使用 `ionization = 1`。"
+
+#: ../../fundamentals/linelist.md:99
+msgid ""
+"Also atom_number is ignored in the radiative transfer calculations and "
+"therefore does not need to be set."
+msgstr "此外，`atom_number` 在辐射转移计算中会被忽略，因此不需要设置。"
+
+#: ../../fundamentals/linelist.md:101
+msgid "Example Linelist"
+msgstr "Linelist 示例"
+
+#: ../../fundamentals/linelist.md:103
+msgid "Below is a typical `sme.linelist` excerpt (middle rows omitted):"
+msgstr "下面给出一个典型的 `sme.linelist` 片段（中间若干行省略）："

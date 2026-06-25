@@ -1,0 +1,146 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2025, Jeff Valenti, Nikolai Piskunov, Mingjie Jian, Ansgar
+# Wehrhahn
+# This file is distributed under the same license as the PySME package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PySME 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-03-29 22:44+0900\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: zh_CN\n"
+"Language-Team: zh_CN <LL@li.org>\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: ../../dev/release_process.md:1
+msgid "Release process"
+msgstr ""
+
+#: ../../dev/release_process.md:3
+msgid "This page documents the current PySME release flow (CI + PyPI)."
+msgstr ""
+
+#: ../../dev/release_process.md:5
+msgid "Branch and CI model"
+msgstr ""
+
+#: ../../dev/release_process.md:7
+msgid "Day-to-day development happens on `develop` (and feature branches)."
+msgstr ""
+
+#: ../../dev/release_process.md:8
+msgid ""
+"Pull requests into `develop` or `master` run the main workflow in "
+"`.github/workflows/python-app.yml`."
+msgstr ""
+
+#: ../../dev/release_process.md:9
+msgid "PR checks are change-aware:"
+msgstr ""
+
+#: ../../dev/release_process.md:10
+msgid "Code changes run pytest matrices on Linux and macOS."
+msgstr ""
+
+#: ../../dev/release_process.md:11
+msgid "Docs-only changes run the docs build job."
+msgstr ""
+
+#: ../../dev/release_process.md:13
+msgid "What triggers a real release"
+msgstr ""
+
+#: ../../dev/release_process.md:15
+msgid ""
+"Only a `v*` tag push triggers package build/publish jobs, and release "
+"tags are gated to commits on `origin/master`."
+msgstr ""
+
+#: ../../dev/release_process.md:17
+msgid "This means:"
+msgstr ""
+
+#: ../../dev/release_process.md:18
+msgid "Tag on `master` commit: release pipeline runs."
+msgstr ""
+
+#: ../../dev/release_process.md:19
+msgid "Tag on non-`master` commit: workflow is skipped by gate."
+msgstr ""
+
+#: ../../dev/release_process.md:21
+msgid "Standard release steps"
+msgstr ""
+
+#: ../../dev/release_process.md:23
+msgid "Merge validated `develop` changes into `master`."
+msgstr ""
+
+#: ../../dev/release_process.md:24
+msgid "Confirm `master` CI is green."
+msgstr ""
+
+#: ../../dev/release_process.md:25
+msgid "Create and push a SemVer tag on `master` (for example `v1.0.0`)."
+msgstr ""
+
+#: ../../dev/release_process.md:26
+msgid "Wait for GitHub Actions release jobs:"
+msgstr ""
+
+#: ../../dev/release_process.md:27
+msgid "Build source distribution"
+msgstr ""
+
+#: ../../dev/release_process.md:28
+msgid "Build wheels"
+msgstr ""
+
+#: ../../dev/release_process.md:29
+msgid "Publish to PyPI"
+msgstr ""
+
+#: ../../dev/release_process.md:30
+msgid "Create GitHub Release"
+msgstr ""
+
+#: ../../dev/release_process.md:31
+msgid "Verify published package:"
+msgstr ""
+
+#: ../../dev/release_process.md:32
+msgid "`pip install pysme-astro==<version>`"
+msgstr ""
+
+#: ../../dev/release_process.md:33
+msgid "`python -c \"import pysme; print(pysme.__version__)\"`"
+msgstr ""
+
+#: ../../dev/release_process.md:35
+msgid "Repository settings to keep aligned"
+msgstr ""
+
+#: ../../dev/release_process.md:37
+msgid ""
+"In branch protection/rulesets, keep required checks aligned with current "
+"job names."
+msgstr ""
+
+#: ../../dev/release_process.md:38
+msgid "For PR merging, require test jobs and docs build as appropriate."
+msgstr ""
+
+#: ../../dev/release_process.md:39
+msgid ""
+"Do not require release-only jobs (`Build source distribution`, wheel "
+"build, `Publish to PyPI`, `Create GitHub Release`) for PRs."
+msgstr ""
+

@@ -1,0 +1,552 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2025, Jeff Valenti, Nikolai Piskunov, Mingjie Jian, Ansgar
+# Wehrhahn
+# This file is distributed under the same license as the PySME package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PySME 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-03-29 22:44+0900\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: zh_CN\n"
+"Language-Team: zh_CN <LL@li.org>\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: ../../advance/fordev.md:1
+msgid "For dev"
+msgstr ""
+
+#: ../../advance/fordev.md:5
+msgid ""
+"This is the page mainly for developers of PySME and the note on its "
+"function, which may have inaccurate information."
+msgstr ""
+
+#: ../../advance/fordev.md:8
+msgid "PySME components"
+msgstr ""
+
+#: ../../advance/fordev.md:10
+msgid ""
+"Since SME is the C++/Fortran library for the spectral synthesis part, "
+"PySME is divided into a few components to make the code work."
+msgstr ""
+
+#: ../../advance/fordev.md:11
+msgid "python package. This is the main interface which the users interact with."
+msgstr ""
+
+#: ../../advance/fordev.md:12
+msgid ""
+"`SMR_DLL` class in `sme_synth.py`. This class perform some necessary "
+"manipulation for the input and pass it to the functions inside `_smelib`"
+msgstr ""
+
+#: ../../advance/fordev.md:13
+msgid ""
+"`_smelib` compiled in `src/pysme/smelib`. This is the C-extension which "
+"attach the python side data and C++ side data."
+msgstr ""
+
+#: ../../advance/fordev.md:14
+msgid ""
+"SMElib core shared library (`sme_synth.*`) which performs the actual "
+"synthesis with C++/Fortran."
+msgstr ""
+
+#: ../../advance/fordev.md:16
+msgid "What does PySME do from installation to the first use?"
+msgstr ""
+
+#: ../../advance/fordev.md:18
+msgid "Behavior differs by version."
+msgstr ""
+
+#: ../../advance/fordev.md:20
+msgid "`<= v0.6.26` (legacy runtime-fetch flow)"
+msgstr ""
+
+#: ../../advance/fordev.md:22
+msgid "`pip install pysme-astro`: python package is installed."
+msgstr ""
+
+#: ../../advance/fordev.md:23
+msgid ""
+"`import pysme`: PySME may download SMElib binaries at runtime from the "
+"SMElib release page."
+msgstr ""
+
+#: ../../advance/fordev.md:24
+msgid ""
+"If `_smelib` is missing/incompatible, PySME may try to compile the "
+"interface at runtime."
+msgstr ""
+
+#: ../../advance/fordev.md:26
+msgid "`>= v0.6.27` (bundled-wheel flow)"
+msgstr ""
+
+#: ../../advance/fordev.md:28
+msgid ""
+"`pip install pysme-astro`: wheel already contains SMElib shared library "
+"and `_smelib`."
+msgstr ""
+
+#: ../../advance/fordev.md:29
+msgid "`import pysme`: PySME loads bundled binaries from the installed package."
+msgstr ""
+
+#: ../../advance/fordev.md:30
+msgid "No runtime download/compile is expected for normal wheel installs."
+msgstr ""
+
+#: ../../advance/fordev.md:32
+msgid "Source/editable install (`>= v0.6.27`)"
+msgstr ""
+
+#: ../../advance/fordev.md:34
+msgid ""
+"Binary components are built during installation (`pip install -e .` or "
+"wheel build), not on first import."
+msgstr ""
+
+#: ../../advance/fordev.md:36
+msgid ""
+"For source installs from GitHub, SMElib is provided via git submodule. "
+"Always ensure submodules are initialized and updated:"
+msgstr ""
+
+#: ../../advance/fordev.md:43
+msgid "How to rebuild  smelib"
+msgstr ""
+
+#: ../../advance/fordev.md:45
+msgid "`>= v0.6.27` (recommended)"
+msgstr ""
+
+#: ../../advance/fordev.md:47
+msgid "From the project root:"
+msgstr ""
+
+#: ../../advance/fordev.md:53
+msgid ""
+"This rebuilds/reinstalls package binaries (including SMElib and "
+"`_smelib`) for the active environment."
+msgstr ""
+
+#: ../../advance/fordev.md:55
+msgid ""
+"After pulling new commits, re-run submodule sync/update before "
+"reinstalling:"
+msgstr ""
+
+#: ../../advance/fordev.md:64
+msgid "`<= v0.6.26` (legacy manual workflow)"
+msgstr ""
+
+#: ../../advance/fordev.md:72
+msgid "Versions in SME/PySME"
+msgstr ""
+
+#: ../../advance/fordev.md:74
+msgid "There are a few versions in SME/PySME:"
+msgstr ""
+
+#: ../../advance/fordev.md:4 ../../advance/fordev.md:75
+msgid "SMElib version"
+msgstr ""
+
+#: ../../advance/fordev.md:76
+msgid ""
+"The version of the SME library, defined in "
+"`SMElib/src/sme/sme_synth_faster.h`, varialbe `VERSION`."
+msgstr ""
+
+#: ../../advance/fordev.md:77
+msgid "This is defined manually."
+msgstr ""
+
+#: ../../advance/fordev.md:4 ../../advance/fordev.md:78
+msgid "SMElib release version"
+msgstr ""
+
+#: ../../advance/fordev.md:79
+msgid ""
+"Since the SME library here is mainly for the use of PySME, slight "
+"modification may be required for the library compilation."
+msgstr ""
+
+#: ../../advance/fordev.md:80
+msgid ""
+"The release version is desigend for such small (not effection the "
+"synthesize result) function."
+msgstr ""
+
+#: ../../advance/fordev.md:81
+msgid ""
+"It will keep the same MAJOR and MINOR versioning, and use PATCH version "
+"to indicate the updates."
+msgstr ""
+
+#: ../../advance/fordev.md:82
+msgid ""
+"In the ideal situation, SMELIb release version will be the same as SMElib"
+" version."
+msgstr ""
+
+#: ../../advance/fordev.md:4 ../../advance/fordev.md:83
+msgid "PySME version"
+msgstr ""
+
+#: ../../advance/fordev.md:84
+msgid ""
+"The version of the PySME, which is independent of the versions mentioned "
+"above."
+msgstr ""
+
+#: ../../advance/fordev.md:85
+msgid ""
+"We will try our best to use the MINOR version to refer to the SMELib "
+"version, but large release may take a leap on this."
+msgstr ""
+
+#: ../../advance/fordev.md:87
+msgid "Version matching between SMElib and PySME"
+msgstr ""
+
+#: ../../advance/fordev.md:89
+msgid ""
+"For the convenience of development, older PySME versions used runtime "
+"SMElib download on first import. From `v0.7.0`, PySME uses strict one-to-"
+"one version matching with SMElib at release time. Each PySME release is "
+"pinned to one specific SMElib release, and the mapping is recorded "
+"explicitly in the table below. This avoids accidental runtime mismatch "
+"with a newer upstream SMElib release."
+msgstr ""
+
+#: ../../advance/fordev.md:94
+msgid ""
+"For other versions, we will not solve the future compatibility issue. You"
+" can download the corresponding SMElib, and override the default library "
+"manually. PySME versions not listed in the table follow the legacy "
+"behavior of resolving to the latest available SMElib release, which is "
+"not recommended for reproducible use."
+msgstr ""
+
+#: ../../advance/fordev.md:98
+msgid "The follwing table shows the version matching between SMElib and PySME."
+msgstr ""
+
+#: ../../advance/fordev.md:4
+msgid "v0.7.0"
+msgstr ""
+
+#: ../../advance/fordev.md:4
+msgid "v6.13.16"
+msgstr ""
+
+#: ../../advance/fordev.md:4
+msgid "6.13 (June 2025)"
+msgstr ""
+
+#: ../../advance/fordev.md:4
+msgid "v0.6.23"
+msgstr ""
+
+#: ../../advance/fordev.md:4
+msgid "v6.13.12"
+msgstr ""
+
+#: ../../advance/fordev.md:4
+msgid "v0.4.199"
+msgstr ""
+
+#: ../../advance/fordev.md:4
+msgid "v6.0.6"
+msgstr ""
+
+#: ../../advance/fordev.md:4
+msgid "6.03 (July 2019)"
+msgstr ""
+
+#: ../../advance/fordev.md:4
+msgid "v0.4.167-v0.4.198"
+msgstr ""
+
+#: ../../advance/fordev.md:107
+msgid "For source installs:"
+msgstr ""
+
+#: ../../advance/fordev.md:108
+msgid ""
+"`v0.7.0` and newer: use `SpectroscopyMadeEasy/PySME` and checkout the "
+"target PySME tag."
+msgstr ""
+
+#: ../../advance/fordev.md:109
+msgid ""
+"Older legacy lines: use `SpectroscopyMadeEasy/PySME-legacy` and checkout "
+"the historical tag there."
+msgstr ""
+
+#: ../../advance/fordev.md:111
+msgid ""
+"The PySME version range indicate the versions which manually matchting of"
+" the SMELib is required, and the single PySME version indicates the one "
+"with freezed SMElib (thus only pip install is required before using). "
+"Note that:"
+msgstr ""
+
+#: ../../advance/fordev.md:113
+msgid ""
+"Small bug fix on SMElib will be labeled with the PATCH version, thus the "
+"actual SMElib used would be 6.13.x. The change of SMElib MAJOR and MINOR "
+"version will follow that in SME."
+msgstr ""
+
+#: ../../advance/fordev.md:114
+msgid ""
+"The support for Apple Silicon Mac is not complete for PySME v0.4. You "
+"need to clone the SMELib from the source code, compile and replace the "
+"library files by yourself."
+msgstr ""
+
+#: ../../advance/fordev.md:116
+msgid "How to update PySME/SMElib version"
+msgstr ""
+
+#: ../../advance/fordev.md:118
+msgid ""
+"The versions are controlled by `git tag`.  For PySME, setting a new tag "
+"will update the version to the latest tag. For SMElib, setting a new "
+"release will based on a tag."
+msgstr ""
+
+#: ../../advance/fordev.md:122
+msgid "Docs versioning policy (RTD)"
+msgstr ""
+
+#: ../../advance/fordev.md:124
+msgid "PySME docs use a tag-driven versioning strategy."
+msgstr ""
+
+#: ../../advance/fordev.md:126
+msgid "Create release tags in `vX.Y.Z` format (for example `v0.6.23`)."
+msgstr ""
+
+#: ../../advance/fordev.md:127
+msgid ""
+"`docs/conf.py` resolves `release` from installed distribution metadata "
+"first, then from `git describe` fallback, so docs title/version follow "
+"release tags."
+msgstr ""
+
+#: ../../advance/fordev.md:128
+msgid ""
+"`docs/conf.py` keeps docs buildable without importing/installing `pysme`,"
+" and falls back to git/env metadata when distribution metadata is "
+"unavailable."
+msgstr ""
+
+#: ../../advance/fordev.md:130
+msgid "RTD project settings must also be configured once (in the RTD web UI):"
+msgstr ""
+
+#: ../../advance/fordev.md:132
+msgid ""
+"Keep both `latest` (branch docs) and `stable` (latest release tag) "
+"enabled."
+msgstr ""
+
+#: ../../advance/fordev.md:133
+msgid "Set default docs version to `stable`."
+msgstr ""
+
+#: ../../advance/fordev.md:134
+msgid "Add an automation rule to activate SemVer tags (`v*`) as RTD versions."
+msgstr ""
+
+#: ../../advance/fordev.md:135
+msgid "Hide or deactivate outdated branch versions if needed."
+msgstr ""
+
+#: ../../advance/fordev.md:137
+msgid "NLTE departure coefficients"
+msgstr ""
+
+#: ../../advance/fordev.md:139
+msgid "What happens when the NLTE grid is added into PySME?"
+msgstr ""
+
+#: ../../advance/fordev.md:141
+msgid "`sme.nlte.set_nlte()`, then nothing happens."
+msgstr ""
+
+#: ../../advance/fordev.md:142
+msgid ""
+"Inside `synthesize_spectrum()`, `sme.nlte.update_coefficients(sme, dll, "
+"self.lfs_nlte)` will be triggered if there is nlte grids in `sme`."
+msgstr ""
+
+#: ../../advance/fordev.md:144
+msgid "`nlte.update_coefficients`"
+msgstr ""
+
+#: ../../advance/fordev.md:146
+msgid "All the $b$s will be reset by `dll.ResetDepartureCoefficients()`."
+msgstr ""
+
+#: ../../advance/fordev.md:147
+msgid ""
+"Format of line list will be check, and NLTE calculation will not be "
+"performed if the format is not `long`."
+msgstr ""
+
+#: ../../advance/fordev.md:148
+msgid "Get the NLTE grid using `self.get_grid(sme, elem, lfs_nlte)`"
+msgstr ""
+
+#: ../../advance/fordev.md:149
+msgid "If no lines are found for this element, remove it from NLTE list."
+msgstr ""
+
+#: ../../advance/fordev.md:150
+msgid ""
+"Get the $b$ matrix using `grid.get(sme.abund, sme.teff, sme.logg, "
+"sme.monh, sme.atmo)`."
+msgstr ""
+
+#: ../../advance/fordev.md:151
+msgid "This is also the core part of `update_coefficients`."
+msgstr ""
+
+#: ../../advance/fordev.md:152
+msgid "Input the $b$s using `dll.InputDepartureCoefficients(bmat[:, lr], li)`."
+msgstr ""
+
+#: ../../advance/fordev.md:154
+msgid "`self.get_grid`"
+msgstr ""
+
+#: ../../advance/fordev.md:156
+msgid ""
+"This function is to get the $b$ grid for a specific element. Note that "
+"the whole $b$ grid is not readed, but only the levels related with the "
+"input line list. Thus the configuration or level matching is done inside "
+"this function."
+msgstr ""
+
+#: ../../advance/fordev.md:160
+msgid "configuration/level matching"
+msgstr ""
+
+#: ../../advance/fordev.md:162
+msgid ""
+"This is done inside `Grid.__init__`. The level matching can be done with "
+"levels or energy, and the default one is energy."
+msgstr ""
+
+#: ../../advance/fordev.md:164
+msgid "`grid.get`"
+msgstr ""
+
+#: ../../advance/fordev.md:166
+msgid "Find the relative abundance input"
+msgstr ""
+
+#: ../../advance/fordev.md:167
+msgid "`self.read_grid(rabund, teff, logg, monh)`"
+msgstr ""
+
+#: ../../advance/fordev.md:168
+msgid "`return self.interpolate(rabund, teff, logg, monh, atmo)`."
+msgstr ""
+
+#: ../../advance/fordev.md:170
+msgid "`apply_continuum`"
+msgstr ""
+
+#: ../../advance/fordev.md:172
+msgid "Apply continuum to the spectra according to `cscale`."
+msgstr ""
+
+#: ../../advance/fordev.md:174
+msgid ""
+"For each segment i:      - If `cscale_type` contains 'spline', then "
+"`cscale` should be an array which with the same length of sme.wave[i], "
+"and its value will be multiplied to sme.synth[i].         - If the length"
+" of `cscale` is not the same as the length of `sme.wave[i]`, then it will"
+" be interpolated according to `cwave`, which for now is the same as "
+"`sme.wave[i]` thus this situation is not allowed.         - We may just "
+"remove the `spline` option, if not stated in the paper.      - If "
+"`cscale_type` does not contain 'spline', then the code will calculate "
+"`np.polyval` according to `cscale`, and apply to `sme.synth[i]`."
+msgstr ""
+
+#: ../../advance/fordev.md:180
+msgid "`radial_velocity_mode`"
+msgstr ""
+
+#: ../../advance/fordev.md:182
+msgid ""
+"This variable determines how the cscale and vrad being assigned, and can "
+"be specfied manually."
+msgstr ""
+
+#: ../../advance/fordev.md:184
+msgid "NLTE grid"
+msgstr ""
+
+#: ../../advance/fordev.md:186
+msgid ""
+"If you create your own NLTE departure coefficient grid following the "
+"current public grid to a `DirectAccess` file and you use the "
+"`nlte.DirectAccess.wrtie` function, note that the `wrtie` and `read` code"
+" changes the shape of b-grid, tau and rhox.  Some extra test is needed to"
+" clear the situation."
+msgstr ""
+
+#: ../../advance/fordev.md:189
+msgid "SME"
+msgstr ""
+
+#: ../../advance/fordev.md:191
+msgid "`Trasf` function"
+msgstr ""
+
+#: ../../advance/fordev.md:193
+msgid "`AutoIonization`"
+msgstr ""
+
+#: ../../advance/fordev.md:194
+msgid "Calculate Line center opacity using `LINEOPAC`."
+msgstr ""
+
+#: ../../advance/fordev.md:195
+msgid "Calculate Line contribution limits using `OPMTRX`."
+msgstr ""
+
+#: ../../advance/fordev.md:196
+msgid "Step 2 and 3 go through all the input lines"
+msgstr ""
+
+#: ../../advance/fordev.md:198
+msgid "IDLSME"
+msgstr ""
+
+#: ../../advance/fordev.md:200
+msgid "Installation"
+msgstr ""
+
+#: ../../advance/fordev.md:202
+msgid "TBD."
+msgstr ""
+

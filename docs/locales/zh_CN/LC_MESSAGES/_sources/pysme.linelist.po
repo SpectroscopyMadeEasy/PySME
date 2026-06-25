@@ -1,0 +1,432 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2025, Jeff Valenti, Nikolai Piskunov, Mingjie Jian, Ansgar
+# Wehrhahn
+# This file is distributed under the same license as the PySME package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PySME 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-03-29 22:44+0900\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: zh_CN\n"
+"Language-Team: zh_CN <LL@li.org>\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: ../../_sources/pysme.linelist.rst:2
+msgid "pysme.atmosphere package"
+msgstr ""
+
+#: ../../_sources/pysme.linelist.rst:5
+msgid "Subpackages"
+msgstr ""
+
+#: ../../_sources/pysme.linelist.rst:8
+msgid "Submodules"
+msgstr ""
+
+#: ../../_sources/pysme.linelist.rst:11
+msgid "pysme.linelist.linelist module"
+msgstr ""
+
+#: of pysme.linelist.linelist:1
+msgid ""
+"Handles abstract LineList data Implementation of a specific source (e.g. "
+"Vald) should be in its own file"
+msgstr ""
+
+#: of pysme.linelist.linelist:4
+msgid "Uses a pandas dataframe under the hood to handle the data"
+msgstr ""
+
+#: of pysme.linelist.linelist.LineListError:1
+msgid "Bases: :py:class:`Exception`"
+msgstr ""
+
+#: of pysme.linelist.linelist.LineListError:1
+msgid "Raise when attempt to read a line data file fails"
+msgstr ""
+
+#: of pysme.linelist.linelist.LineList:1
+msgid "Bases: :py:class:`~pysme.persistence.IPersist`"
+msgstr ""
+
+#: of pysme.linelist.linelist.LineList:1
+msgid "Atomic data for a list of spectral lines"
+msgstr ""
+
+#: of pysme.linelist.linelist.LineList.add:1
+msgid "Add a new line to the existing linelist"
+msgstr ""
+
+#: of pysme.linelist.linelist.LineList.add:3
+msgid ""
+"This replaces the underlying datastructure, i.e. any references (atomic, "
+"etc.) will not be updated"
+msgstr ""
+
+#: ../../_sources/pysme.linelist.rst
+msgid "Parameters"
+msgstr ""
+
+#: of pysme.linelist.linelist.LineList.add:6
+msgid "Name of the element and ionization"
+msgstr ""
+
+#: of pysme.linelist.linelist.LineList.add:8
+msgid "central wavelength"
+msgstr ""
+
+#: of pysme.linelist.linelist.LineList.add:10
+msgid "excitation energy in eV"
+msgstr ""
+
+#: of pysme.linelist.linelist.LineList.add:12
+msgid "gf logarithm"
+msgstr ""
+
+#: of pysme.linelist.linelist.LineList.add:14
+msgid "broadening factor radiation"
+msgstr ""
+
+#: of pysme.linelist.linelist.LineList.add:16
+msgid "broadening factor qst"
+msgstr ""
+
+#: of pysme.linelist.linelist.LineList.add:18
+msgid "broadening factor van der Waals"
+msgstr ""
+
+#: of pysme.linelist.linelist.LineList.append:1
+msgid "Append a linelist to this one"
+msgstr ""
+
+#: of pysme.linelist.linelist.LineList.append:3
+msgid "Note this replaces the underlying data and sorts the lines by wavelength"
+msgstr ""
+
+#: of pysme.linelist.linelist.LineList.append:6
+msgid "other linelist to append"
+msgstr ""
+
+#: ../../_sources/pysme.linelist.rst
+msgid "Returns"
+msgstr ""
+
+#: of pysme.linelist.linelist.LineList.append:9
+msgid "**self** -- this object, now with appended data"
+msgstr ""
+
+#: ../../_sources/pysme.linelist.rst
+msgid "Return type"
+msgstr ""
+
+#: of pysme.linelist.linelist.LineList.cull:1
+msgid "Remove lines from the linelist that are weaker than the cutoff"
+msgstr ""
+
+#: of pysme.linelist.linelist.LineList.cull:3
+#: pysme.linelist.linelist.LineList.cull_percentage:4
+msgid ""
+"The linedepth is an estimate and not accurate for the final stellar "
+"parameters, so final line depths might differ from depths in the linelist"
+msgstr ""
+
+#: of pysme.linelist.linelist.LineList.cull:6
+msgid ""
+"the cutoff for lines to keep them. The cutoff is specified within the "
+"normalised spectrum, so should be between 0 and 1"
+msgstr ""
+
+#: of pysme.linelist.linelist.LineList.cull:10
+#: pysme.linelist.linelist.LineList.cull_percentage:14
+msgid "the culled linelist"
+msgstr ""
+
+#: of pysme.linelist.linelist.LineList.cull_percentage:1
+msgid ""
+"Remove a percentage of the lines in the linelist, removing the weakest "
+"lines first"
+msgstr ""
+
+#: of pysme.linelist.linelist.LineList.cull_percentage:7
+msgid ""
+"The cut is not exact in the number of lines, e.g. if there are many lines"
+" with the same depth as the cutoff, then the resulting Linelist will have"
+" slightly more than half the lines."
+msgstr ""
+
+#: of pysme.linelist.linelist.LineList.cull_percentage:11
+msgid "The percentage to keep in the linelist, should be between 0 and 100"
+msgstr ""
+
+#: ../../_sources/pysme.linelist.rst
+msgid "Raises"
+msgstr ""
+
+#: of pysme.linelist.linelist.LineList.cull_percentage:17
+msgid "if the percentage is not between 0 and 100"
+msgstr ""
+
+#: of pysme.linelist.linelist.LineList.from_IDL_SME:1
+msgid "extract LineList from IDL SME structure keywords"
+msgstr ""
+
+#: of pysme.linelist.linelist.LineList.parse_line_error:1
+msgid "Transform Line Error flags into relative error values"
+msgstr ""
+
+#: of pysme.linelist.linelist.LineList.parse_line_error:3
+msgid "Error Flags as defined by various references"
+msgstr ""
+
+#: of pysme.linelist.linelist.LineList.parse_line_error:5
+msgid "depths of the lines, to convert absolute to relative errors"
+msgstr ""
+
+#: of pysme.linelist.linelist.LineList.parse_line_error:8
+msgid "**errors** -- relative errors for each line"
+msgstr ""
+
+#: of pysme.linelist.linelist.LineList.sort:1
+msgid "Sort the linelist"
+msgstr ""
+
+#: of pysme.linelist.linelist.LineList.sort:3
+msgid ""
+"The underlying datastructure will be replaced, i.e. any references will "
+"not be sorted or updated"
+msgstr ""
+
+#: of pysme.linelist.linelist.LineList.sort:6
+msgid "Field to use for sorting (default: \"wlcent\")"
+msgstr ""
+
+#: of pysme.linelist.linelist.LineList.sort:8
+msgid "Wether to sort in ascending or descending order (default: True)"
+msgstr ""
+
+#: of pysme.linelist.linelist.LineList.sort:11
+msgid "**self** -- The sorted LineList object"
+msgstr ""
+
+#: of pysme.linelist.linelist.LineList.trim:1
+msgid "Remove lines from the linelist outside the specified wavelength range"
+msgstr ""
+
+#: of pysme.linelist.linelist.LineList.trim:4
+msgid "lower wavelength limit in Angstrom"
+msgstr ""
+
+#: of pysme.linelist.linelist.LineList.trim:6
+msgid "upper wavelength limit in Angstrom"
+msgstr ""
+
+#: of pysme.linelist.linelist.LineList.trim:8
+msgid ""
+"add an additional buffer on each side, corresponding to this radial "
+"velocity, by default None"
+msgstr ""
+
+#: of pysme.linelist.linelist.LineList.trim:10
+msgid ""
+"keep the strong line in the range of wave_min-strong_line_margin, "
+"wave_max+strong_line_margin."
+msgstr ""
+
+#: of pysme.linelist.linelist.LineList.trim:12
+msgid "The element of lines to be classified as strong lines."
+msgstr ""
+
+#: of pysme.linelist.linelist.LineList.trim:15
+msgid "trimmed linelist"
+msgstr ""
+
+#: of pysme.linelist.linelist.LineList.atomic:1
+msgid "Data array passed to C library, should only be used for this purpose"
+msgstr ""
+
+#: ../../../docstring of pysme.linelist.linelist.LineList.atomic
+#: pysme.linelist.linelist.LineList.extra
+#: pysme.linelist.linelist.LineList.lineformat
+#: pysme.linelist.linelist.LineList.lulande
+#: pysme.linelist.linelist.LineList.species
+msgid "type"
+msgstr ""
+
+#: of pysme.linelist.linelist.LineList.atomic:3
+msgid "list(float) of size (nlines, 8)"
+msgstr ""
+
+#: of pysme.linelist.linelist.LineList.extra:1
+msgid "additional line level information for NLTE calculation"
+msgstr ""
+
+#: of pysme.linelist.linelist.LineList.extra:3
+msgid "list(float) of size (nlines, 3)"
+msgstr ""
+
+#: ../../../docstring of pysme.linelist.linelist.LineList.lineformat:1
+msgid "Defines how much information is available"
+msgstr ""
+
+#: ../../../docstring of pysme.linelist.linelist.LineList.lineformat:3
+#, python-brace-format
+msgid "{\"short\", \"long\"}"
+msgstr ""
+
+#: of pysme.linelist.linelist.LineList.lulande:1
+msgid "Lower and Upper Lande factors"
+msgstr ""
+
+#: of pysme.linelist.linelist.LineList.lulande:3
+msgid "list(float) of size (nlines, 2)"
+msgstr ""
+
+#: of pysme.linelist.linelist.LineList.species:1
+msgid "Species name of each line"
+msgstr ""
+
+#: of pysme.linelist.linelist.LineList.species:3
+msgid "list(str) of size (nlines,)"
+msgstr ""
+
+#: ../../_sources/pysme.linelist.rst:19
+msgid "pysme.linelist.vald module"
+msgstr ""
+
+#: of pysme.linelist.ges:1 pysme.linelist.vald:1
+msgid ""
+"Module for handling linelist data from the VALD3 database "
+"(http://vald.astro.uu.se/)."
+msgstr ""
+
+#: of pysme.linelist.ges.GesError:1 pysme.linelist.vald.ValdError:1
+msgid "Bases: :py:class:`~pysme.linelist.linelist.LineListError`"
+msgstr ""
+
+#: of pysme.linelist.ges.GesError:1 pysme.linelist.vald.ValdError:1
+msgid "Vald Data File Error"
+msgstr ""
+
+#: of pysme.linelist.ges.GesFile:1 pysme.linelist.vald.ValdFile:1
+msgid "Bases: :py:class:`~pysme.linelist.linelist.LineList`"
+msgstr ""
+
+#: of pysme.linelist.ges.GesFile:1 pysme.linelist.vald.ValdFile:1
+msgid "Atomic data for a list of spectral lines."
+msgstr ""
+
+#: of pysme.linelist.vald.ValdFile.identify_valdtype:1
+msgid ""
+"Determines whether the file was created with extract_all, "
+"extract_stellar, or extract_element and whether it is in long or short "
+"format"
+msgstr ""
+
+#: of pysme.linelist.vald.ValdFile.identify_valdtype:4
+msgid "file contents"
+msgstr ""
+
+#: of pysme.linelist.ges.GesFile.load:1 pysme.linelist.vald.ValdFile.load:1
+msgid "Read line data file from the VALD extract stellar service"
+msgstr ""
+
+#: of pysme.linelist.ges.GesFile.load:3 pysme.linelist.vald.ValdFile.load:3
+msgid "Name of the VALD linelist file to read"
+msgstr ""
+
+#: of pysme.linelist.ges.GesFile.load:6 pysme.linelist.vald.ValdFile.load:6
+msgid "**vald** -- Parsed vald file"
+msgstr ""
+
+#: of pysme.linelist.vald.ValdFile.merge_list:1
+msgid ""
+"Combine two VALD line list. The two line list must have the same "
+"short/long format. Note that the code will use the metadata from vlist_1 "
+"as the ones in the combined line list. Lines with same 'species', "
+"'wlcent', 'gflog' and 'excit' will be treated as duplicated lines and "
+"removed. Note: reference mismatch is known to be happen during line list "
+"merge."
+msgstr ""
+
+#: of pysme.linelist.vald.ValdFile.parse_abund:1
+msgid "Parse VALD abundance lines from a VALD line data file"
+msgstr ""
+
+#: of pysme.linelist.vald.ValdFile.parse_abund:3
+msgid "Lines containing the VALD abundance data"
+msgstr ""
+
+#: of pysme.linelist.vald.ValdFile.parse_abund:6
+msgid "**abund** -- Parsed abundance data"
+msgstr ""
+
+#: of pysme.linelist.vald.ValdFile.parse_abund:9
+msgid "If the data could not be parsed"
+msgstr ""
+
+#: of pysme.linelist.vald.ValdFile.parse_header:1
+msgid ""
+"Parse header line from a VALD line data file and sets the internal "
+"parameters"
+msgstr ""
+
+#: of pysme.linelist.vald.ValdFile.parse_header:4
+msgid "header line of a vald file"
+msgstr ""
+
+#: of pysme.linelist.vald.ValdFile.parse_header:7
+msgid "If the header is not understood"
+msgstr ""
+
+#: of pysme.linelist.vald.ValdFile.parse_linedata:1
+msgid "Parse line data from a VALD line data file"
+msgstr ""
+
+#: of pysme.linelist.vald.ValdFile.parse_linedata:3
+msgid "lines of the input data file"
+msgstr ""
+
+#: of pysme.linelist.vald.ValdFile.parse_linedata:5
+msgid ""
+"linelist format, short format has one line of data per spectral line, "
+"while the long format uses four lines per spectral line. The default is "
+"\"short\""
+msgstr ""
+
+#: of pysme.linelist.vald.ValdFile.parse_linedata:11
+msgid "**linelist** -- the parsed linelist"
+msgstr ""
+
+#: of pysme.linelist.vald.ValdFile.parse_valdatmo:1
+msgid "Parse VALD model atmosphere line from a VALD line data file"
+msgstr ""
+
+#: of pysme.linelist.vald.ValdFile.parse_valdatmo:3
+msgid "line form the model atmosphere"
+msgstr ""
+
+#: of pysme.linelist.vald.ValdFile.parse_valdatmo:6
+msgid "**atmo** -- Name of the model atmosphere"
+msgstr ""
+
+#: of pysme.linelist.vald.ValdFile.parse_valdatmo:9
+msgid "If the line is not from a model atmosphere"
+msgstr ""
+
+#: of pysme.linelist.vald.ValdFile.save:1
+msgid "Save the line list to a file, in VALD format."
+msgstr ""
+
+#: ../../_sources/pysme.linelist.rst:27
+msgid "pysme.linelist.ges module"
+msgstr ""
+

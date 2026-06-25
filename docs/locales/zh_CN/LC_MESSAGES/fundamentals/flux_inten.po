@@ -1,0 +1,134 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2025, Jeff Valenti, Nikolai Piskunov, Mingjie Jian, Ansgar
+# Wehrhahn
+# This file is distributed under the same license as the PySME package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PySME 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-03-29 22:44+0900\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: zh_CN\n"
+"Language-Team: zh_CN <LL@li.org>\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: ../../fundamentals/flux_inten.md:1
+msgid "Flux and intensity"
+msgstr "通量与强度"
+
+#: ../../fundamentals/flux_inten.md:3
+msgid ""
+"This page summarizes two switches that control how PySME outputs "
+"synthetic spectra."
+msgstr "本页总结了控制 PySME 输出合成光谱方式的两个开关。"
+
+#: ../../fundamentals/flux_inten.md:5
+msgid "`normalize_by_continuum`"
+msgstr "`normalize_by_continuum`"
+
+#: ../../fundamentals/flux_inten.md:7
+msgid ""
+"`normalize_by_continuum` controls whether the synthetic spectrum is "
+"divided by the synthetic continuum:"
+msgstr "`normalize_by_continuum` 控制是否用合成连续谱去除合成光谱："
+
+#: ../../fundamentals/flux_inten.md:10
+msgid ""
+"`True` (default): output a continuum-normalized spectrum (usually for "
+"normalized observations)"
+msgstr "`True`（默认）：输出经过连续谱归一化的光谱（通常用于已归一化的观测）"
+
+#: ../../fundamentals/flux_inten.md:11
+msgid "`False`: keep flux-level output (usually for flux-calibrated observations)"
+msgstr "`False`：保留通量层级输出（通常用于已做通量定标的观测）"
+
+#: ../../fundamentals/flux_inten.md:13
+msgid ""
+"Even when this is `False`, continuum fitting can still be enabled through"
+" `cscale_flag`."
+msgstr "即使这里设为 `False`，也仍然可以通过 `cscale_flag` 启用连续谱拟合。"
+
+#: ../../fundamentals/flux_inten.md:16
+msgid "`specific_intensities_only`"
+msgstr "`specific_intensities_only`"
+
+#: ../../fundamentals/flux_inten.md:18
+msgid ""
+"`specific_intensities_only` controls whether PySME returns angle-"
+"dependent specific intensities or disk-integrated flux:"
+msgstr "`specific_intensities_only` 控制 PySME 返回的是与角度相关的比强度，还是盘面积分后的通量："
+
+#: ../../fundamentals/flux_inten.md:21
+msgid ""
+"`False` (default): integrate specific intensities over the stellar disk "
+"and return flux"
+msgstr "`False`（默认）：将比强度在恒星盘面上积分，并返回通量"
+
+#: ../../fundamentals/flux_inten.md:22
+msgid ""
+"`True`: return specific intensities directly, without flux-level post-"
+"processing"
+msgstr "`True`：直接返回比强度，不进行通量层级的后处理"
+
+#: ../../fundamentals/flux_inten.md:23
+msgid ""
+"In this mode, `synthesize_spectrum` stores trimmed intensity-level "
+"outputs on `sme`:"
+msgstr "在这种模式下，`synthesize_spectrum` 会把裁剪后的强度层级输出存入 `sme`："
+
+#: ../../fundamentals/flux_inten.md:24
+msgid "`sme.wint`: transfer wavelength grid per segment"
+msgstr "`sme.wint`：每个 segment 的 transfer 波长网格"
+
+#: ../../fundamentals/flux_inten.md:25
+msgid "`sme.sint`: line+continuum specific intensities `(nmu, nwave)`"
+msgstr "`sme.sint`：谱线+连续谱的比强度 `(nmu, nwave)`"
+
+#: ../../fundamentals/flux_inten.md:26
+msgid "`sme.cint`: continuum specific intensities `(nmu, nwave)`"
+msgstr "`sme.cint`：连续谱比强度 `(nmu, nwave)`"
+
+#: ../../fundamentals/flux_inten.md:28
+msgid ""
+"This is useful when you want the radiative-transfer output itself (as a "
+"function of angle), rather than only the final integrated spectrum."
+msgstr "当你关心的是辐射转移本身的输出（作为角度的函数），而不仅仅是最终积分后的光谱时，这个模式就很有用。"
+
+#: ../../fundamentals/flux_inten.md:31
+msgid "Typical usage"
+msgstr "典型用法"
+
+#: ../../fundamentals/flux_inten.md:33
+msgid "Normalized stellar spectrum fitting:"
+msgstr "归一化恒星光谱拟合："
+
+#: ../../fundamentals/flux_inten.md:34
+msgid "`normalize_by_continuum = True`"
+msgstr "`normalize_by_continuum = True`"
+
+#: ../../fundamentals/flux_inten.md:35 ../../fundamentals/flux_inten.md:38
+msgid "`specific_intensities_only = False`"
+msgstr "`specific_intensities_only = False`"
+
+#: ../../fundamentals/flux_inten.md:36
+msgid "Flux-calibrated analysis:"
+msgstr "通量定标后的分析："
+
+#: ../../fundamentals/flux_inten.md:37
+msgid "`normalize_by_continuum = False`"
+msgstr "`normalize_by_continuum = False`"
+
+#: ../../fundamentals/flux_inten.md:39
+msgid "Intensity-level diagnostics / custom integration:"
+msgstr "强度层级诊断 / 自定义积分："
+
+#: ../../fundamentals/flux_inten.md:40
+msgid "`specific_intensities_only = True`"
+msgstr "`specific_intensities_only = True`"

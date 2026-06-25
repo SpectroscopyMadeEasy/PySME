@@ -4,8 +4,8 @@
 import logging
 import os, sys
 from ctypes import cdll
-from os.path import abspath, dirname, join, normpath
-from posixpath import expanduser
+from importlib import import_module
+from os.path import normpath
 from .smelib import libtools
 import numpy as np
 
@@ -13,37 +13,57 @@ from .smelib.libtools import get_full_datadir, get_full_libfile, _parse_needed_a
 
 logger = logging.getLogger(__name__)
 
-# Load the library
-# This ensures that we can find the library when we load _smelib
-libfile = get_full_libfile()
+_smelib = None
+CURRENT_LIB = None
 
-try:
-    cdll.LoadLibrary(libfile)
-except OSError as e:
-    msg = str(e)
-    # 仅在 macOS 且架构不匹配时尝试自愈
-    if sys.platform == "darwin" and ("incompatible architecture" in msg or "mach-o file" in msg):
-        need = _parse_needed_arch_from_error(msg)
-        print("Detected arch mismatch; error says need:", need or "(unknown)")
-        # 如果错误里没写 need，就按当前解释器架构
-        if need is not None:
-            download_smelib(force_arch=need)
-            libtools.compile_interface()
-            cdll.LoadLibrary(libfile)
 
-from .smelib import _smelib
+def ensure_smelib_ready(libfile=None):
+    """Load and initialize the native SME library on first use."""
+    global _smelib
+    global CURRENT_LIB
 
-CURRENT_LIB = libfile
+    libfile = libfile or get_full_libfile()
+    if _smelib is not None and CURRENT_LIB == libfile:
+        return _smelib
+
+    if not os.path.exists(libfile):
+        download_smelib()
+
+    try:
+        cdll.LoadLibrary(libfile)
+    except OSError as e:
+        msg = str(e)
+        if sys.platform == "darwin" and (
+            "incompatible architecture" in msg or "mach-o file" in msg
+        ):
+            need = _parse_needed_arch_from_error(msg)
+            print("Detected arch mismatch; error says need:", need or "(unknown)")
+            if need is not None:
+                download_smelib(force_arch=need)
+                libtools.compile_interface()
+                cdll.LoadLibrary(libfile)
+            else:
+                raise
+        else:
+            raise
+
+    try:
+        _smelib = import_module(".smelib._smelib", package="pysme")
+    except Exception:
+        libtools.compile_interface()
+        _smelib = import_module(".smelib._smelib", package="pysme")
+
+    CURRENT_LIB = libfile
+    return _smelib
 
 
 def reload_lib(libfile):
     global _smelib
     global CURRENT_LIB
-    if libfile != CURRENT_LIB:
-        del _smelib
-        cdll.LoadLibrary(libfile)
-        from .smelib import _smelib
-    CURRENT_LIB = libfile
+    target = libfile or get_full_libfile()
+    if target != CURRENT_LIB:
+        _smelib = None
+    ensure_smelib_ready(target)
 
 
 class SME_DLL:
@@ -53,6 +73,8 @@ class SME_DLL:
         self.libfile = libfile
         reload_lib(libfile)
 
+        if hasattr(_smelib, "SetHlinopWarningMode"):
+            _smelib.SetHlinopWarningMode(1)
         self.SetLibraryPath(datadir)
         self.check_data_files_exist()
 
@@ -68,7 +90,7 @@ class SME_DLL:
     @property
     def file(self):
         """str: (Expected) Location of the library file"""
-        return libfile
+        return self.libfile or CURRENT_LIB or get_full_libfile()
 
     def check_data_files_exist(self):
         """
@@ -147,6 +169,22 @@ class SME_DLL:
     def ClearH2broad(self):
         """Clear flag for H2 molecule"""
         self.SetH2broad(False)
+
+    def SetHlinopWarningMode(self, mode):
+        """Set HLINPROF->HLINOP warning mode (0=stderr, 1=record-only, 2=off)."""
+        if hasattr(_smelib, "SetHlinopWarningMode"):
+            _smelib.SetHlinopWarningMode(int(mode))
+
+    def GetHlinopWarnings(self):
+        """Return and clear the last HLINPROF->HLINOP warning summary, if any."""
+        if hasattr(_smelib, "GetHlinopWarnings"):
+            return _smelib.GetHlinopWarnings()
+        return ""
+
+    def _log_hlinop_warnings(self):
+        msg = self.GetHlinopWarnings()
+        if msg:
+            logger.warning("%s", msg)
 
     def SetLineInfoMode(self, mode):
         """Set handling mode for precomputed line info (0=internal, 1=use_if_valid, 2=trust)."""
@@ -556,6 +594,7 @@ class SME_DLL:
         nw, wave, sint, cint = _smelib.Transf(
             mu, wave, nwmax, accrt, accwi, keep_lineop, long_continuum
         )
+        self._log_hlinop_warnings()
 
         # Resize the arrays
         wave = wave[:nw]
@@ -586,7 +625,9 @@ class SME_DLL:
             Centeral depth (i.e. specific intensity) of each line
         """
 
-        return _smelib.CentralDepth(mu, accrt)
+        table = _smelib.CentralDepth(mu, accrt)
+        self._log_hlinop_warnings()
+        return table
 
     def ALMAXRange(self, accrt=1e-4):
         """Compute first-stage ALMAX and line ranges from SMElib preselection logic.
@@ -603,7 +644,9 @@ class SME_DLL:
         linerange : array of size (nlines, 2)
             Preselection range for each line.
         """
-        return _smelib.ALMAXRange(accrt=accrt)
+        result = _smelib.ALMAXRange(accrt=accrt)
+        self._log_hlinop_warnings()
+        return result
 
     def GetLineOpacity(self, wave):
         """

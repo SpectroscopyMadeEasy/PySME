@@ -8,6 +8,7 @@ from astropy import constants as const
 from scipy.interpolate import interp1d
 from scipy.optimize import curve_fit
 
+from ..abund import Abund
 from ..large_file_storage import setup_atmo
 from .atmosphere import Atmosphere as Atmo
 from .atmosphere import AtmosphereError, AtmosphereGrid
@@ -234,6 +235,28 @@ class AtmosphereInterpolator:
         ## Select interpolation variable (RHOX vs. TAU)
         ##
 
+        def _field(record, name, default=None):
+            try:
+                return getattr(record, name)
+            except AttributeError:
+                try:
+                    return record[name]
+                except (KeyError, IndexError, ValueError):
+                    return default
+
+        def _as_abund(record):
+            abund = _field(record, "abund")
+            if isinstance(abund, Abund):
+                return abund
+            abund_format = getattr(
+                self.atmo_grid, "abund_format", _field(record, "abund_format", "sme")
+            )
+            return Abund(
+                monh=_field(record, "monh", 0),
+                pattern=np.array(abund, dtype=float, copy=True),
+                type=abund_format,
+            )
+
         # Check which depth scales are available in both input atmospheres.
         tags1 = atmo1.dtype.names
         tags2 = atmo2.dtype.names
@@ -249,6 +272,25 @@ class AtmosphereInterpolator:
             interpvar = "tau" if ok_tau else "rhox"
         if interpvar != "tau" and interpvar != "rhox":
             raise AtmosphereError("interpvar must be 'TAU' (default) or 'RHOX'")
+
+        has_spherical_height = (
+            _field(atmo1, "radius", 0) > 1
+            and _field(atmo2, "radius", 0) > 1
+            and "height" in tags1
+            and "height" in tags2
+        )
+
+        def to_interp_space(vtag, values):
+            values = np.asarray(values)
+            if vtag == "height":
+                return values
+            return np.log10(values)
+
+        def from_interp_space(vtag, values):
+            values = np.asarray(values)
+            if vtag == "height":
+                return values
+            return 10.0 ** values
 
         ##
         ## Define depth scale for both atmospheres
@@ -294,6 +336,8 @@ class AtmosphereInterpolator:
             vtags += ["tau"]
         if interpvar == "tau" and ok_rhox:
             vtags += ["rhox"]
+        if has_spherical_height:
+            vtags += ["height"]
         nvtag = len(vtags)
 
         # Adopt arbitrary uncertainties for shift determinations.
@@ -303,8 +347,8 @@ class AtmosphereInterpolator:
         # Put depth and TEMP midpoints for atmo1 and atmo2 on top of one another.
         npar = 4
         ipar = np.zeros(npar, dtype="f4")
-        temp1 = np.log10(atmo1.temp[mask1])
-        temp2 = np.log10(atmo2.temp[mask2])
+        temp1 = np.log10(_field(atmo1, "temp")[mask1])
+        temp2 = np.log10(_field(atmo2, "temp")[mask2])
         mid1 = np.argmin(np.abs(temp1 - 0.5 * (temp1[1] + temp1[-2])))
         mid2 = np.argmin(np.abs(temp2 - 0.5 * (temp2[1] + temp2[-2])))
         ipar[0] = depth1[mid1] - depth2[mid2]  # horizontal
@@ -333,8 +377,8 @@ class AtmosphereInterpolator:
             if vtag not in tags2:
                 raise AtmosphereError("atmo2 does not contain " + vtag)
 
-            vect1 = np.log10(atmo1[vtag][mask1])
-            vect2 = np.log10(atmo2[vtag][mask2])
+            vect1 = to_interp_space(vtag, atmo1[vtag][mask1])
+            vect2 = to_interp_space(vtag, atmo2[vtag][mask2])
 
             # Fit the second atmosphere onto the first by finding the best horizontal
             # shift in depth2 and the best vertical shift in vect2.
@@ -391,8 +435,8 @@ class AtmosphereInterpolator:
         for ivtag, (vtag, par) in enumerate(zip(vtags, pars)):
 
             # Extract data
-            vect1 = np.log10(atmo1[vtag][mask1])
-            vect2 = np.log10(atmo2[vtag][mask2])
+            vect1 = to_interp_space(vtag, atmo1[vtag][mask1])
+            vect2 = to_interp_space(vtag, atmo2[vtag][mask2])
 
             # Identify output depth points that require extrapolation of atmosphere vector.
             depth1f = depth1 - par[0] * frac
@@ -427,7 +471,7 @@ class AtmosphereInterpolator:
         # Might be wise to interpolate abundances, in case those ever change.
         atmo = Atmo(interp=interpvar)
         stags = ["teff", "logg", "monh", "vturb", "lonh", "abund"]
-        ndep_orig = len(atmo1.temp)
+        ndep_orig = len(_field(atmo1, "temp"))
         for tag in tags1:
 
             # Default is to copy value from atmo1. Trim vectors.
@@ -438,11 +482,13 @@ class AtmosphereInterpolator:
             # Vector quantities that have already been interpolated.
             if tag in vtags:
                 ivtag = [i for i in range(nvtag) if tag == vtags[i]][0]
-                value = 10.0 ** vects[ivtag]
+                value = from_interp_space(tag, vects[ivtag])
 
             # Scalar quantities that should be interpolated using frac.
             if tag in stags:
-                if tag in tags2:
+                if tag == "abund":
+                    value = (1 - frac) * _as_abund(atmo1) + frac * _as_abund(atmo2)
+                elif tag in tags2:
                     value = (1 - frac) * atmo1[tag] + frac * atmo2[tag]
                 else:
                     value = atmo1[tag]
@@ -450,10 +496,6 @@ class AtmosphereInterpolator:
             # Remaining cases.
             if tag == "ndep":
                 value = ndep
-
-            # Abundances
-            if tag == "abund":
-                value = (1 - frac) * atmo1[tag] + frac * atmo2[tag]
 
             # Create or add to output structure.
             atmo[tag] = value
@@ -734,6 +776,12 @@ class AtmosphereInterpolator:
             icor[im, ig, it] = iwhr[0]
 
         # Trace diagnostics.
+        def _field(model, name):
+            try:
+                return getattr(model, name)
+            except AttributeError:
+                return model[name]
+
         if self.verbose >= 1:
             logger.info("Teff=%i,  log(g)=%.3f,  [M/H]=%.3f:", teff, logg, monh)
             logger.info("indx  M/H  g   Teff     indx  M/H  g   Teff")
@@ -743,13 +791,13 @@ class AtmosphereInterpolator:
                     i1 = icor[im, ig, 1]
                     logger.info(
                         i0,
-                        atmo_grid[i0].monh,
-                        atmo_grid[i0].logg,
-                        atmo_grid[i0].teff,
+                        _field(atmo_grid[i0], "monh"),
+                        _field(atmo_grid[i0], "logg"),
+                        _field(atmo_grid[i0], "teff"),
                         i1,
-                        atmo_grid[i1].monh,
-                        atmo_grid[i1].logg,
-                        atmo_grid[i1].teff,
+                        _field(atmo_grid[i1], "monh"),
+                        _field(atmo_grid[i1], "logg"),
+                        _field(atmo_grid[i1], "teff"),
                     )
         return icor
 
@@ -799,8 +847,14 @@ class AtmosphereInterpolator:
 
         # We do this for every pair of atmosphere models
         def interpolate(m0, m1, p, param, **kwargs):
-            p0 = getattr(m0, param)
-            p1 = getattr(m1, param)
+            try:
+                p0 = getattr(m0, param)
+            except AttributeError:
+                p0 = m0[param]
+            try:
+                p1 = getattr(m1, param)
+            except AttributeError:
+                p1 = m1[param]
             pfrac = (p - p0) / (p1 - p0) if p0 != p1 else 0
             return self.interp_atmo_pair(m0, m1, pfrac, interpvar=interp, **kwargs)
 
@@ -853,9 +907,11 @@ class AtmosphereInterpolator:
 
         gtags = atmo_grid.dtype.names
         selection = atmo_grid[icor]
-        if "radius" in gtags and "height" in gtags and np.min(selection.radius) > 1:
+        if "radius" in gtags and "height" in gtags and np.min(selection["radius"]) > 1:
             mass_cor = (
-                selection.logg - logg_sun - 2 * np.log10(R_sun / selection.radius)
+                selection["logg"]
+                - logg_sun
+                - 2 * np.log10(R_sun / selection["radius"])
             )
             mass = np.mean(mass_cor)
             radius = R_sun * 10 ** ((logg_sun - logg + mass) * 0.5)

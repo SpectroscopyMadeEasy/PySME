@@ -1,5 +1,32 @@
 # Changelog
 
+## 2026-06-26
+
+- Fixed the H NLTE abundance-coordinate handling so the standard hydrogen NLTE
+  abundance coordinate remains stable during synthesis.
+- Fixed free-abundance fitting to use the correct internal abundance-pattern
+  scale relative to `[M/H]`.
+- Fixed spherical atmosphere interpolation so `height` is interpolated
+  consistently with the other atmospheric structure quantities.
+- Fixed derived abundance parameter handling in `solve()` so abundance keys are
+  parsed consistently, including capitalized forms such as `"Abund Ti"`.
+- Improved SMElib robustness:
+  - tolerate missing HLINOP warning symbols in older SMElib builds
+  - rebuild the DLL object inside multiprocessing worker processes when needed
+- Added explicit abundance-scale views and updated documentation around
+  `sme.abund.A[...]` and `sme.abund.pattern[...]`.
+- Unified line-selection controls around the `line_select_*` interface while
+  keeping legacy `cdr_*` pathways available for compatibility.
+- Added an experimental `profile_nlte` interface for profile-based NLTE
+  corrections. This path is disabled by default and remains experimental.
+- Compatibility and deprecations:
+  - `dynamic_param` is deprecated in favor of `derived_param`
+  - `cdr_database` is deprecated in favor of `line_precompute_database`
+  - `linelist_mode="auto"` is deprecated in favor of `linelist_mode="dynamic"`
+  - direct abundance assignment through `sme.abund["X"]` is still supported,
+    but now emits a warning because it writes the internal pattern rather than
+    the final abundance used in synthesis
+ 
 ## 2026-02-10
 
 - Added `derived_param` as the preferred name for derived-parameter callbacks in `solve()`.

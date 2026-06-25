@@ -10,6 +10,7 @@ Typical files:
 
 - Atmosphere grids
 - NLTE grids
+- Experimental profile-NLTE resources
 - Optional custom resources
 
 ## Configure data locations
@@ -47,6 +48,7 @@ Notes:
 - The NADC packaged data mirror page is <https://nadc.china-vo.org/res/r101793/>.
 - `~` is supported in path values and will be expanded to your home directory.
 - Changing these paths does not migrate old files automatically; move existing files manually if needed.
+- `data.hlineprof` is used by the current experimental hydrogen profile-NLTE provider.
 
 ```{admonition} Accessing data files
 The atmosphere and nlte data files should be downloaded from the server automatically when used, so network connection is required when using PySME (not only during installation).

@@ -1,0 +1,111 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2025, Jeff Valenti, Nikolai Piskunov, Mingjie Jian, Ansgar
+# Wehrhahn
+# This file is distributed under the same license as the PySME package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PySME 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-03-29 22:44+0900\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: zh_CN\n"
+"Language-Team: zh_CN <LL@li.org>\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: ../../advance/faq.md:1
+msgid "FAQ"
+msgstr ""
+
+#: ../../advance/faq.md:4
+msgid "How do I change the default log file?"
+msgstr ""
+
+#: ../../advance/faq.md:6
+msgid "Call `util.start_logging(filename)`."
+msgstr ""
+
+#: ../../advance/faq.md:13
+msgid ""
+"Get output of `A module that was compiled using NumPy 1.x cannot be run "
+"in NumPy 2.2.0 as it may crash.`"
+msgstr ""
+
+#: ../../advance/faq.md:15
+msgid ""
+"This is an ABI mismatch between your NumPy and the installed `_smelib` "
+"binary."
+msgstr ""
+
+#: ../../advance/faq.md:17
+msgid "For `<= v0.6.26`, PySME may attempt a runtime rebuild/download path."
+msgstr ""
+
+#: ../../advance/faq.md:18
+msgid ""
+"For `>= v0.6.27`, the recommended fix is to reinstall PySME in the target"
+" environment so binaries are rebuilt/reinstalled consistently."
+msgstr ""
+
+#: ../../advance/faq.md:20
+msgid "If you see output like:"
+msgstr ""
+
+#: ../../advance/faq.md:25
+msgid "the extension is being rebuilt."
+msgstr ""
+
+#: ../../advance/faq.md:27
+msgid "I get an error \"Derivatives in the starting point are not finite\""
+msgstr ""
+
+#: ../../advance/faq.md:29
+msgid ""
+"Make sure your initial stellar parameters are within the atmosphere grid "
+"defined by the atmosphere file set in sme.atmo.source"
+msgstr ""
+
+#: ../../advance/faq.md:32
+msgid ""
+"I get an error \"lnGAS: DGESVX failed to solved for corrections the "
+"partial pressures.\""
+msgstr ""
+
+#: ../../advance/faq.md:34
+msgid ""
+"The most possible reason would be the abvundance of the element in error "
+"is too low or nan, thus the EOS code cannot compute its EOS."
+msgstr ""
+
+#: ../../advance/faq.md:37
+msgid "I upgraded PySME, but behavior/version output still looks old"
+msgstr ""
+
+#: ../../advance/faq.md:39
+msgid ""
+"This is usually caused by a stale compiled extension (`_smelib`) left in "
+"the environment. Python may load the stale binary instead of the expected"
+" one from the current wheel."
+msgstr ""
+
+#: ../../advance/faq.md:42
+msgid "First, check what is actually loaded:"
+msgstr ""
+
+#: ../../advance/faq.md:54
+msgid ""
+"If `_smelib` points to an unexpected legacy file, do a clean reinstall in"
+" the same environment:"
+msgstr ""
+
+#: ../../advance/faq.md:71
+msgid "Replace `X.Y.Z` with the target release version you want to test."
+msgstr ""
+

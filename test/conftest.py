@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
+from importlib.util import find_spec
 from os.path import dirname, join
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -7,21 +9,48 @@ from scipy.constants import speed_of_light
 
 from pysme.abund import Abund
 from pysme.linelist.vald import ValdFile
-from pysme.sme import SME_Structure as SME_Struct
-from pysme.synthesize import synthesize_spectrum
+from pysme.smelib.libtools import get_full_datadir, get_full_libfile
 
 # TODO create various kinds of default sme structures
 # then run test on all of the relevant ones
 
+def smelib_available():
+    try:
+        if find_spec("pysme.smelib._smelib") is None:
+            return False
+        if not Path(get_full_libfile()).exists():
+            return False
+        if not Path(get_full_datadir()).exists():
+            return False
+        return True
+    except Exception:
+        return False
+
+
+skipif_smelib = pytest.mark.skipif(
+    not smelib_available(), reason="SMElib not available locally"
+)
+
+
+@pytest.fixture
+def require_smelib():
+    if not smelib_available():
+        pytest.skip("SMElib not available locally")
+
 
 @pytest.fixture
 def sme_empty():
+    from pysme.sme import SME_Structure as SME_Struct
+
     sme = SME_Struct()
     return sme
 
 
 @pytest.fixture
-def testcase1():
+def testcase1(require_smelib):
+    from pysme.sme import SME_Structure as SME_Struct
+    from pysme.synthesize import synthesize_spectrum
+
     c_light = speed_of_light * 1e-3
 
     # TODO get better test case for this
@@ -52,7 +81,9 @@ def testcase1():
 
 
 @pytest.fixture
-def sme_2segments():
+def sme_2segments(require_smelib):
+    from pysme.sme import SME_Structure as SME_Struct
+
     cwd = dirname(__file__)
 
     sme = SME_Struct()

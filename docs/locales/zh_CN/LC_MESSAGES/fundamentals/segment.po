@@ -1,0 +1,210 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2025, Jeff Valenti, Nikolai Piskunov, Mingjie Jian, Ansgar
+# Wehrhahn
+# This file is distributed under the same license as the PySME package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PySME 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-03-29 22:44+0900\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: zh_CN\n"
+"Language-Team: zh_CN <LL@li.org>\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: ../../fundamentals/segment.md:1
+msgid "Spectral segment"
+msgstr "光谱 segment"
+
+#: ../../fundamentals/segment.md:3
+msgid ""
+"A segment is one wavelength chunk of the spectrum.   PySME is segment-"
+"aware by design: most spectral arrays are stored as a list-like object "
+"with one entry per segment."
+msgstr ""
+"一个 segment 是光谱中按波长划分出的一个片段。PySME 在设计上就是 segment-aware 的：大多数光谱数组都以类列表对象存储，"
+"其中每个 segment 对应一个条目。"
+
+#: ../../fundamentals/segment.md:7
+msgid "Why segments exist"
+msgstr "为什么需要 segments"
+
+#: ../../fundamentals/segment.md:9
+msgid "Segments are useful when:"
+msgstr "在以下情况下，segments 很有用："
+
+#: ../../fundamentals/segment.md:11
+msgid "your observation is naturally split into orders/chunks"
+msgstr "你的观测天然就分成多个 order 或 chunk"
+
+#: ../../fundamentals/segment.md:12
+msgid ""
+"different chunks have different wavelength sampling/resolution/radial "
+"velocity."
+msgstr "不同 chunk 具有不同的波长采样、分辨率或径向速度。"
+
+#: ../../fundamentals/segment.md:13
+msgid "you want to process only part of the spectrum in synthesis/solve"
+msgstr "你只想在 synthesis/solve 中处理光谱的一部分"
+
+#: ../../fundamentals/segment.md:15
+msgid "How segments are defined"
+msgstr "segments 如何定义"
+
+#: ../../fundamentals/segment.md:17
+msgid "PySME can get segment information from either:"
+msgstr "PySME 可以通过以下任一方式获取 segment 信息："
+
+#: ../../fundamentals/segment.md:19
+msgid "`sme.wave`: explicit wavelength arrays (recommended when available)"
+msgstr "`sme.wave`：显式的波长数组（如果具备，推荐使用）"
+
+#: ../../fundamentals/segment.md:20
+msgid ""
+"`sme.wran`: only segment boundaries `[[w0_start, w0_end], [w1_start, "
+"w1_end], ...]`"
+msgstr "`sme.wran`：只提供 segment 边界 `[[w0_start, w0_end], [w1_start, w1_end], ...]`"
+
+#: ../../fundamentals/segment.md:22
+msgid ""
+"If `sme.wave` exists, it effectively defines segment boundaries.   If "
+"only `sme.wran` is given, PySME synthesizes each segment within those "
+"ranges."
+msgstr ""
+"如果存在 `sme.wave`，它实际上就定义了 segment 的边界。如果只给了 `sme.wran`，PySME 就会在这些范围内分别合成每个 "
+"segment。"
+
+#: ../../fundamentals/segment.md:25
+msgid "Segment-aware inputs"
+msgstr "按 segment 处理的输入"
+
+#: ../../fundamentals/segment.md:27
+msgid "Typical segment-aware fields are:"
+msgstr "典型的按 segment 处理字段包括："
+
+#: ../../fundamentals/segment.md:29
+msgid "`wave`"
+msgstr "`wave`"
+
+#: ../../fundamentals/segment.md:30
+msgid "`spec`"
+msgstr "`spec`"
+
+#: ../../fundamentals/segment.md:31
+msgid "`uncs`"
+msgstr "`uncs`"
+
+#: ../../fundamentals/segment.md:32
+msgid "`mask`"
+msgstr "`mask`"
+
+#: ../../fundamentals/segment.md:33
+msgid "`synth`"
+msgstr "`synth`"
+
+#: ../../fundamentals/segment.md:34
+msgid "`cont`"
+msgstr "`cont`"
+
+#: ../../fundamentals/segment.md:35
+msgid "`wint` (optional transfer grid)"
+msgstr "`wint`（可选的 transfer 网格）"
+
+#: ../../fundamentals/segment.md:36
+msgid "`vrad`"
+msgstr "`vrad`"
+
+#: ../../fundamentals/segment.md:37
+msgid "`cscale`"
+msgstr "`cscale`"
+
+#: ../../fundamentals/segment.md:39
+msgid "You can pass these as:"
+msgstr "这些字段可以按以下形式传入："
+
+#: ../../fundamentals/segment.md:41
+msgid "a single 1D array for one segment"
+msgstr "针对单个 segment 的一个 1D 数组"
+
+#: ../../fundamentals/segment.md:42
+msgid "a list of arrays for multiple segments"
+msgstr "针对多个 segments 的数组列表"
+
+#: ../../fundamentals/segment.md:44
+msgid "Parameters that are not segmented"
+msgstr "不按 segment 划分的参数"
+
+#: ../../fundamentals/segment.md:46
+msgid "Some model parameters are global (single value for all segments), e.g.:"
+msgstr "有些模型参数是全局量（所有 segments 共用一个值），例如："
+
+#: ../../fundamentals/segment.md:48
+msgid "`vmic`"
+msgstr "`vmic`"
+
+#: ../../fundamentals/segment.md:49
+msgid "`vmac`"
+msgstr "`vmac`"
+
+#: ../../fundamentals/segment.md:50
+msgid "`vsini`"
+msgstr "`vsini`"
+
+#: ../../fundamentals/segment.md:52
+msgid "Some are scalar-or-per-segment, e.g.:"
+msgstr "有些参数既可以是标量，也可以按 segment 给出，例如："
+
+#: ../../fundamentals/segment.md:54
+msgid "`ipres`: can be one value or one value per segment"
+msgstr "`ipres`：可以是一个值，也可以是每个 segment 一个值"
+
+#: ../../fundamentals/segment.md:55
+msgid "`vrad`: handled per segment, depending on `vrad_flag`"
+msgstr "`vrad`：按 segment 处理，具体方式取决于 `vrad_flag`"
+
+#: ../../fundamentals/segment.md:57
+msgid "Choosing which segments to run"
+msgstr "选择运行哪些 segments"
+
+#: ../../fundamentals/segment.md:59
+msgid ""
+"Both `synthesize_spectrum(...)` and `solve(...)` accept a `segments` "
+"argument."
+msgstr "`synthesize_spectrum(...)` 和 `solve(...)` 都接受一个 `segments` 参数。"
+
+#: ../../fundamentals/segment.md:61
+msgid "`segments=\"all\"`: run all segments"
+msgstr "`segments=\"all\"`：运行所有 segments"
+
+#: ../../fundamentals/segment.md:62
+msgid "`segments=[0, 2, ...]`: run selected segments only"
+msgstr "`segments=[0, 2, ...]`：只运行选定的 segments"
+
+#: ../../fundamentals/segment.md:64
+msgid ""
+"Invalid indices raise an error.   Segments that are fully masked as bad "
+"pixels are skipped automatically."
+msgstr "无效索引会触发报错。被完全标记为坏像素的 segments 会自动跳过。"
+
+#: ../../fundamentals/segment.md:67
+msgid "Practical notes"
+msgstr "实际注意事项"
+
+#: ../../fundamentals/segment.md:69
+msgid "Keep segment ordering consistent across all segment-aware inputs."
+msgstr "在所有按 segment 处理的输入中，segment 顺序必须保持一致。"
+
+#: ../../fundamentals/segment.md:70
+msgid "If you provide per-segment arrays, lengths must match within each segment."
+msgstr "如果你提供的是按 segment 划分的数组，那么每个 segment 内各数组的长度必须一致。"
+
+#: ../../fundamentals/segment.md:71
+msgid "For simple single-chunk workflows, using one 1D `wave` array is enough."
+msgstr "对于简单的单块工作流，使用一个 1D `wave` 数组就足够了。"

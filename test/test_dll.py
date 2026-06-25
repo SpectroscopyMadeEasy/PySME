@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
+from pathlib import Path
 from os.path import dirname
 
 import numpy as np
 import pytest
 
 from pysme.abund import Abund
-from pysme.atmosphere.krzfile import KrzFile
+from pysme.atmosphere.krzfile import KrzFile, atmoic_mass
 from pysme.linelist.linelist import LineList
 from pysme.sme_synth import SME_DLL
 
@@ -145,6 +146,44 @@ def test_abund(libsme, abund):
         libsme.InputAbund(None)
 
 
+def test_krzfile_mu_uses_number_ratios(atmo):
+    ratios = atmo.abund.get_pattern(type="n/nH")
+    valid = [(element, value) for element, value in ratios.items() if not np.isnan(value)]
+    expected_mu = sum(
+        value * atmoic_mass[element] for element, value in valid
+    ) / sum(value for _, value in valid)
+
+    assert np.isclose(atmo.get_mu_from_abund(), expected_mu)
+
+
+def test_krzfile_reads_monh_from_abundance_scale(tmp_path, cwd, atmo):
+    source = Path(cwd) / "testatmo1.krz"
+    content = source.read_text()
+    content = content.replace("TITLE  [0.0]", "TITLE       ", 1)
+    content = content.replace("ABUNDANCE SCALE   1.00000", "ABUNDANCE SCALE   0.10000", 1)
+    target = tmp_path / "scaled_from_abundance.krz"
+    target.write_text(content)
+
+    scaled = KrzFile(str(target))
+
+    assert np.isclose(scaled.monh, -1.0)
+    assert np.isclose(scaled.abundance_scale, 0.1)
+    assert np.isclose(scaled.abund.A["Fe"], atmo.abund.A["Fe"] - 1.0)
+
+
+def test_krzfile_warns_when_header_and_abundance_scale_disagree(tmp_path, cwd):
+    source = Path(cwd) / "testatmo1.krz"
+    content = source.read_text()
+    content = content.replace("ABUNDANCE SCALE   1.00000", "ABUNDANCE SCALE   0.10000", 1)
+    target = tmp_path / "mismatch_scale_header.krz"
+    target.write_text(content)
+
+    with pytest.warns(UserWarning, match="ATLAS abundance scale and header metallicity disagree"):
+        atmo = KrzFile(str(target))
+
+    assert np.isclose(atmo.monh, -1.0)
+
+
 def test_transf(
     libsme,
     linelist,
@@ -174,7 +213,11 @@ def test_transf(
     libsme.Opacity()
 
     nw, wave, synth, cont = libsme.Transf(mu, accrt=accrt, accwi=accwt)
-    assert nw == 27
+    assert nw == len(wave) == synth.shape[-1] == cont.shape[-1]
+    assert nw > 0
+    assert np.isclose(wave[0], wfirst)
+    assert np.isclose(wave[-1], wlast)
+    assert np.all(np.diff(wave) > 0)
 
     density = libsme.GetDensity()
     assert np.allclose(density, atmo.rho, rtol=3e-1, equal_nan=True)

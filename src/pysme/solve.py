@@ -25,7 +25,7 @@ from .atmosphere.savfile import SavFile
 from .large_file_storage import setup_lfs
 from .nlte import DirectAccessFile
 from .sme import MASK_VALUES
-from .synthesize import Synthesizer
+from .synthesize import Synthesizer, _normalize_line_precompute_database_arg
 from .util import print_to_log, show_progress_bars
 
 # # Debug usage
@@ -62,6 +62,46 @@ def _format_log_value(value, precision=4):
         return _format_nested(np.asarray(arr, dtype=float).tolist())
     except (TypeError, ValueError):
         return str(value)
+
+
+def _is_abund_parameter(name):
+    return str(name).strip().casefold().startswith("abund")
+
+
+def _get_abund_element(name):
+    parts = str(name).strip().split()
+    if len(parts) < 2 or parts[0].casefold() != "abund":
+        raise ValueError(f"Could not parse abundance parameter name {name!r}")
+    return parts[1].capitalize()
+
+
+def _uses_metallicity_scaled_pattern(sme, element):
+    return sme.abund.elem_dict[element] >= 2 and sme.monh is not None
+
+
+def _get_solve_parameter_value(sme, name):
+    """Return parameter value in the solver's internal scale.
+
+    Free abundances are handled in abundance-pattern scale for now, because the
+    existing ``SME_Structure.__setitem__`` abundance path writes into the
+    underlying pattern rather than the effective abundance after ``[M/H]``.
+    """
+    if _is_abund_parameter(name):
+        element = _get_abund_element(name)
+        pattern = sme.abund.get_pattern(type="H=12", raw=True)
+        return pattern[sme.abund.elem_dict[element]]
+    return sme[name]
+
+
+def _set_solve_parameter_value(sme, name, value):
+    """Write parameter value using the solver's internal scale."""
+    sme[name] = value
+
+
+def _to_pattern_abundance_bound(sme, element, value):
+    if _uses_metallicity_scaled_pattern(sme, element):
+        return value - sme.monh
+    return value
 
 
 class VariableNumber(np.lib.mixins.NDArrayOperatorsMixin):
@@ -141,7 +181,11 @@ class SME_Solver:
             # The keys are string, but we want the max in int, so we need to convert back and forth
             iteration = str(max(int(i) for i in data.keys()))
             for fp in self.parameter_names:
-                sme[fp] = data[iteration].get(fp, sme[fp])
+                _set_solve_parameter_value(
+                    sme,
+                    fp,
+                    data[iteration].get(fp, _get_solve_parameter_value(sme, fp)),
+                )
             logger.warning(f"Restoring existing backup data from {fname}")
         except:
             pass
@@ -155,7 +199,9 @@ class SME_Solver:
                 data = json.load(f)
         except:
             data = {}
-        data[self.iteration] = {fp: sme[fp] for fp in self.parameter_names}
+        data[self.iteration] = {
+            fp: _get_solve_parameter_value(sme, fp) for fp in self.parameter_names
+        }
         try:
             with open(fname, "w") as f:
                 json.dump(data, f)
@@ -224,12 +270,12 @@ class SME_Solver:
             if self.derived_param is not None:
                 if name in self.derived_param.keys():
                     raise ValueError(f"fitting parameter {name} cannot be also in derived parameter.")
-            sme[name] = value
+            _set_solve_parameter_value(sme, name, value)
         # change derived parameters
         if self.derived_param is not None:
             for name in self.derived_param.keys():
-                if "abund" in name:
-                    abund_name = name.split()[1]
+                if _is_abund_parameter(name):
+                    abund_name = _get_abund_element(name)
                     sme.abund[abund_name] = self.derived_param[name](sme) - sme.monh
                 else:
                     sme[name] = self.derived_param[name](sme)
@@ -240,8 +286,8 @@ class SME_Solver:
         ]
         if self.derived_param is not None:
             for name in self.derived_param.keys():
-                if "abund" in name:
-                    abund_name = name.split()[1]
+                if _is_abund_parameter(name):
+                    abund_name = _get_abund_element(name)
                     derived_value = sme.abund[abund_name] + sme.monh
                 else:
                     derived_value = sme[name]
@@ -472,6 +518,8 @@ class SME_Solver:
                     xmin, xmax = available.min(), available.max()
                     xmin += solar[element]
                     xmax += solar[element]
+                    xmin = _to_pattern_abundance_bound(sme, element, xmin)
+                    xmax = _to_pattern_abundance_bound(sme, element, xmax)
                     if xmin == xmax:
                         xmin -= 1
                         xmax += 1
@@ -556,7 +604,10 @@ class SME_Solver:
             return d[name]
 
         values = [
-            sme[s] if sme[s] is not None else default(s) for s in self.parameter_names
+            _get_solve_parameter_value(sme, s)
+            if _get_solve_parameter_value(sme, s) is not None
+            else default(s)
+            for s in self.parameter_names
         ]
         return np.array(values)
 
@@ -781,6 +832,12 @@ class SME_Solver:
                 stacklevel=2,
             )
         self.derived_param = derived_param if derived_param is not None else dynamic_param
+        line_precompute_database = _normalize_line_precompute_database_arg(
+            line_precompute_database=line_precompute_database,
+            cdr_database=cdr_database,
+            stacklevel=2,
+        )
+        cdr_database = None
 
         if self.restore and self.filename is not None:
             fname = self.filename.rsplit(".", 1)[0]
@@ -932,7 +989,7 @@ class SME_Solver:
             self.progressbar.close()
             self.progressbar_jacobian.close()
             for i, name in enumerate(self.parameter_names):
-                sme[name] = res.x[i]
+                _set_solve_parameter_value(sme, name, res.x[i])
             sme = self.update_fitresults(sme, res, segments)
             logger.debug("Reduced chi square: %.3f", sme.fitresults.chisq)
             try:
@@ -996,6 +1053,13 @@ def solve(
     dynamic_param=None,
     **kwargs,
 ):
+    if "cdr_database" in kwargs:
+        kwargs["line_precompute_database"] = _normalize_line_precompute_database_arg(
+            line_precompute_database=kwargs.get("line_precompute_database"),
+            cdr_database=kwargs.get("cdr_database"),
+            stacklevel=2,
+        )
+        kwargs["cdr_database"] = None
     solver = SME_Solver(filename=filename, restore=restore)
     return solver.solve(
         sme,
