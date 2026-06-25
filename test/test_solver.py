@@ -136,3 +136,34 @@ def test_solver_backup_restore_preserves_effective_abundance(tmp_path):
     restored = solver.restore_func(sme)
 
     assert restored.abund["Ti"] == pytest.approx(effective_ti)
+
+
+def test_solver_derived_abundance_uses_effective_scale_for_capitalized_key(monkeypatch):
+    sme, _pattern_ti, _effective_ti = _make_free_abundance_sme()
+    solver = SME_Solver()
+    solver.parameter_names = ["monh"]
+    solver.derived_param = {"Abund Ti": lambda s: 4.25}
+    solver.progressbar = _DummyProgressBar()
+    solver.progressbar_jacobian = _DummyProgressBar()
+
+    captured = {}
+
+    def fake_synthesize_spectrum(local_sme, **_kwargs):
+        captured["effective_ti"] = local_sme.abund["Ti"]
+        captured["pattern_ti"] = local_sme.abund.pattern["Ti"]
+        raise RuntimeError("stop after assignment")
+
+    monkeypatch.setattr(solver.synthesizer, "synthesize_spectrum", fake_synthesize_spectrum)
+
+    with pytest.raises(RuntimeError, match="stop after assignment"):
+        solver._residuals(
+            np.array([sme.monh]),
+            sme,
+            spec=np.array([[0.0]]),
+            uncs=np.array([[1.0]]),
+            mask=np.array([True]),
+            segments=[0],
+        )
+
+    assert captured["effective_ti"] == pytest.approx(4.25)
+    assert captured["pattern_ti"] == pytest.approx(4.25 - sme.monh)

@@ -274,8 +274,8 @@ class SME_Solver:
         # change derived parameters
         if self.derived_param is not None:
             for name in self.derived_param.keys():
-                if "abund" in name:
-                    abund_name = name.split()[1]
+                if _is_abund_parameter(name):
+                    abund_name = _get_abund_element(name)
                     sme.abund[abund_name] = self.derived_param[name](sme) - sme.monh
                 else:
                     sme[name] = self.derived_param[name](sme)
@@ -286,8 +286,8 @@ class SME_Solver:
         ]
         if self.derived_param is not None:
             for name in self.derived_param.keys():
-                if "abund" in name:
-                    abund_name = name.split()[1]
+                if _is_abund_parameter(name):
+                    abund_name = _get_abund_element(name)
                     derived_value = sme.abund[abund_name] + sme.monh
                 else:
                     derived_value = sme[name]
