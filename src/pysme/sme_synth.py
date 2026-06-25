@@ -73,7 +73,8 @@ class SME_DLL:
         self.libfile = libfile
         reload_lib(libfile)
 
-        _smelib.SetHlinopWarningMode(1)
+        if hasattr(_smelib, "SetHlinopWarningMode"):
+            _smelib.SetHlinopWarningMode(1)
         self.SetLibraryPath(datadir)
         self.check_data_files_exist()
 
@@ -171,11 +172,14 @@ class SME_DLL:
 
     def SetHlinopWarningMode(self, mode):
         """Set HLINPROF->HLINOP warning mode (0=stderr, 1=record-only, 2=off)."""
-        _smelib.SetHlinopWarningMode(int(mode))
+        if hasattr(_smelib, "SetHlinopWarningMode"):
+            _smelib.SetHlinopWarningMode(int(mode))
 
     def GetHlinopWarnings(self):
         """Return and clear the last HLINPROF->HLINOP warning summary, if any."""
-        return _smelib.GetHlinopWarnings()
+        if hasattr(_smelib, "GetHlinopWarnings"):
+            return _smelib.GetHlinopWarnings()
+        return ""
 
     def _log_hlinop_warnings(self):
         msg = self.GetHlinopWarnings()

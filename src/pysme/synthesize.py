@@ -816,6 +816,14 @@ class Synthesizer:
             dll_id = self.dll
         if dll_id in __DLL_DICT__:
             return __DLL_DICT__[dll_id]
+        elif isinstance(dll_id, uuid.UUID):
+            # Child processes spawned for pqdm do not inherit the parent's
+            # module-level DLL registry, so only the UUID key survives pickling.
+            # Recreate and register a fresh SME_DLL instance in that process.
+            dll = SME_DLL()
+            __DLL_DICT__[dll_id] = dll
+            __DLL_IDS__[dll] = dll_id
+            return dll
         else:
             return dll_id
 
