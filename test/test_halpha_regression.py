@@ -9,6 +9,7 @@ import pytest
 
 from pysme.abund import Abund
 from pysme.config import Config
+from pysme.large_file_storage import LargeFileStorage, _get_file_servers
 from pysme.linelist.vald import ValdFile
 from pysme.sme import SME_Structure
 from pysme.synthesize import synthesize_spectrum
@@ -73,13 +74,19 @@ def _has_local_h_nlte_grid():
         return False
 
     mapping = json.loads(pointers.read_text())
-    relpath = mapping.get("nlte_H_pysme.grd")
-    if relpath is None:
+    if "nlte_H_pysme.grd" not in mapping:
         return False
 
-    url = f'{config["data.file_server"].rstrip("/")}/{relpath.lstrip("/")}'
-    cache_dir = nlte_root / "download" / "url" / hashlib.md5(url.encode()).hexdigest()
-    return (cache_dir / "contents").exists()
+    lfs = LargeFileStorage(
+        server=_get_file_servers(config),
+        pointers=mapping,
+        storage=str(nlte_root),
+    )
+    for url in lfs.get_urls("nlte_H_pysme.grd"):
+        cache_dir = nlte_root / "download" / "url" / hashlib.md5(url.encode()).hexdigest()
+        if (cache_dir / "contents").exists():
+            return True
+    return False
 
 
 def _make_structure(case):
