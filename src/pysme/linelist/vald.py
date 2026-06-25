@@ -644,7 +644,7 @@ class ValdFile(LineList):
         # Only for extract_stellar: add model and abund
         if self.valdtype == 'extract_stellar':
             list_save_content.append(f"'{self.atmo}',")
-            pattern = self.abund.totype(self.abund.pattern, 'H=12')
+            pattern = self.abund.get_pattern(type="H=12")
             abund_text = ''
             count = 1
             for ele in pattern.keys():
