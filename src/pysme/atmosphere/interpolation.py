@@ -8,6 +8,7 @@ from astropy import constants as const
 from scipy.interpolate import interp1d
 from scipy.optimize import curve_fit
 
+from ..abund import Abund
 from ..large_file_storage import setup_atmo
 from .atmosphere import Atmosphere as Atmo
 from .atmosphere import AtmosphereError, AtmosphereGrid
@@ -243,6 +244,19 @@ class AtmosphereInterpolator:
                 except (KeyError, IndexError, ValueError):
                     return default
 
+        def _as_abund(record):
+            abund = _field(record, "abund")
+            if isinstance(abund, Abund):
+                return abund
+            abund_format = getattr(
+                self.atmo_grid, "abund_format", _field(record, "abund_format", "sme")
+            )
+            return Abund(
+                monh=_field(record, "monh", 0),
+                pattern=np.array(abund, dtype=float, copy=True),
+                type=abund_format,
+            )
+
         # Check which depth scales are available in both input atmospheres.
         tags1 = atmo1.dtype.names
         tags2 = atmo2.dtype.names
@@ -472,7 +486,9 @@ class AtmosphereInterpolator:
 
             # Scalar quantities that should be interpolated using frac.
             if tag in stags:
-                if tag in tags2:
+                if tag == "abund":
+                    value = (1 - frac) * _as_abund(atmo1) + frac * _as_abund(atmo2)
+                elif tag in tags2:
                     value = (1 - frac) * atmo1[tag] + frac * atmo2[tag]
                 else:
                     value = atmo1[tag]
@@ -480,10 +496,6 @@ class AtmosphereInterpolator:
             # Remaining cases.
             if tag == "ndep":
                 value = ndep
-
-            # Abundances
-            if tag == "abund":
-                value = (1 - frac) * atmo1[tag] + frac * atmo2[tag]
 
             # Create or add to output structure.
             atmo[tag] = value
