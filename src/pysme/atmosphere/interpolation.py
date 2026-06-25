@@ -755,6 +755,12 @@ class AtmosphereInterpolator:
             icor[im, ig, it] = iwhr[0]
 
         # Trace diagnostics.
+        def _field(model, name):
+            try:
+                return getattr(model, name)
+            except AttributeError:
+                return model[name]
+
         if self.verbose >= 1:
             logger.info("Teff=%i,  log(g)=%.3f,  [M/H]=%.3f:", teff, logg, monh)
             logger.info("indx  M/H  g   Teff     indx  M/H  g   Teff")
@@ -764,13 +770,13 @@ class AtmosphereInterpolator:
                     i1 = icor[im, ig, 1]
                     logger.info(
                         i0,
-                        atmo_grid[i0].monh,
-                        atmo_grid[i0].logg,
-                        atmo_grid[i0].teff,
+                        _field(atmo_grid[i0], "monh"),
+                        _field(atmo_grid[i0], "logg"),
+                        _field(atmo_grid[i0], "teff"),
                         i1,
-                        atmo_grid[i1].monh,
-                        atmo_grid[i1].logg,
-                        atmo_grid[i1].teff,
+                        _field(atmo_grid[i1], "monh"),
+                        _field(atmo_grid[i1], "logg"),
+                        _field(atmo_grid[i1], "teff"),
                     )
         return icor
 
@@ -820,8 +826,14 @@ class AtmosphereInterpolator:
 
         # We do this for every pair of atmosphere models
         def interpolate(m0, m1, p, param, **kwargs):
-            p0 = getattr(m0, param)
-            p1 = getattr(m1, param)
+            try:
+                p0 = getattr(m0, param)
+            except AttributeError:
+                p0 = m0[param]
+            try:
+                p1 = getattr(m1, param)
+            except AttributeError:
+                p1 = m1[param]
             pfrac = (p - p0) / (p1 - p0) if p0 != p1 else 0
             return self.interp_atmo_pair(m0, m1, pfrac, interpvar=interp, **kwargs)
 
