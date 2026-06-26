@@ -78,8 +78,14 @@ msgid "Citation"
 msgstr "引用"
 
 #: ../../index.rst:48
-msgid "Jian et al. (2026; in prep.)"
-msgstr "Jian et al. (2026; in prep.)"
+msgid ""
+"`Jian et al. (2026) "
+"<https://ui.adsabs.harvard.edu/abs/2026arXiv260504007J/abstract>`_ "
+"(`v0.4.168` onward)"
+msgstr ""
+"`Jian et al. (2026) "
+"<https://ui.adsabs.harvard.edu/abs/2026arXiv260504007J/abstract>`_ "
+"(`v0.4.168` onward)"
 
 #: ../../index.rst:49
 msgid ""
