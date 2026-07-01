@@ -21,6 +21,7 @@ from . import __file_ending__
 from .abund import Abund
 from .atmosphere.atmosphere import AtmosphereError
 from .atmosphere.krzfile import KrzFile
+from .atmosphere.providers import resolve_routine_atmosphere_provider
 from .atmosphere.savfile import SavFile
 from .large_file_storage import setup_lfs
 from .nlte import DirectAccessFile
@@ -494,6 +495,10 @@ class SME_Solver:
                 bounds["teff"] = atmo.teff - 500, atmo.teff + 500
                 bounds["logg"] = atmo.logg - 1, atmo.logg + 1
                 bounds["monh"] = atmo.monh - 1, atmo.monh + 1
+            if sme.atmo.method == "routine":
+                provider = resolve_routine_atmosphere_provider(sme.atmo.source)
+                if hasattr(provider, "get_bounds"):
+                    bounds.update(provider.get_bounds())
         # Add generic bounds
         bounds.update(
             {
