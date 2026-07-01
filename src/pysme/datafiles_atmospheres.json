@@ -62,5 +62,13 @@
     "marcs2014.sav": [
         "https://nadc.china-vo.org/res/file_upload/download?id=53701",
         "models/marcs2014_v1.0.0.sav.gz"
+    ],
+    "kurucz_a1_norm_params.npz": [
+        "https://nadc.china-vo.org/res/file_upload/download?id=1448153",
+        "models/kurucz_a1_v0.1.0_norm_params.npz"
+    ],
+    "kurucz_a1_weights.npz": [
+        "https://nadc.china-vo.org/res/file_upload/download?id=1448152",
+        "models/kurucz_a1_v0.1.0_weights.npz"
     ]
 }
