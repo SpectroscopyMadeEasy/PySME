@@ -2,6 +2,65 @@
 
 This page describes some new (and in testing) function of PySME.
 
+## Advanced synthesis controls
+
+PySME now exposes several experimental synthesis controls directly on
+`SME_Structure`. These fields are optional and default to `None`, which means
+"do not override the historical behavior".
+
+```py
+from pysme.sme import SME_Structure
+
+sme = SME_Structure()
+
+# SMElib hydrogen occupation-probability experiment
+sme.h_line_mode = "apply"
+sme.h_line_form = "wratio"
+
+# Normalized-spectrum construction
+sme.normalize_resample_mode = "ratio"
+
+# Profile-NLTE hydrogen correction construction
+sme.profile_nlte.correction_construction = "ratio"
+```
+
+Available values:
+
+- `sme.h_line_mode`: `None`, `"off"`, `"trace"`, `"apply"`
+- `sme.h_line_form`: `None`, `"wratio"`, `"abs_only"`
+- `sme.normalize_resample_mode`: `None`, `"separate"`, `"ratio"`
+- `sme.profile_nlte.correction_construction`: `None`, `"separate"`, `"ratio"`
+
+For the hydrogen occupation-probability experiment, the recommended physical
+form is:
+
+- `sme.h_line_form = "wratio"`
+  - applies the minimal LTE-consistent correction `Cocc = Wup / Wlo`
+  - this correction acts on the hydrogen line-opacity branch itself, so it is
+    also compatible with 1D NLTE runs
+- `sme.h_line_form = "abs_only"`
+  - keeps the older diagnostic-only absorption-only construction and should
+    not be treated as the preferred physical default
+
+Scientific basis for the hydrogen occupation-probability correction:
+
+- Hummer and Mihalas (1988)
+- Dappen, Anderson, and Mihalas (1987)
+- Hubeny, Hummer, and Lanz (1994)
+- Barklem and Piskunov `hlinop/hbop` implementation lineage
+
+Turbospectrum_NLTE was used as a numerical comparison path during validation,
+not as a code source.
+
+The current built-in defaults remain unchanged:
+
+- hydrogen occupation-probability mode defaults to `off`
+- hydrogen occupation-probability form defaults to `wratio`
+- normalized-spectrum resampling defaults to `separate`
+- profile-NLTE hydrogen correction construction defaults to `separate`
+
+Use the explicit `sme` fields for reproducible scripts and notebooks.
+
 ## How to get the atmosphere grid
 
 ```py

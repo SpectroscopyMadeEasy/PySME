@@ -80,6 +80,10 @@ def test_empty_structure():
 
     assert empty.nlte is not None
     assert empty.nlte.elements == []
+    assert empty.h_line_mode is None
+    assert empty.h_line_form is None
+    assert empty.normalize_resample_mode is None
+    assert empty.profile_nlte.correction_construction is None
 
 
 def test_save_and_load_structure(filename):

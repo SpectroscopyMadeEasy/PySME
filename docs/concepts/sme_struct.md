@@ -169,5 +169,25 @@ For more information see [system_info](../concepts/system_info.md).
 :id:
     The date and time when this structure or the
     last synthetic spectrum was created
+:normalize_resample_mode:
+    Optional normalized-spectrum construction mode.
+    Supported values are `None`, `separate`, and `ratio`.
+    `None` keeps the historical default resolution path.
+:h_line_mode:
+    Optional experimental hydrogen occupation-probability mode passed into SMElib.
+    Supported values are `None`, `off`, `trace`, and `apply`.
+:h_line_form:
+    Optional experimental hydrogen occupation-probability correction form.
+    Supported values are `None`, `wratio`, and `abs_only`.
+:profile_nlte:
+    Profile-based NLTE configuration object.
+    In addition to `enabled`, `element`, `provider`, and `summary`,
+    it also exposes `correction_construction` with supported values
+    `None`, `separate`, and `ratio`.
+
+See also:
+
+- [](../advance/how-to.md) for advanced synthesis control examples
+- [](../advance/profile_nlte.md) for profile-based NLTE details
 
 [^iliffe]: They are called Illiffe vectors in the code, and they were that in IDL. But they are technically not Illiffe vectors anymore, but just lists of individal numpy arrays.

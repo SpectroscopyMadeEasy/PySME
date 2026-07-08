@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 # TODO implement synthesis tests
+import os
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -64,6 +66,7 @@ class _DummyDLL:
         self.last_wave = "unset"
         self.transf_wave = transf_wave
         self._nlines = 0
+        self.last_env = {}
 
     def SetLibraryPath(self):
         return None
@@ -83,6 +86,12 @@ class _DummyDLL:
 
     def Transf(self, mu, accrt, accwi, keep_lineop, wave=None):
         self.last_wave = wave
+        self.last_env = {
+            "PYSME_H_OCCPROB_MODE": os.environ.get("PYSME_H_OCCPROB_MODE"),
+            "PYSME_H_OCCPROB_FORM": os.environ.get("PYSME_H_OCCPROB_FORM"),
+            "PYSME_RESAMPLE_NORM_MODE": os.environ.get("PYSME_RESAMPLE_NORM_MODE"),
+            "PYSME_PROFILE_NLTE_H_CORR_MODE": os.environ.get("PYSME_PROFILE_NLTE_H_CORR_MODE"),
+        }
         if wave is None:
             if self.transf_wave is None:
                 wint = np.linspace(5000.0, 5001.0, 5)
@@ -225,6 +234,7 @@ def test_profile_nlte_h_summary_uses_default_provider(monkeypatch):
     assert summary["applied"] is True
     assert summary["element"] == "H"
     assert summary["provider"] == "pysme_h_3dnlte_rbf"
+    assert summary["correction_construction"] == "separate"
     assert summary["species"] == "H 1"
     assert summary["profile_kind"] == "intensity_ratio"
     assert summary["data_key"] == "data.hlineprof"
@@ -258,6 +268,7 @@ def test_profile_nlte_summary_skips_when_species_missing():
     assert summary["applied"] is False
     assert summary["fallback"] is True
     assert summary["fallback_reason"] == "no_matching_species_in_linelist"
+    assert summary["correction_construction"] is None
 
 
 def test_profile_nlte_warning_when_species_missing(caplog):
@@ -309,6 +320,69 @@ def test_profile_nlte_legacy_tdnlte_h_maps_to_profile_summary(monkeypatch):
     assert summary["applied"] is True
     assert summary["element"] == "H"
     assert summary["provider"] == "pysme_h_3dnlte_rbf"
+    assert summary["correction_construction"] == "separate"
+
+
+def test_profile_nlte_summary_reports_ratio_correction_mode(monkeypatch):
+    dll = _DummyDLL(transf_wave=np.linspace(6550.0, 6575.0, 9))
+    synth = Synthesizer(dll=dll)
+    sme = _minimal_sme()
+    sme.wran = [[6550.0, 6575.0]]
+    sme.specific_intensities_only = False
+    sme.profile_nlte.enabled = True
+    sme.profile_nlte.element = "H"
+    _set_minimal_species_linelist(sme, ["H 1"])
+
+    monkeypatch.setenv("PYSME_PROFILE_NLTE_H_CORR_MODE", "ratio")
+    monkeypatch.setattr(
+        Synthesizer,
+        "get_H_3dnlte_correction_rbf",
+        lambda self, sme: np.ones((len(sme.mu), len(np.asarray(util.lambda_H_3DNLTE)))),
+    )
+
+    out = synth.synthesize_spectrum(
+        sme,
+        segments=[0],
+        passAtmosphere=False,
+        passNLTE=False,
+    )
+
+    summary = out.profile_nlte.summary
+    assert summary["applied"] is True
+    assert summary["correction_construction"] == "ratio"
+
+
+def test_synthesize_segment_explicit_config_overrides_env_and_restores(monkeypatch):
+    dll = _DummyDLL()
+    synth = Synthesizer(dll=dll)
+    sme = _minimal_sme()
+    sme.specific_intensities_only = False
+    sme.normalize_by_continuum = False
+    sme.h_line_mode = "apply"
+    sme.h_line_form = "wratio"
+    sme.normalize_resample_mode = "ratio"
+    sme.profile_nlte.correction_construction = "ratio"
+
+    monkeypatch.setenv("PYSME_H_OCCPROB_MODE", "off")
+    monkeypatch.setenv("PYSME_H_OCCPROB_FORM", "abs_only")
+    monkeypatch.setenv("PYSME_RESAMPLE_NORM_MODE", "separate")
+    monkeypatch.setenv("PYSME_PROFILE_NLTE_H_CORR_MODE", "separate")
+
+    synth.synthesize_spectrum(
+        sme,
+        segments=[0],
+        passAtmosphere=False,
+        passNLTE=False,
+    )
+
+    assert dll.last_env["PYSME_H_OCCPROB_MODE"] == "apply"
+    assert dll.last_env["PYSME_H_OCCPROB_FORM"] == "wratio"
+    assert dll.last_env["PYSME_RESAMPLE_NORM_MODE"] == "ratio"
+    assert dll.last_env["PYSME_PROFILE_NLTE_H_CORR_MODE"] == "ratio"
+    assert os.environ.get("PYSME_H_OCCPROB_MODE") == "off"
+    assert os.environ.get("PYSME_H_OCCPROB_FORM") == "abs_only"
+    assert os.environ.get("PYSME_RESAMPLE_NORM_MODE") == "separate"
+    assert os.environ.get("PYSME_PROFILE_NLTE_H_CORR_MODE") == "separate"
 
 
 def _flag_strong_lines_by_bins_reference(wl, depth, bin_width=0.2, threshold=0.001):

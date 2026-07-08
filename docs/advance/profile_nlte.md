@@ -43,6 +43,33 @@ sme.profile_nlte.provider = "pysme_h_3dnlte_rbf"
 
 If `provider` is left as `None`, PySME uses the default provider for the selected element.
 
+## Correction Construction
+
+The hydrogen profile-NLTE correction layer now also exposes how the correction
+profile itself is constructed:
+
+```python
+sme.profile_nlte.correction_construction = "separate"
+```
+
+Supported values are:
+
+- `None`
+  - keep the historical default behavior
+- `"separate"`
+  - construct the correction using the current legacy path
+- `"ratio"`
+  - construct the correction from the profile ratio on the internal grid
+
+`None` is the default and is intentionally conservative.
+At runtime, PySME resolves this setting in the following order:
+
+1. `sme.profile_nlte.correction_construction`
+2. environment variable `PYSME_PROFILE_NLTE_H_CORR_MODE`
+3. built-in default `separate`
+
+This means existing code keeps the old result unless you opt in explicitly.
+
 ## Current Hydrogen Provider
 
 The built-in hydrogen provider currently supports these air-wavelength windows:
@@ -78,6 +105,7 @@ The summary currently includes:
 - `applied_windows_air`
 - `fallback`
 - `fallback_reason`
+- `correction_construction`
 
 Example:
 
@@ -104,6 +132,7 @@ Example:
     ],
     "fallback": False,
     "fallback_reason": None,
+    "correction_construction": "separate",
 }
 ```
 
@@ -178,3 +207,5 @@ New code should prefer `sme.profile_nlte`.
 - It is not yet a general multi-element profile-correction framework.
 - Only one profile-NLTE element provider can be active at a time.
 - The current hydrogen provider is handled as one element-level bundle, not as independently switchable individual lines.
+- `get_H_3dnlte_correction_rbf()` currently has its own correction-construction switch.
+  It is separate from the normalized-spectrum resampling switch described in the advanced synthesis controls.
