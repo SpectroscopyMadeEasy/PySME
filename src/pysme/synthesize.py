@@ -1736,7 +1736,7 @@ class Synthesizer:
         # For testing wavegrid
         sme.wmod = wmod.copy()
         sme.smod = smod.copy()
-        sme.comd = cmod.copy()
+        sme.cmod = cmod.copy()
         sme.opacity = opacity.copy()
 
         # Fit continuum and radial velocity
