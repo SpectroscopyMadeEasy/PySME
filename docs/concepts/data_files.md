@@ -41,14 +41,37 @@ Notes:
 - Pointer values in `datafiles_*.json` can be:
   - a single relative path (expanded against each path-compatible mirror server)
   - a list of paths/URLs (tried in order)
+  - a metadata object with `url` and optional validation fields
   - a full URL (`https://...` or `file://...`)
 - Absolute URLs are tried as written and are not joined with `data.file_servers`.
 - This allows mixed-source fallbacks such as `NADC -> Uppsala -> Zenodo` in a single pointer list.
 - In the current PySME defaults, Uppsala is configured as the path-compatible mirror in `data.file_servers`, while NADC and Zenodo are usually referenced as explicit URLs in the pointer files.
+- Validation fields apply to the downloadable object itself, not to any later unpacked file. For example, a `.grd.gz` pointer validates the downloaded `.grd.gz` payload, and a `.tar.gz` pointer validates the downloaded tarball.
+- Supported validation fields are `size`, `md5`, and `sha256`. Any of these fields that are present must match for the download target to be accepted.
+- Zenodo commonly exposes file `size` and `md5`, so Zenodo pointer entries can usually be validated without computing a local `sha256` first.
 - The NADC packaged data mirror page is <https://nadc.china-vo.org/res/r101793/>.
 - `~` is supported in path values and will be expanded to your home directory.
 - Changing these paths does not migrate old files automatically; move existing files manually if needed.
 - `data.hlineprof` is used by the current experimental hydrogen profile-NLTE provider.
+
+Example pointer targets:
+
+```json
+{
+  "foo.grd": [
+    {
+      "url": "https://zenodo.org/records/.../files/foo.grd.gz?download=1",
+      "md5": "0123456789abcdef0123456789abcdef",
+      "size": 12345678
+    },
+    {
+      "url": "nlte_grids/foo_v1.grd.gz",
+      "sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "size": 12345678
+    }
+  ]
+}
+```
 
 ```{admonition} Accessing data files
 The atmosphere and nlte data files should be downloaded from the server automatically when used, so network connection is required when using PySME (not only during installation).

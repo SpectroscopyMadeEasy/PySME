@@ -9,11 +9,14 @@ Con: Need to run server
 """
 
 import gzip
+import hashlib
 import json
 import logging
 import os
 import shutil
 import tarfile
+from dataclasses import dataclass
+from html.parser import HTMLParser
 from os.path import basename
 from pathlib import Path
 from tempfile import NamedTemporaryFile
@@ -35,11 +38,37 @@ logger = logging.getLogger(__name__)
 Path.__contains__ = lambda self, key: (self / key).exists()
 
 
+class _HTMLDetectionParser(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.seen_html_tag = False
+
+    def handle_starttag(self, tag, attrs):
+        if tag.lower() == "html":
+            self.seen_html_tag = True
+
+
+@dataclass(frozen=True)
+class _DownloadTarget:
+    url: str
+    md5: str | None = None
+    sha256: str | None = None
+    size: int | None = None
+
+
 class LargeFileStorage:
     """
     Download large data files from data server when needed
-    New versions of the datafiles are indicated in a 'pointer' file
-    that includes the hash of the newest version of the files
+    New versions of the datafiles are indicated in a pointer file.
+
+    Pointer entries describe the downloadable object itself:
+    - bare files are validated as bare files
+    - `.gz` URLs are validated as the downloaded gzip payload
+    - `.tar.gz` URLs are validated as the downloaded tarball
+
+    Optional metadata in each pointer target can include `size`, `md5`,
+    and/or `sha256`. Any validation fields that are present must match
+    before the downloaded object is accepted.
 
     Raises
     ------
@@ -57,7 +86,7 @@ class LargeFileStorage:
             path = Path(__file__).parent / pointers
             pointers = LargeFileStorage.load_pointers_file(path)
 
-        #:dict(fname:hash): points from a filename to the current newest object id, usually a hash
+        #:dict: maps tracked filenames to pointer targets for the downloadable object
         self.pointers = pointers
         #:Directory: directory of the current data files
         cache_path = Path(storage).expanduser().resolve(strict=False)
@@ -117,6 +146,16 @@ class LargeFileStorage:
         import_file_to_cache(url, filename, pkgname=self.PKGNAME)
         return download_file(url, cache=True, pkgname=self.PKGNAME)
 
+    @staticmethod
+    def _normalize_target_entry(target):
+        if isinstance(target, str):
+            return {"url": target}
+        if isinstance(target, dict):
+            if "url" not in target:
+                raise ValueError(f"Pointer target dict must include 'url', got {target}")
+            return dict(target)
+        raise TypeError(f"Unsupported pointer target {target!r}")
+
     def _detect_download_format(self, fname, url, compression):
         if compression is None:
             return "plain"
@@ -131,6 +170,76 @@ class LargeFileStorage:
         if tarfile.is_tarfile(fname):
             return "tar.gz"
         return "gzip"
+
+    @staticmethod
+    def _looks_like_html_error_page(fname):
+        try:
+            with open(fname, "rb") as f:
+                sample = f.read(4096)
+        except OSError:
+            return False
+
+        if not sample:
+            return False
+
+        stripped = sample.lstrip()
+        if stripped[:1] != b"<":
+            return False
+
+        for encoding in ("utf-8", "latin-1"):
+            try:
+                text = stripped.decode(encoding, errors="ignore")
+                break
+            except Exception:
+                text = None
+        if not text:
+            return False
+
+        lowered = text.lower()
+        if "<!doctype html" in lowered or "<html" in lowered:
+            return True
+
+        parser = _HTMLDetectionParser()
+        try:
+            parser.feed(text)
+        except Exception:
+            return False
+        return parser.seen_html_tag
+
+    @staticmethod
+    def _compute_digest(fname, algorithm):
+        digest = hashlib.new(algorithm)
+        with open(fname, "rb") as f:
+            for chunk in iter(lambda: f.read(1024 * 1024), b""):
+                digest.update(chunk)
+        return digest.hexdigest()
+
+    def _validate_download_payload(self, fname, target, file_format):
+        if target.size is not None:
+            actual_size = os.path.getsize(fname)
+            if actual_size != target.size:
+                raise ValueError(
+                    f"Downloaded file size mismatch for {target.url}: expected {target.size}, got {actual_size}"
+                )
+
+        if target.md5 is not None:
+            actual_md5 = self._compute_digest(fname, "md5")
+            if actual_md5.lower() != str(target.md5).lower():
+                raise ValueError(
+                    f"Downloaded file MD5 mismatch for {target.url}: expected {target.md5}, got {actual_md5}"
+                )
+
+        if target.sha256 is not None:
+            actual_sha256 = self._compute_digest(fname, "sha256")
+            if actual_sha256.lower() != str(target.sha256).lower():
+                raise ValueError(
+                    f"Downloaded file checksum mismatch for {target.url}: expected {target.sha256}, got {actual_sha256}"
+                )
+
+        if file_format == "plain" and self._looks_like_html_error_page(fname):
+            raise ValueError(
+                f"Downloaded HTML page instead of data file from {target.url}"
+            )
 
     @staticmethod
     def load_pointers_file(filename):
@@ -163,10 +272,11 @@ class LargeFileStorage:
         fullpath : str
             Absolute path to the datafile
         """
-        urls = self.get_urls(key)
+        targets = self.get_targets(key)
         errors = []
 
-        for i, url in enumerate(urls):
+        for i, target in enumerate(targets):
+            url = target.url
             try:
                 # If its a direct file link, pass that directly to
                 if url.startswith("file://"):
@@ -181,6 +291,7 @@ class LargeFileStorage:
 
                 compression = self._test_compression(fname)
                 file_format = self._detect_download_format(fname, url, compression)
+                self._validate_download_payload(fname, target, file_format)
                 if file_format == "plain":
                     return fname
                 if file_format == "gzip":
@@ -194,7 +305,7 @@ class LargeFileStorage:
                 )
             except Exception as exc:
                 errors.append((url, exc))
-                if i < len(urls) - 1:
+                if i < len(targets) - 1:
                     logger.warning(
                         "Could not fetch %s from %s, trying fallback mirror",
                         key,
@@ -203,6 +314,49 @@ class LargeFileStorage:
 
         detail = "; ".join(f"{url}: {exc}" for url, exc in errors)
         raise FileNotFoundError(f"Could not fetch tracked file {key}. Attempts: {detail}")
+
+    def get_targets(self, key):
+        key = str(key)
+
+        if key not in self.pointers:
+            if key not in self.current:
+                if not os.path.exists(key):
+                    raise FileNotFoundError(
+                        f"File {key} does not exist and is not tracked by the Large File system"
+                    )
+                return [_DownloadTarget(Path(key).as_uri())]
+            return [_DownloadTarget((self.current / key).as_uri())]
+
+        newest = self.pointers[key]
+        raw_targets = newest if isinstance(newest, list) else [newest]
+
+        targets = []
+        seen = set()
+        for raw_target in raw_targets:
+            target = self._normalize_target_entry(raw_target)
+            raw_url = str(target["url"]).strip()
+            if raw_url == "":
+                continue
+
+            if self._is_uri(raw_url):
+                candidate_urls = [raw_url]
+            elif len(self.servers) > 0:
+                candidate_urls = [self._join_uri(server, raw_url) for server in self.servers]
+            else:
+                candidate_urls = [raw_url]
+
+            for url in candidate_urls:
+                normalized = _DownloadTarget(
+                    url=url,
+                    md5=target.get("md5"),
+                    sha256=target.get("sha256"),
+                    size=target.get("size"),
+                )
+                if normalized in seen:
+                    continue
+                targets.append(normalized)
+                seen.add(normalized)
+        return targets
 
     def get_urls(self, key):
         """
@@ -213,37 +367,7 @@ class LargeFileStorage:
         - each pointer string may be a full URI (http/https/file) or relative path
         - relative paths are combined with every configured mirror server in order
         """
-        key = str(key)
-
-        # Check if the file is tracked and/or exists in the storage directory
-        if key not in self.pointers:
-            if key not in self.current:
-                if not os.path.exists(key):
-                    raise FileNotFoundError(
-                        f"File {key} does not exist and is not tracked by the Large File system"
-                    )
-                else:
-                    return [Path(key).as_uri()]
-            else:
-                return [(self.current / key).as_uri()]
-
-        newest = self.pointers[key]
-        pointer_targets = newest if isinstance(newest, list) else [newest]
-
-        urls = []
-        for target in pointer_targets:
-            target = str(target).strip()
-            if target == "":
-                continue
-            if self._is_uri(target):
-                urls.append(target)
-            elif len(self.servers) > 0:
-                for server in self.servers:
-                    urls.append(self._join_uri(server, target))
-            else:
-                urls.append(target)
-
-        return self._unique_in_order(urls)
+        return [target.url for target in self.get_targets(key)]
 
     def _test_compression(self, fname):
         """Check filetype using the magic string"""

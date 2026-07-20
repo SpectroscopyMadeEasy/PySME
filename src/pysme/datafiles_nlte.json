@@ -1,117 +1,185 @@
 {
-    "marcs2012_Fe2016.grd": "nlte_grids/marcs2012_Fe2016_v1.0.0.grd.gz",
-    "marcs2012_Li.grd": "nlte_grids/marcs2012_Li_v1.0.0.grd.gz",
-    "marcs2012_Li2009.grd": "nlte_grids/marcs2012_Li2009_v1.0.0.grd.gz",
-    "marcs2012_Mg2016.grd": "nlte_grids/marcs2012_Mg2016_v1.0.0.grd.gz",
-    "marcs2012_Na.grd": "nlte_grids/marcs2012_Na_v1.0.0.grd.gz",
-    "marcs2012_Na2011.grd": "nlte_grids/marcs2012_Na2011_v1.0.0.grd.gz",
-    "marcs2012_O2015.grd": "nlte_grids/marcs2012_O2015_v1.0.0.grd.gz",
-    "marcs2012_Si2016.grd": "nlte_grids/marcs2012_Si2016_v1.0.0.grd.gz",
-    "marcs2012p_t1.0_Ba.grd": "nlte_grids/marcs2012p_t1.0_Ba_v1.0.0.grd.gz",
-    "marcs2012p_t1.0_Ca.grd": "nlte_grids/marcs2012p_t1.0_Ca_v1.0.0.grd.gz",
-    "marcs2012p_t1.0_Na.grd": "nlte_grids/marcs2012p_t1.0_Na_v1.0.0.grd.gz",
-    "marcs2012p_t1.0_O.grd": "nlte_grids/marcs2012p_t1.0_O_v1.0.0.grd.gz",
-    "marcs2012s_t2.0_Ca.grd": "nlte_grids/marcs2012s_t2.0_Ca_v1.0.0.grd.gz",
-    "marcs2012s_t2.0_Fe.grd": "nlte_grids/marcs2012s_t2.0_Fe_v1.0.0.grd.gz",
-    "marcs2012s_t2.0_Ti.grd": "nlte_grids/marcs2012s_t2.0_Ti_v1.0.0.grd.gz",
-    "marcs2012_Al2017.grd": "nlte_grids/marcs2012_Al2017_v1.0.0.grd.gz",
-    "nlte_Eu.grd": "nlte_grids/nlte_Eu_v1.0.0.grd.gz",
-    "nlte_Fe_multi_full.grd": "nlte_grids/nlte_Fe_multi_full_v1.0.0.grd.gz",
-    "nlte_Li_multi.grd": "nlte_grids/nlte_Li_multi_v1.0.0.grd.gz",
-    "nlte_Na_multi_full.grd": "nlte_grids/nlte_Na_multi_full_v1.0.0.grd.gz",
-    "nlte_Na_multi_sun.grd": "nlte_grids/nlte_Na_multi_sun_v1.0.0.grd.gz",
-    "nlte_Al_pysme.grd": [
-        "https://nadc.china-vo.org/res/file_upload/download?id=53708",
-        "nlte_grids/nlte_Al_scatt_Aug2020_pysme.grd.gz",
-        "https://zenodo.org/api/records/3982506/files/nlte_Al_scatt_pysme.tar.gz/content"
-    ],
-    "nlte_Ba_pysme.grd": [
-        "https://nadc.china-vo.org/res/file_upload/download?id=53692",
-        "nlte_grids/nlte_Ba_scatt_Aug2020_pysme.grd.gz",
-        "https://zenodo.org/api/records/3982506/files/nlte_Ba_scatt_pysme.tar.gz/content"
-    ],
-    "nlte_Ca_pysme.grd": [
-        "https://nadc.china-vo.org/res/file_upload/download?id=53678",
-        "nlte_grids/nlte_Ca_scatt_Aug2020_pysme.grd.gz",
-        "https://zenodo.org/api/records/3982506/files/nlte_Ca_scatt_pysme.tar.gz/content"
-    ],
-    "nlte_C_pysme.grd": [
-        "https://nadc.china-vo.org/res/file_upload/download?id=53691",
-        "nlte_grids/nlte_C_ama51_Feb2022_pysme.grd.gz",
-        "https://zenodo.org/api/records/3960831/files/nlte_C_ama51_pysme.tar.gz/content"
-    ],
-    "nlte_H_pysme.grd": [
-        "https://nadc.china-vo.org/res/file_upload/download?id=53679",
-        "https://zenodo.org/api/records/15062813/files/nlte_H_ama51_Oct2022_pysme.grd/content"
-    ],
-    "nlte_K_pysme.grd": [
-        "https://nadc.china-vo.org/res/file_upload/download?id=53706",
-        "nlte_grids/nlte_K_scatt_Aug2020_pysme.grd.gz",
-        "https://zenodo.org/api/records/3982506/files/nlte_K_scatt_pysme.tar.gz/content"
-    ],
-    "nlte_Li_pysme.grd": [
-        "https://nadc.china-vo.org/res/file_upload/download?id=53681",
-        "nlte_grids/nlte_Li_scatt_Aug2020_pysme.grd.gz",
-        "https://zenodo.org/api/records/3982506/files/nlte_Li_scatt_pysme.tar.gz/content"
-    ],
-    "nlte_Mg_pysme.grd": [
-        "https://nadc.china-vo.org/res/file_upload/download?id=53695",
-        "nlte_grids/nlte_Mg_scatt_Aug2020_pysme.grd.gz",
-        "https://zenodo.org/api/records/3982506/files/nlte_Mg_scatt_pysme.tar.gz/content"
-    ],
-    "nlte_Mn_pysme.grd": [
-        "https://nadc.china-vo.org/res/file_upload/download?id=53689",
-        "nlte_grids/nlte_Mn_scatt_Aug2020_pysme.grd.gz",
-        "https://zenodo.org/api/records/3982506/files/nlte_Mn_scatt_pysme.tar.gz/content"
-    ],
-    "nlte_Na_pysme.grd": [
-        "https://nadc.china-vo.org/res/file_upload/download?id=53686",
-        "nlte_grids/nlte_Na_scatt_Aug2020_pysme.grd.gz",
-        "https://zenodo.org/api/records/3982506/files/nlte_Na_scatt_pysme.tar.gz/content"
-    ],
-    "nlte_N_pysme.grd": [
-        "https://nadc.china-vo.org/res/file_upload/download?id=53698",
-        "nlte_grids/nlte_N_scatt_Aug2020_pysme.grd.gz",
-        "https://zenodo.org/api/records/3982506/files/nlte_N_scatt_pysme.tar.gz/content"
-    ],
-    "nlte_O_pysme.grd": [
-        "https://nadc.china-vo.org/res/file_upload/download?id=53710",
-        "nlte_grids/nlte_O_scatt_Aug2020_pysme.grd.gz",
-        "https://zenodo.org/api/records/3982506/files/nlte_O_scatt_pysme.tar.gz/content"
-    ],
-    "nlte_Si_pysme.grd": [
-        "https://nadc.china-vo.org/res/file_upload/download?id=53704",
-        "nlte_grids/nlte_Si_scatt_Aug2020_pysme.grd.gz",
-        "https://zenodo.org/api/records/3982506/files/nlte_Si_scatt_pysme.tar.gz/content"
-    ],
-    "nlte_Fe_pysme.grd": [
-        "https://nadc.china-vo.org/res/file_upload/download?id=53687",
-        "nlte_grids/nlte_Fe_ama51_Feb2022_pysme.grd.gz",
-        "https://zenodo.org/api/records/7088951/files/nlte_Fe_pysme.tar.gz/content"
-    ],
-    "nlte_Ti_pysme.grd": [
-        "https://nadc.china-vo.org/res/file_upload/download?id=53711",
-        "nlte_grids/nlte_Ti_ama51_Aug2024_pysme.grd.gz",
-        "https://zenodo.org/api/records/15062813/files/nlte_Ti_ama51_Aug2024_pysme.grd/content"
-    ],
-    "marcs2012_H2018.grd": "nlte_grids/marcs2012_H2018_v1.0.0.grd.gz",
-    "marcs2012_Al.grd": "nlte_grids/marcs2012_Al_v1.0.0.grd.gz",
-    "marcs2012_Ba.grd": "nlte_grids/marcs2012_Ba_v1.0.0.grd.gz",
-    "marcs2012_Ca.grd": "nlte_grids/marcs2012_Ca_v1.0.0.grd.gz",
-    "marcs2012_C.grd": "nlte_grids/marcs2012_C_v1.0.0.grd.gz",
-    "marcs2012_Fe.grd": "nlte_grids/marcs2012_Fe_v1.0.0.grd.gz",
-    "marcs2012_K.grd": "nlte_grids/marcs2012_K_v1.0.0.grd.gz",
-    "marcs2012_Mg.grd": "nlte_grids/marcs2012_Mg_v1.0.0.grd.gz",
-    "marcs2012_Mn.grd": "nlte_grids/marcs2012_Mn_v1.0.0.grd.gz",
-    "marcs2012_N.grd": "nlte_grids/marcs2012_N_v1.0.0.grd.gz",
-    "marcs2012_O.grd": "nlte_grids/marcs2012_O_v1.0.0.grd.gz",
-    "marcs2012_Si.grd": "nlte_grids/marcs2012_Si_v1.0.0.grd.gz",
-    "nlte_S_pysme.grd": [
-        "https://nadc.china-vo.org/res/file_upload/download?id=53685",
-        "https://zenodo.org/api/records/17064337/files/nlte_S_ama51_Sep2024_pysme.grd/content"
-    ],
-    "nlte_Cu_pysme.grd": [
-        "https://nadc.china-vo.org/res/file_upload/download?id=53734",
-        "https://zenodo.org/api/records/15062813/files/nlte_Cu_caliskan_Oct2024_pysme.grd/content"
-    ]
+  "marcs2012_Fe2016.grd": "nlte_grids/marcs2012_Fe2016_v1.0.0.grd.gz",
+  "marcs2012_Li.grd": "nlte_grids/marcs2012_Li_v1.0.0.grd.gz",
+  "marcs2012_Li2009.grd": "nlte_grids/marcs2012_Li2009_v1.0.0.grd.gz",
+  "marcs2012_Mg2016.grd": "nlte_grids/marcs2012_Mg2016_v1.0.0.grd.gz",
+  "marcs2012_Na.grd": "nlte_grids/marcs2012_Na_v1.0.0.grd.gz",
+  "marcs2012_Na2011.grd": "nlte_grids/marcs2012_Na2011_v1.0.0.grd.gz",
+  "marcs2012_O2015.grd": "nlte_grids/marcs2012_O2015_v1.0.0.grd.gz",
+  "marcs2012_Si2016.grd": "nlte_grids/marcs2012_Si2016_v1.0.0.grd.gz",
+  "marcs2012p_t1.0_Ba.grd": "nlte_grids/marcs2012p_t1.0_Ba_v1.0.0.grd.gz",
+  "marcs2012p_t1.0_Ca.grd": "nlte_grids/marcs2012p_t1.0_Ca_v1.0.0.grd.gz",
+  "marcs2012p_t1.0_Na.grd": "nlte_grids/marcs2012p_t1.0_Na_v1.0.0.grd.gz",
+  "marcs2012p_t1.0_O.grd": "nlte_grids/marcs2012p_t1.0_O_v1.0.0.grd.gz",
+  "marcs2012s_t2.0_Ca.grd": "nlte_grids/marcs2012s_t2.0_Ca_v1.0.0.grd.gz",
+  "marcs2012s_t2.0_Fe.grd": "nlte_grids/marcs2012s_t2.0_Fe_v1.0.0.grd.gz",
+  "marcs2012s_t2.0_Ti.grd": "nlte_grids/marcs2012s_t2.0_Ti_v1.0.0.grd.gz",
+  "marcs2012_Al2017.grd": "nlte_grids/marcs2012_Al2017_v1.0.0.grd.gz",
+  "nlte_Eu.grd": "nlte_grids/nlte_Eu_v1.0.0.grd.gz",
+  "nlte_Fe_multi_full.grd": "nlte_grids/nlte_Fe_multi_full_v1.0.0.grd.gz",
+  "nlte_Li_multi.grd": "nlte_grids/nlte_Li_multi_v1.0.0.grd.gz",
+  "nlte_Na_multi_full.grd": "nlte_grids/nlte_Na_multi_full_v1.0.0.grd.gz",
+  "nlte_Na_multi_sun.grd": "nlte_grids/nlte_Na_multi_sun_v1.0.0.grd.gz",
+  "nlte_Al_pysme.grd": [
+    "https://nadc.china-vo.org/res/file_upload/download?id=53708",
+    "nlte_grids/nlte_Al_scatt_Aug2020_pysme.grd.gz",
+    {
+      "url": "https://zenodo.org/api/records/3982506/files/nlte_Al_scatt_pysme.tar.gz/content",
+      "md5": "38fbe23f4d3fe90da3aacf1021bb2bb9",
+      "size": 202012474
+    }
+  ],
+  "nlte_Ba_pysme.grd": [
+    "https://nadc.china-vo.org/res/file_upload/download?id=53692",
+    "nlte_grids/nlte_Ba_scatt_Aug2020_pysme.grd.gz",
+    {
+      "url": "https://zenodo.org/api/records/3982506/files/nlte_Ba_scatt_pysme.tar.gz/content",
+      "md5": "ab2af9aec78e6a8c5e26a752b26f54f4",
+      "size": 648871535
+    }
+  ],
+  "nlte_Ca_pysme.grd": [
+    "https://nadc.china-vo.org/res/file_upload/download?id=53678",
+    "nlte_grids/nlte_Ca_scatt_Aug2020_pysme.grd.gz",
+    {
+      "url": "https://zenodo.org/api/records/3982506/files/nlte_Ca_scatt_pysme.tar.gz/content",
+      "md5": "90a886a4bc6fb4f2b2e037f0188d41c6",
+      "size": 539613494
+    }
+  ],
+  "nlte_C_pysme.grd": [
+    "https://nadc.china-vo.org/res/file_upload/download?id=53691",
+    "nlte_grids/nlte_C_ama51_Feb2022_pysme.grd.gz",
+    {
+      "url": "https://zenodo.org/api/records/3960831/files/nlte_C_ama51_pysme.tar.gz/content",
+      "md5": "c225fbe523f59585f5d2c45176cec5c8",
+      "size": 246519283
+    }
+  ],
+  "nlte_H_pysme.grd": [
+    "https://nadc.china-vo.org/res/file_upload/download?id=53679",
+    {
+      "url": "https://zenodo.org/api/records/15062813/files/nlte_H_ama51_Oct2022_pysme.grd/content",
+      "md5": "01b70938daa4315fb511dea52288be8f",
+      "size": 304374218
+    }
+  ],
+  "nlte_K_pysme.grd": [
+    "https://nadc.china-vo.org/res/file_upload/download?id=53706",
+    "nlte_grids/nlte_K_scatt_Aug2020_pysme.grd.gz",
+    {
+      "url": "https://zenodo.org/api/records/3982506/files/nlte_K_scatt_pysme.tar.gz/content",
+      "md5": "ce3c9ce7340f17db3d349ecd4904a3f0",
+      "size": 391545064
+    }
+  ],
+  "nlte_Li_pysme.grd": [
+    "https://nadc.china-vo.org/res/file_upload/download?id=53681",
+    "nlte_grids/nlte_Li_scatt_Aug2020_pysme.grd.gz",
+    {
+      "url": "https://zenodo.org/api/records/3982506/files/nlte_Li_scatt_pysme.tar.gz/content",
+      "md5": "5d4f7101510a47e78c10b7d1645357f0",
+      "size": 378820392
+    }
+  ],
+  "nlte_Mg_pysme.grd": [
+    "https://nadc.china-vo.org/res/file_upload/download?id=53695",
+    "nlte_grids/nlte_Mg_scatt_Aug2020_pysme.grd.gz",
+    {
+      "url": "https://zenodo.org/api/records/3982506/files/nlte_Mg_scatt_pysme.tar.gz/content",
+      "md5": "cdc4449e17f580cac0c5cf6f041bcc2f",
+      "size": 614240709
+    }
+  ],
+  "nlte_Mn_pysme.grd": [
+    "https://nadc.china-vo.org/res/file_upload/download?id=53689",
+    "nlte_grids/nlte_Mn_scatt_Aug2020_pysme.grd.gz",
+    {
+      "url": "https://zenodo.org/api/records/3982506/files/nlte_Mn_scatt_pysme.tar.gz/content",
+      "md5": "ba01596031b054386a79a992141ebf72",
+      "size": 1396737718
+    }
+  ],
+  "nlte_Na_pysme.grd": [
+    "https://nadc.china-vo.org/res/file_upload/download?id=53686",
+    "nlte_grids/nlte_Na_scatt_Aug2020_pysme.grd.gz",
+    {
+      "url": "https://zenodo.org/api/records/3982506/files/nlte_Na_scatt_pysme.tar.gz/content",
+      "md5": "b4b1408dc8f296fa3d14ad2e2a62452f",
+      "size": 131667854
+    }
+  ],
+  "nlte_N_pysme.grd": [
+    "https://nadc.china-vo.org/res/file_upload/download?id=53698",
+    "nlte_grids/nlte_N_scatt_Aug2020_pysme.grd.gz",
+    {
+      "url": "https://zenodo.org/api/records/3982506/files/nlte_N_scatt_pysme.tar.gz/content",
+      "md5": "03cf5e489a93ba0633a4e0e45cffeea0",
+      "size": 201874304
+    }
+  ],
+  "nlte_O_pysme.grd": [
+    "https://nadc.china-vo.org/res/file_upload/download?id=53710",
+    "nlte_grids/nlte_O_scatt_Aug2020_pysme.grd.gz",
+    {
+      "url": "https://zenodo.org/api/records/3982506/files/nlte_O_scatt_pysme.tar.gz/content",
+      "md5": "339e57921e1a52e33f59830095cc8a1f",
+      "size": 232767040
+    }
+  ],
+  "nlte_Si_pysme.grd": [
+    "https://nadc.china-vo.org/res/file_upload/download?id=53704",
+    "nlte_grids/nlte_Si_scatt_Aug2020_pysme.grd.gz",
+    {
+      "url": "https://zenodo.org/api/records/3982506/files/nlte_Si_scatt_pysme.tar.gz/content",
+      "md5": "1489ce3bc4cafa68ee7fa8ec21f08c58",
+      "size": 333634293
+    }
+  ],
+  "nlte_Fe_pysme.grd": [
+    "https://nadc.china-vo.org/res/file_upload/download?id=53687",
+    "nlte_grids/nlte_Fe_ama51_Feb2022_pysme.grd.gz",
+    {
+      "url": "https://zenodo.org/api/records/7088951/files/nlte_Fe_pysme.tar.gz/content",
+      "md5": "504157d463ad792635452deae4c36964",
+      "size": 158002463
+    }
+  ],
+  "nlte_Ti_pysme.grd": [
+    "https://nadc.china-vo.org/res/file_upload/download?id=53711",
+    "nlte_grids/nlte_Ti_ama51_Aug2024_pysme.grd.gz",
+    {
+      "url": "https://zenodo.org/api/records/15062813/files/nlte_Ti_ama51_Aug2024_pysme.grd/content",
+      "md5": "8c317133720469ac739b07d543e77b80",
+      "size": 11381408861
+    }
+  ],
+  "marcs2012_H2018.grd": "nlte_grids/marcs2012_H2018_v1.0.0.grd.gz",
+  "marcs2012_Al.grd": "nlte_grids/marcs2012_Al_v1.0.0.grd.gz",
+  "marcs2012_Ba.grd": "nlte_grids/marcs2012_Ba_v1.0.0.grd.gz",
+  "marcs2012_Ca.grd": "nlte_grids/marcs2012_Ca_v1.0.0.grd.gz",
+  "marcs2012_C.grd": "nlte_grids/marcs2012_C_v1.0.0.grd.gz",
+  "marcs2012_Fe.grd": "nlte_grids/marcs2012_Fe_v1.0.0.grd.gz",
+  "marcs2012_K.grd": "nlte_grids/marcs2012_K_v1.0.0.grd.gz",
+  "marcs2012_Mg.grd": "nlte_grids/marcs2012_Mg_v1.0.0.grd.gz",
+  "marcs2012_Mn.grd": "nlte_grids/marcs2012_Mn_v1.0.0.grd.gz",
+  "marcs2012_N.grd": "nlte_grids/marcs2012_N_v1.0.0.grd.gz",
+  "marcs2012_O.grd": "nlte_grids/marcs2012_O_v1.0.0.grd.gz",
+  "marcs2012_Si.grd": "nlte_grids/marcs2012_Si_v1.0.0.grd.gz",
+  "nlte_S_pysme.grd": [
+    "https://nadc.china-vo.org/res/file_upload/download?id=53685",
+    {
+      "url": "https://zenodo.org/api/records/17064337/files/nlte_S_ama51_Sep2024_pysme.grd/content",
+      "md5": "c4486707374e6e598b8a4d7b9d97c706",
+      "size": 3007372949
+    }
+  ],
+  "nlte_Cu_pysme.grd": [
+    "https://nadc.china-vo.org/res/file_upload/download?id=53734",
+    {
+      "url": "https://zenodo.org/api/records/15062813/files/nlte_Cu_caliskan_Oct2024_pysme.grd/content",
+      "md5": "d6fce44eadfebe7d89050f7b15918364",
+      "size": 2495530092
+    }
+  ]
 }

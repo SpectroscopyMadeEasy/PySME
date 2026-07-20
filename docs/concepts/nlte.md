@@ -84,6 +84,14 @@ For the default `nlte_*_pysme.grd` pointers shipped with PySME, the preferred so
 
 The order above is implemented in `datafiles_nlte.json` using ordered pointer lists. Relative paths are expanded against path-compatible mirrors such as Uppsala, while NADC and Zenodo entries are usually provided as explicit download URLs.
 
+For checksum metadata in `datafiles_nlte.json`, PySME validates the downloaded object named by the pointer URL itself. In practice this means:
+
+- Zenodo `.tar.gz` links are validated as tarballs before extraction.
+- Zenodo direct `.grd` links are validated as downloaded `.grd` files.
+- Mirror-relative `.grd.gz` entries are validated as downloaded gzip payloads.
+
+Zenodo commonly publishes `md5` and `size` for hosted files, so those are the most practical validation fields to add first for Zenodo-backed NLTE pointers.
+
 ## Deprecated grids
 
   - H 
@@ -134,7 +142,6 @@ The order above is implemented in `datafiles_nlte.json` using ordered pointer li
     - marcs2012p_t1.0_Ba.grd [(Mashonkina et al. 1999)](https://ui.adsabs.harvard.edu/abs/1999A%26A...343..519M)
   - Eu
     - nlte_Eu.grd
-
 
 
 
