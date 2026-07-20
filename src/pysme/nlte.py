@@ -14,7 +14,7 @@ from tqdm import tqdm
 
 from .abund import Abund
 from .abund import elements as abund_elem
-from .data_structure import Collection, CollectionFactory, array, astype, oneof, this
+from .data_structure import Collection, CollectionFactory, array, asbool, astype, oneof, this
 from .util import show_progress_bars
 
 # from memory_profiler import profile
@@ -1028,6 +1028,8 @@ class NLTE(Collection):
             "Each entry is for one parameter abund, teff, logg, monh"),
         ("flags", None, array(None, np.bool_), this,
             "array: contains a flag for each line, whether it was calculated in NLTE (True) or not (False)"),
+        ("strict", False, asbool, this,
+            "bool: if True, raise an error instead of falling back to LTE when requested NLTE data cannot be applied to the current synthesis"),
         ("solar", None, this, this, "str: defines which default to use as the solar metallicitiies"),
         ("abund_format", "H=12", astype(str), this, "str: which abundance format to use for comparison"),
         ("selection", "energy", oneof("energy", "levels"), this, "str: which selection algorithm to use to match linelist and departure coefficients"),
@@ -1146,6 +1148,11 @@ class NLTE(Collection):
     def _citation_info(self, value):
         pass
 
+    def _handle_lte_fallback(self, exc_type, message):
+        if self.strict:
+            raise exc_type(f"{message} Strict NLTE mode forbids LTE fallback.")
+        logger.warning("%s", message)
+
     # @profile
     def update_coefficients(self, sme, dll, lfs_nlte):
         """pass departure coefficients to C library;
@@ -1165,12 +1172,19 @@ class NLTE(Collection):
                 logger.info("Running in LTE")
             return sme
         if sme.linelist.lineformat == "short":
+            message = (
+                "NLTE line formation was requested, but VALD3 long-format linedata\n"
+                "are required in order to relate line terms to NLTE level corrections!\n"
+                "Line formation will proceed under LTE."
+            )
+            if self.strict:
+                self.first = False
+                self._handle_lte_fallback(ValueError, message)
             if self.first:
                 self.first = False
-                logger.warning(
-                    "NLTE line formation was requested, but VALD3 long-format linedata\n"
-                    "are required in order to relate line terms to NLTE level corrections!\n"
-                    "Line formation will proceed under LTE."
+                self._handle_lte_fallback(
+                    ValueError,
+                    message,
                 )
             return sme
 
@@ -1188,17 +1202,17 @@ class NLTE(Collection):
             if not np.any(grid.iused):
                 # No lines are found for this element
                 # remove it from the elements after this loop
-                logger.warning(
-                    "No %s NLTE lines found, removing it from NLTE calculations",
-                    elem,
+                self._handle_lte_fallback(
+                    RuntimeError,
+                    f"No {elem} NLTE lines found, removing it from NLTE calculations.",
                 )
                 marked_for_removal += [elem]
                 continue
             bmat = grid.get(sme.abund, sme.teff, sme.logg, sme.monh, sme.atmo)
             if bmat is None or grid.linerefs.size == 0:
-                logger.warning(
-                    "No %s NLTE lines found, removing it from NLTE calculations",
-                    elem,
+                self._handle_lte_fallback(
+                    RuntimeError,
+                    f"No {elem} NLTE lines found, removing it from NLTE calculations.",
                 )
                 marked_for_removal += [elem]
                 continue

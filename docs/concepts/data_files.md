@@ -49,6 +49,7 @@ Notes:
 - Validation fields apply to the downloadable object itself, not to any later unpacked file. For example, a `.grd.gz` pointer validates the downloaded `.grd.gz` payload, and a `.tar.gz` pointer validates the downloaded tarball.
 - Supported validation fields are `size`, `md5`, and `sha256`. Any of these fields that are present must match for the download target to be accepted.
 - Zenodo commonly exposes file `size` and `md5`, so Zenodo pointer entries can usually be validated without computing a local `sha256` first.
+- If NLTE data are requested but a valid NLTE download target cannot be applied, PySME normally warns and falls back to LTE. Set `sme.nlte.strict = True` to raise an exception instead.
 - The NADC packaged data mirror page is <https://nadc.china-vo.org/res/r101793/>.
 - `~` is supported in path values and will be expanded to your home directory.
 - Changing these paths does not migrate old files automatically; move existing files manually if needed.
