@@ -80,6 +80,7 @@ def test_empty_structure():
 
     assert empty.nlte is not None
     assert empty.nlte.elements == []
+    assert empty.interpolation_policy == "allow"
     assert empty.h_line_mode is None
     assert empty.h_line_form is None
     assert empty.normalize_resample_mode is None

@@ -520,7 +520,11 @@ class Synthesizer:
                 self.atmosphere_interpolator.geom = atmo.geom
 
             atmo = self.atmosphere_interpolator.interp_atmo_grid(
-                atmo.source, sme.teff, sme.logg, sme.monh
+                atmo.source,
+                sme.teff,
+                sme.logg,
+                sme.monh,
+                interpolation_policy=sme.interpolation_policy,
             )
         elif atmo.method == "routine":
             provider = resolve_routine_atmosphere_provider(atmo.source)

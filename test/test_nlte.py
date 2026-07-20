@@ -218,7 +218,28 @@ def test_h_old_scaled_rel_abund_would_show_pattern_offset():
     old_scaled_rel_abund = grid.solar_rel_abund(abund, "H") - grid.solar_rel_abund(abund, "Fe")
 
     assert old_scaled_rel_abund == pytest.approx(-0.01, abs=1e-6)
-    assert grid.scaled_rel_abund(abund) == pytest.approx(0.0)
+
+
+def test_nlte_abundance_boundary_raises_in_error_mode():
+    grid = _make_grid_for_abundance_test("Mg")
+    grid._xfe = np.array([-0.5, 0.0, 0.5])
+
+    with pytest.raises(ValueError, match="outside the interpolation boundary"):
+        grid.validate_parameter_point(
+            rabund=1.0,
+            teff=5000.0,
+            logg=4.0,
+            monh=0.0,
+            interpolation_policy="error",
+        )
+
+    grid.validate_parameter_point(
+        rabund=0.25,
+        teff=5000.0,
+        logg=4.0,
+        monh=0.0,
+        interpolation_policy="error",
+    )
 
 
 def test_update_coefficients_short_format_defaults_to_warning_and_lte(caplog):

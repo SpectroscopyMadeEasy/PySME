@@ -6,6 +6,7 @@ import logging
 import numpy as np
 from astropy import constants as const
 from scipy.interpolate import interp1d
+from scipy.ndimage import binary_fill_holes
 from scipy.optimize import curve_fit
 
 from ..abund import Abund
@@ -35,8 +36,11 @@ class AtmosphereInterpolator:
         self.source = None
         self.atmo_grid = None
         self.verbose = verbose
+        self._boundary_cache = {}
 
-    def interp_atmo_grid(self, atmo_grid, teff, logg, monh):
+    def interp_atmo_grid(
+        self, atmo_grid, teff, logg, monh, interpolation_policy="allow"
+    ):
         """
         General routine to interpolate in 3D grid of model atmospheres
 
@@ -85,12 +89,21 @@ class AtmosphereInterpolator:
 
         assert len(atmo_grid) > 0, "No atmospheres for this geometry"
 
+        interpolation_policy = str(interpolation_policy).lower()
+        if interpolation_policy not in {"allow", "error"}:
+            raise ValueError("interpolation_policy must be 'allow' or 'error'")
+
         # Get field names in ATMO and ATMO_GRID structures.
         depth = self.determine_depth_scale(self.depth, atmo_grid)
         interp = self.determine_interpolation_scale(self.interp, atmo_grid)
 
+        if interpolation_policy == "error":
+            self.validate_parameter_point(teff, logg, monh, atmo_grid)
+
         # Find the corner models bracketing the given values
-        icor = self.find_corner_models(teff, logg, monh, atmo_grid)
+        icor = self.find_corner_models(
+            teff, logg, monh, atmo_grid, interpolation_policy=interpolation_policy
+        )
 
         # Interpolate the corner models
         atmo = self.interpolate_corner_models(
@@ -123,6 +136,132 @@ class AtmosphereInterpolator:
         atmo.method = "grid"
 
         return atmo
+
+    def get_parameter_boundary(self, atmo_grid):
+        cache_key = (
+            getattr(atmo_grid, "source", None),
+            getattr(atmo_grid, "geom", None),
+            len(atmo_grid),
+            id(atmo_grid) if getattr(atmo_grid, "source", None) in (None, "") else None,
+        )
+        if cache_key in self._boundary_cache:
+            return self._boundary_cache[cache_key]
+
+        monh_values = np.sort(np.unique(np.asarray(atmo_grid.monh, dtype=float)))
+        teff_values = np.sort(np.unique(np.asarray(atmo_grid.teff, dtype=float)))
+        logg_values = np.sort(np.unique(np.asarray(atmo_grid.logg, dtype=float)))
+        teff_index = {value: idx for idx, value in enumerate(teff_values)}
+        logg_index = {value: idx for idx, value in enumerate(logg_values)}
+
+        slices = {}
+        for monh in monh_values:
+            select = np.isclose(atmo_grid.monh, monh)
+            occupied = np.zeros((len(logg_values), len(teff_values)), dtype=bool)
+            for teff, logg in zip(
+                np.asarray(atmo_grid.teff[select], dtype=float),
+                np.asarray(atmo_grid.logg[select], dtype=float),
+            ):
+                occupied[logg_index[logg], teff_index[teff]] = True
+
+            row_fill = occupied.copy()
+            for i in range(row_fill.shape[0]):
+                cols = np.flatnonzero(row_fill[i])
+                if cols.size > 0:
+                    row_fill[i, cols.min() : cols.max() + 1] = True
+
+            col_fill = row_fill.copy()
+            for j in range(col_fill.shape[1]):
+                rows = np.flatnonzero(col_fill[:, j])
+                if rows.size > 0:
+                    col_fill[rows.min() : rows.max() + 1, j] = True
+
+            filled = binary_fill_holes(col_fill)
+
+            teff_idx = []
+            lower = []
+            upper = []
+            for j in range(filled.shape[1]):
+                rows = np.flatnonzero(filled[:, j])
+                if rows.size == 0:
+                    continue
+                teff_idx.append(j)
+                lower.append(rows.min())
+                upper.append(rows.max())
+
+            slices[monh] = {
+                "teff": teff_values[np.asarray(teff_idx, dtype=int)],
+                "lower": logg_values[np.asarray(lower, dtype=int)],
+                "upper": logg_values[np.asarray(upper, dtype=int)],
+            }
+
+        boundary = {
+            "monh": monh_values,
+            "slices": slices,
+        }
+        self._boundary_cache[cache_key] = boundary
+        return boundary
+
+    @staticmethod
+    def _interp_slice_bounds(teff, teff_grid, lower, upper):
+        if teff < teff_grid[0] or teff > teff_grid[-1]:
+            return None
+        lower_bound = float(interp1d(teff_grid, lower)(teff))
+        upper_bound = float(interp1d(teff_grid, upper)(teff))
+        return lower_bound, upper_bound
+
+    def get_logg_bounds(self, teff, monh, atmo_grid):
+        boundary = self.get_parameter_boundary(atmo_grid)
+        monh_grid = boundary["monh"]
+        if monh < monh_grid[0] or monh > monh_grid[-1]:
+            return None
+
+        pos = np.searchsorted(monh_grid, monh)
+        if pos < len(monh_grid) and np.isclose(monh_grid[pos], monh):
+            slice_boundary = boundary["slices"][monh_grid[pos]]
+            return self._interp_slice_bounds(
+                teff,
+                slice_boundary["teff"],
+                slice_boundary["lower"],
+                slice_boundary["upper"],
+            )
+        if pos == 0 or pos >= len(monh_grid):
+            return None
+
+        monh_lo = monh_grid[pos - 1]
+        monh_hi = monh_grid[pos]
+        slice_lo = boundary["slices"][monh_lo]
+        slice_hi = boundary["slices"][monh_hi]
+        bounds_lo = self._interp_slice_bounds(
+            teff, slice_lo["teff"], slice_lo["lower"], slice_lo["upper"]
+        )
+        bounds_hi = self._interp_slice_bounds(
+            teff, slice_hi["teff"], slice_hi["lower"], slice_hi["upper"]
+        )
+        if bounds_lo is None or bounds_hi is None:
+            return None
+
+        weight = (monh - monh_lo) / (monh_hi - monh_lo)
+        lower = (1 - weight) * bounds_lo[0] + weight * bounds_hi[0]
+        upper = (1 - weight) * bounds_lo[1] + weight * bounds_hi[1]
+        return lower, upper
+
+    def validate_parameter_point(self, teff, logg, monh, atmo_grid):
+        bounds = self.get_logg_bounds(teff, monh, atmo_grid)
+        if bounds is None:
+            raise AtmosphereError(
+                "interp_atmo_grid: requested parameters "
+                f"(Teff={teff:.1f}, logg={logg:.3f}, [M/H]={monh:.3f}) "
+                "lie outside the atmosphere interpolation boundary."
+            )
+
+        lower, upper = bounds
+        if not (lower <= logg <= upper):
+            raise AtmosphereError(
+                "interp_atmo_grid: requested parameters "
+                f"(Teff={teff:.1f}, logg={logg:.3f}, [M/H]={monh:.3f}) "
+                f"lie outside the atmosphere interpolation boundary "
+                f"(allowed logg at this Teff/[M/H]: {lower:.3f} to {upper:.3f})."
+            )
 
     def interp_atmo_pair(self, atmo1, atmo2, frac, interpvar="RHOX", itop=0):
         """
@@ -603,7 +742,9 @@ class AtmosphereInterpolator:
             )
         return interp
 
-    def find_corner_models(self, teff, logg, monh, atmo_grid):
+    def find_corner_models(
+        self, teff, logg, monh, atmo_grid, interpolation_policy="allow"
+    ):
         """
         Find the models in the grid that bracket the given stellar parameters
 
@@ -645,14 +786,24 @@ class AtmosphereInterpolator:
                 monh,
                 mmax,
             )
-        if monh < mmin:  # true: logg too small
-            raise AtmosphereError(
-                "interp_atmo_grid: requested [M/H] (%.3f) smaller than min grid value (%.3f). returning."
-                % (monh, mmin)
-            )
+        if monh < mmin:  # true: [M/H] too small
+            if interpolation_policy == "allow":
+                logger.info(
+                    "interp_atmo_grid: requested [M/H] (%.3f) smaller than min grid value (%.3f). extrapolating.",
+                    monh,
+                    mmin,
+                )
+            else:
+                raise AtmosphereError(
+                    "interp_atmo_grid: requested [M/H] (%.3f) smaller than min grid value (%.3f). returning."
+                    % (monh, mmin)
+                )
 
         # Find closest two [M/H] values in grid that bracket requested [M/H].
-        if monh <= mmax:
+        if monh < mmin:
+            mlo = mmin
+            mup = np.min(mlist[mlist > mlo])
+        elif monh <= mmax:
             mlo = np.max(mlist[mlist <= monh])
             mup = np.min(mlist[mlist >= monh])
         else:
@@ -683,13 +834,23 @@ class AtmosphereInterpolator:
                 )
 
             if logg < gmin:  # true: logg too small
-                raise AtmosphereError(
-                    "interp_atmo_grid: requested log(g) (%.3f) smaller than min grid value (%.3f). returning."
-                    % (logg, gmin)
-                )
+                if interpolation_policy == "allow":
+                    logger.info(
+                        "interp_atmo_grid: requested log(g) (%.3f) smaller than min grid value (%.3f). extrapolating.",
+                        logg,
+                        gmin,
+                    )
+                else:
+                    raise AtmosphereError(
+                        "interp_atmo_grid: requested log(g) (%.3f) smaller than min grid value (%.3f). returning."
+                        % (logg, gmin)
+                    )
 
             # Find closest two gravities in Mlo subgrid that bracket requested gravity.
-            if logg <= gmax:
+            if logg < gmin:
+                glo = gmin
+                gup = np.min(glist[glist > glo])
+            elif logg <= gmax:
                 glo = np.max(glist[glist <= logg])
                 gup = np.min(glist[glist >= logg])
             else:
@@ -723,10 +884,17 @@ class AtmosphereInterpolator:
                 tmin = np.min(tlist)  # range of temperatures in grid
                 tmax = np.max(tlist)
                 if teff > tmax:  # true: Teff too large
-                    raise AtmosphereError(
-                        "interp_atmo_grid: requested Teff (%i) larger than max grid value (%i). returning."
-                        % (teff, tmax)
-                    )
+                    if interpolation_policy == "allow":
+                        logger.info(
+                            "interp_atmo_grid: requested Teff (%i) larger than max grid value (%i). extrapolating.",
+                            teff,
+                            tmax,
+                        )
+                    else:
+                        raise AtmosphereError(
+                            "interp_atmo_grid: requested Teff (%i) larger than max grid value (%i). returning."
+                            % (teff, tmax)
+                        )
                 if teff < tmin:  # true: logg too small
                     logger.info(
                         "interp_atmo_grid: requested Teff (%i) smaller than min grid value (%i). extrapolating.",
@@ -735,7 +903,13 @@ class AtmosphereInterpolator:
                     )
 
                 # Find closest two temperatures in subgrid that bracket requested Teff.
-                if teff > tmin:
+                if teff < tmin:
+                    tlo = tmin
+                    tup = np.min(tlist[tlist > tlo])
+                elif teff > tmax:
+                    tup = tmax
+                    tlo = np.max(tlist[tlist < tup])
+                elif teff > tmin:
                     tlo = np.max(tlist[tlist <= teff])
                     tup = np.min(tlist[tlist >= teff])
                 else:

@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from pysme.atmosphere.atmosphere import Atmosphere
+from pysme.atmosphere.atmosphere import Atmosphere, AtmosphereError, AtmosphereGrid
 from pysme.atmosphere.interpolation import AtmosphereInterpolator
 from pysme.atmosphere.savfile import SavFile
 
@@ -94,3 +94,69 @@ def test_interp_atmo_pair_interpolates_spherical_height():
     assert not np.allclose(out.height, atmo1.height[: len(out.height)])
     assert not np.allclose(out.height, atmo2.height[: len(out.height)])
     assert np.allclose(out.height, 0.5 * (atmo1.height + atmo2.height), atol=1.0)
+
+
+def _make_boundary_test_grid():
+    points = [
+        (-1.0, 5000.0, 3.0),
+        (-1.0, 5000.0, 4.0),
+        (-1.0, 5500.0, 2.0),
+        (-1.0, 5500.0, 3.0),
+        (-1.0, 5500.0, 4.0),
+        (0.0, 5000.0, 2.0),
+        (0.0, 5000.0, 3.0),
+        (0.0, 5500.0, 1.0),
+        (0.0, 5500.0, 2.0),
+        (0.0, 5500.0, 3.0),
+    ]
+    grid = AtmosphereGrid(len(points), 1)
+    grid.source = "boundary_test.sav"
+    grid.geom = "PP"
+    for i, (monh, teff, logg) in enumerate(points):
+        grid.monh[i] = monh
+        grid.teff[i] = teff
+        grid.logg[i] = logg
+        grid.radius[i] = 1.0
+    return grid
+
+
+def test_validate_parameter_point_interpolates_boundary_in_monh():
+    interpolator = AtmosphereInterpolator()
+    grid = _make_boundary_test_grid()
+
+    with pytest.raises(AtmosphereError, match="outside the atmosphere interpolation boundary"):
+        interpolator.validate_parameter_point(5250.0, 1.0, -0.5, grid)
+
+    interpolator.validate_parameter_point(5250.0, 2.5, -0.5, grid)
+
+
+def test_find_corner_models_allows_extrapolation_in_every_direction():
+    grid = AtmosphereGrid(8, 1)
+    grid.source = "corners_test.sav"
+    grid.geom = "PP"
+    points = [
+        (-1.0, 5000.0, 2.0),
+        (-1.0, 6000.0, 2.0),
+        (-1.0, 5000.0, 4.0),
+        (-1.0, 6000.0, 4.0),
+        (0.0, 5000.0, 2.0),
+        (0.0, 6000.0, 2.0),
+        (0.0, 5000.0, 4.0),
+        (0.0, 6000.0, 4.0),
+    ]
+    for i, (monh, teff, logg) in enumerate(points):
+        grid.monh[i] = monh
+        grid.teff[i] = teff
+        grid.logg[i] = logg
+        grid.radius[i] = 1.0
+
+    interpolator = AtmosphereInterpolator()
+    corners = interpolator.find_corner_models(
+        teff=6500.0,
+        logg=1.0,
+        monh=-1.5,
+        atmo_grid=grid,
+        interpolation_policy="allow",
+    )
+
+    assert corners.shape == (2, 2, 2)

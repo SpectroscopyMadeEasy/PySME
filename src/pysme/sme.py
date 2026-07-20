@@ -251,6 +251,8 @@ class SME_Structure(Parameters):
             "bool: Whether to normalize the synthetic spectrum by the synthetic continuum spectrum or not"),
         ("normalize_resample_mode", None, lowercase(oneof(None, "separate", "ratio")), this,
             "str or None: Resampling mode for normalized synthetic spectra; None keeps legacy/default behaviour"),
+        ("interpolation_policy", "allow", lowercase(oneof("allow", "error")), this,
+            "str: parameter-grid extrapolation policy shared by atmosphere and NLTE calculations"),
         ("specific_intensities_only", False, asbool, this,
             "bool: Whether to keep the specific intensities or integrate them together"),
         ("h_line_mode", None, lowercase(oneof(None, "off", "trace", "apply")), this,

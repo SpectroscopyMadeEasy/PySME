@@ -10,8 +10,14 @@ If you want to provide your own model atmosphere file, it should be present in `
 
 Each atmosphere model file describes a grid of models, on
 which we then linearly interpolate to the desired stellar parameters.
-Sometimes we dare extrapolate from this grid as well, but in that case,
-we always show a warnning.
+PySME now exposes this behaviour via `sme.interpolation_policy`:
+
+- `allow` (default): allow parameter-space extrapolation if interpolation can proceed
+- `error`: forbid parameter-space extrapolation and raise an error once the requested point leaves the atmosphere-grid boundary
+
+For the default MARCS atmosphere, the strict boundary is defined in the
+`Teff-logg` plane separately for each `[M/H]` slice and interpolated linearly
+between neighbouring `[M/H]` slices.
 
 Note that the atmosphere also contains a seperate set of stellar
 parameters, which is usually the same as that of the sme structure,
@@ -69,17 +75,49 @@ The atmopshere object has the following fields:
 
 ### Grid plots
 
+The plots below are expanded by `[M/H]` to make the practical coverage easier
+to inspect. The default `marcs2012.sav` figure additionally shows the current
+strict extrapolation boundary in red. The other atmosphere figures show grid
+coverage only.
+
+`marcs2012.sav`
 ![](../img/atmosphere/marcs2012_grid.png)
+
+`marcs2012p_t0.0.sav`
 ![](../img/atmosphere/marcs2012p_t0.0_grid.png)
+
+`marcs2012p_t1.0.sav`
 ![](../img/atmosphere/marcs2012p_t1.0_grid.png)
+
+`marcs2012p_t2.0.sav`
 ![](../img/atmosphere/marcs2012p_t2.0_grid.png)
+
+`marcs2012s_t1.0.sav`
 ![](../img/atmosphere/marcs2012s_t1.0_grid.png)
+
+`marcs2012s_t2.0.sav`
 ![](../img/atmosphere/marcs2012s_t2.0_grid.png)
+
+`marcs2012s_t5.0.sav`
 ![](../img/atmosphere/marcs2012s_t5.0_grid.png)
+
+`marcs2012t00cooldwarfs.sav`
 ![](../img/atmosphere/marcs2012t00cooldwarfs_grid.png)
+
+`marcs2012t01cooldwarfs.sav`
 ![](../img/atmosphere/marcs2012t01cooldwarfs_grid.png)
+
+`marcs2012t02cooldwarfs.sav`
 ![](../img/atmosphere/marcs2012t02cooldwarfs_grid.png)
+
+`atlas12.sav`
 ![](../img/atmosphere/atlas12_grid.png)
+
+`atlas9_vmic0.0.sav`
 ![](../img/atmosphere/atlas9_vmic0.0_grid.png)
+
+`atlas9_vmic2.0.sav`
 ![](../img/atmosphere/atlas9_vmic2.0_grid.png)
+
+`ll_vmic2.0.sav`
 ![](../img/atmosphere/ll_vmic2.0_grid.png)
