@@ -165,6 +165,7 @@ class GlobalState(ct.Structure):
         ("SPINDEX", ct.POINTER(ct.c_int)),
         ("flagNLTE", ct.POINTER(ct.c_short)),
         ("result", ct.c_char * (MAX_OUT_LEN + 1)),
+        ("continuum_scattering_source_mode", ct.c_short),
     ]
 
     def free_linelist(self):
@@ -597,6 +598,9 @@ class IDL_DLL:
         new.FREQ = state.contents.FREQ
         new.FREQLG = state.contents.FREQLG
         new.debug_print = state.contents.debug_print
+        new.continuum_scattering_source_mode = (
+            state.contents.continuum_scattering_source_mode
+        )
 
         ct.memmove(new.IFOP, state.contents.IFOP, ct.sizeof(new.IFOP))
         ct.memmove(new.ABUND, state.contents.ABUND, ct.sizeof(new.ABUND))

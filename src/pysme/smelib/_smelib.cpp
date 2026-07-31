@@ -228,6 +228,28 @@ static PyObject *smelib_SetLineInfoMode(PyObject *self, PyObject *args)
     Py_RETURN_NONE;
 }
 
+static char smelib_SetContinuumScatteringSourceMode_docstring[] = "Enable PP continuum scattering source";
+static PyObject *smelib_SetContinuumScatteringSourceMode(PyObject *self, PyObject *args)
+{
+    const int n = 1;
+    const char *result = NULL;
+    void *args_c[n];
+    int mode = 0;
+
+    if (!PyArg_ParseTuple(args, "i", &mode))
+        return NULL;
+
+    args_c[0] = &mode;
+    result = SetContinuumScatteringSourceMode(n, args_c);
+    if (result != NULL && result[0] != OK_response)
+    {
+        PyErr_SetString(PyExc_RuntimeError, result);
+        return NULL;
+    }
+
+    Py_RETURN_NONE;
+}
+
 static char smelib_InputLinePrecomputedInfo_docstring[] = "Input precomputed line ranges and strong mask";
 static PyObject *smelib_InputLinePrecomputedInfo(PyObject *self, PyObject *args)
 {
@@ -1035,6 +1057,109 @@ static PyObject *smelib_GetOpacity(PyObject *self, PyObject *args, PyObject *kwd
     return (PyObject *)arr;
 }
 
+static char smelib_GetContinuumOpacityComponents_docstring[] = "Returns continuum absorption, scattering, and total opacity";
+static PyObject *smelib_GetContinuumOpacityComponents(PyObject *self, PyObject *args)
+{
+    const int n = 5;
+    void *args_c[n];
+    const char *result = NULL;
+    npy_intp dims[1];
+    short depth;
+    double wave;
+    PyObject *return_tuple = NULL;
+    PyArrayObject *kappa = NULL, *sigma = NULL, *chi = NULL;
+
+    if (!PyArg_ParseTuple(args, "d", &wave))
+        return NULL;
+
+    depth = GetNRHOX();
+    dims[0] = depth;
+    kappa = (PyArrayObject *)PyArray_SimpleNew(1, dims, NPY_DOUBLE);
+    sigma = (PyArrayObject *)PyArray_SimpleNew(1, dims, NPY_DOUBLE);
+    chi = (PyArrayObject *)PyArray_SimpleNew(1, dims, NPY_DOUBLE);
+    if (kappa == NULL || sigma == NULL || chi == NULL)
+        goto fail;
+
+    args_c[0] = &wave;
+    args_c[1] = &depth;
+    args_c[2] = PyArray_DATA(kappa);
+    args_c[3] = PyArray_DATA(sigma);
+    args_c[4] = PyArray_DATA(chi);
+    result = GetContinuumOpacityComponents(n, args_c);
+
+    if (result != NULL && result[0] != OK_response)
+    {
+        PyErr_SetString(PyExc_RuntimeError, result);
+        goto fail;
+    }
+
+    return_tuple = PyTuple_New(3);
+    if (return_tuple == NULL)
+        goto fail;
+    PyTuple_SET_ITEM(return_tuple, 0, (PyObject *)kappa);
+    kappa = NULL;
+    PyTuple_SET_ITEM(return_tuple, 1, (PyObject *)sigma);
+    sigma = NULL;
+    PyTuple_SET_ITEM(return_tuple, 2, (PyObject *)chi);
+    chi = NULL;
+    return return_tuple;
+
+fail:
+    Py_XDECREF(kappa);
+    Py_XDECREF(sigma);
+    Py_XDECREF(chi);
+    return NULL;
+}
+
+static char smelib_GetContinuumScatteringSource_docstring[] = "Returns PP continuum scattering mean intensity and source";
+static PyObject *smelib_GetContinuumScatteringSource(PyObject *self, PyObject *args)
+{
+    const int n = 4;
+    void *args_c[n];
+    const char *result = NULL;
+    npy_intp dims[1];
+    short depth;
+    double wave;
+    PyObject *return_tuple = NULL;
+    PyArrayObject *jbar = NULL, *source = NULL;
+
+    if (!PyArg_ParseTuple(args, "d", &wave))
+        return NULL;
+
+    depth = GetNRHOX();
+    dims[0] = depth;
+    jbar = (PyArrayObject *)PyArray_SimpleNew(1, dims, NPY_DOUBLE);
+    source = (PyArrayObject *)PyArray_SimpleNew(1, dims, NPY_DOUBLE);
+    if (jbar == NULL || source == NULL)
+        goto fail;
+
+    args_c[0] = &wave;
+    args_c[1] = &depth;
+    args_c[2] = PyArray_DATA(jbar);
+    args_c[3] = PyArray_DATA(source);
+    result = GetContinuumScatteringSource(n, args_c);
+
+    if (result != NULL && result[0] != OK_response)
+    {
+        PyErr_SetString(PyExc_RuntimeError, result);
+        goto fail;
+    }
+
+    return_tuple = PyTuple_New(2);
+    if (return_tuple == NULL)
+        goto fail;
+    PyTuple_SET_ITEM(return_tuple, 0, (PyObject *)jbar);
+    jbar = NULL;
+    PyTuple_SET_ITEM(return_tuple, 1, (PyObject *)source);
+    source = NULL;
+    return return_tuple;
+
+fail:
+    Py_XDECREF(jbar);
+    Py_XDECREF(source);
+    return NULL;
+}
+
 static char smelib_GetFraction_docstring[] = "Returns fraction/partition function for a species";
 static PyObject *smelib_GetFraction(PyObject *self, PyObject *args, PyObject *kwds)
 {
@@ -1665,6 +1790,7 @@ static PyMethodDef module_methods[] = {
     {"SetH2broad", smelib_SetH2broad, METH_NOARGS, smelib_SetH2broad_docstring},
     {"ClearH2broad", smelib_ClearH2broad, METH_NOARGS, smelib_ClearH2broad_docstring},
     {"SetLineInfoMode", smelib_SetLineInfoMode, METH_VARARGS, smelib_SetLineInfoMode_docstring},
+    {"SetContinuumScatteringSourceMode", smelib_SetContinuumScatteringSourceMode, METH_VARARGS, smelib_SetContinuumScatteringSourceMode_docstring},
     {"InputLinePrecomputedInfo", smelib_InputLinePrecomputedInfo, METH_VARARGS, smelib_InputLinePrecomputedInfo_docstring},
     {"InputLineList", smelib_InputLineList, METH_VARARGS, smelib_InputLineList_docstring},
     {"OutputLineList", smelib_OutputLineList, METH_NOARGS, smelib_OutputLineList_docstring},
@@ -1676,6 +1802,8 @@ static PyMethodDef module_methods[] = {
     {"InputAbund", smelib_InputAbund, METH_VARARGS, smelib_InputAbund_docstring},
     {"Opacity", smelib_Opacity, METH_NOARGS, smelib_Opacity_docstring},
     {"GetOpacity", (PyCFunction)(void (*)(void))smelib_GetOpacity, METH_VARARGS | METH_KEYWORDS, smelib_GetOpacity_docstring},
+    {"GetContinuumOpacityComponents", smelib_GetContinuumOpacityComponents, METH_VARARGS, smelib_GetContinuumOpacityComponents_docstring},
+    {"GetContinuumScatteringSource", smelib_GetContinuumScatteringSource, METH_VARARGS, smelib_GetContinuumScatteringSource_docstring},
     {"GetFraction", (PyCFunction)(void (*)(void))smelib_GetFraction, METH_VARARGS | METH_KEYWORDS, smelib_GetFraction_docstring},
     {"Ionization", smelib_Ionization, METH_VARARGS, smelib_Ionization_docstring},
     {"GetDensity", smelib_GetDensity, METH_NOARGS, smelib_GetDensity_docstring},
