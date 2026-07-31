@@ -82,6 +82,12 @@ from IDL SME. It is recommend however to use the new variables.
     If not provided, PySME can reuse an internal cached adaptive grid
     when `reuse_wavelength_grid=True`; otherwise SMElib computes a new
     adaptive grid.
+:continuum_scattering_source:
+    Boolean flag controlling whether coherent continuum scattering is included
+    in the continuum source function during synthesis. The default is `False`,
+    which keeps the historical PySME behavior. Set this to `True` to use the
+    opt-in continuum-scattering source treatment for plane-parallel and
+    spherical atmospheres.
 
 
 ## Abundance

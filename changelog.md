@@ -2,6 +2,8 @@
 
 ## 2026-06-26
 
+- Added an opt-in continuum-scattering source treatment for plane-parallel and
+  spherical atmospheres using a constant-Eddington-factor moment approximation.
 - Fixed the H NLTE abundance-coordinate handling so the standard hydrogen NLTE
   abundance coordinate remains stable during synthesis.
 - Fixed free-abundance fitting to use the correct internal abundance-pattern
