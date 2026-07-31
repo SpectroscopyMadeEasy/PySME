@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 # TODO implement synthesis tests
+from copy import deepcopy
 import os
 
 import numpy as np
@@ -7,7 +8,10 @@ import pandas as pd
 import pytest
 
 from pysme import util
+from pysme.abund import Abund
+from pysme.atmosphere.krzfile import KrzFile
 from pysme.iliffe_vector import Iliffe_vector
+from pysme.linelist.linelist import LineList
 from pysme.sme import SME_Structure as SME_Struct
 from pysme.synthesize import Synthesizer, synthesize_spectrum
 from .conftest import skipif_smelib
@@ -67,6 +71,7 @@ class _DummyDLL:
         self.transf_wave = transf_wave
         self._nlines = 0
         self.last_env = {}
+        self.continuum_scattering_source_modes = []
 
     def SetLibraryPath(self):
         return None
@@ -78,6 +83,10 @@ class _DummyDLL:
         return None
 
     def SetLineInfoMode(self, *_):
+        return None
+
+    def SetContinuumScatteringSourceMode(self, mode):
+        self.continuum_scattering_source_modes.append(int(mode))
         return None
 
     def InputLineList(self, linelist):
@@ -132,6 +141,41 @@ def _set_minimal_species_linelist(sme, species):
         }
     )
     sme.line_ion_mask = np.zeros(len(species), dtype=bool)
+
+
+def _continuum_scattering_sme(cwd, spherical=False):
+    sme = SME_Struct()
+    sme.teff = 5750
+    sme.logg = 4.5
+    sme.vmic = 2.0
+    sme.vmac = 0.0
+    sme.vsini = 0.0
+    sme.abund = Abund(monh=0, pattern="asplund2009")
+    sme.linelist = LineList()
+    sme.linelist.add("Fe 1", 5502.9931, 0.9582, -3.047, 7.19, -6.22, 239.249)
+    sme.linelist.add("Cr 2", 5503.5955, 4.1682, -2.117, 8.37, -6.49, 195.248)
+    sme.atmo = KrzFile(os.path.join(cwd, "testatmo1.krz"))
+    sme.atmo.method = "embedded"
+    if spherical:
+        sme.atmo.geom = "SPH"
+        sme.atmo.radius = 10.0
+        sme.atmo.height = np.linspace(4e7, 0.0, len(sme.atmo.rhox))
+    else:
+        sme.atmo.geom = "PP"
+    sme.wran = [[5500.0, 5600.0]]
+    sme.wint = [np.linspace(5500.0, 5600.0, 41)]
+    sme.mu = [1.0]
+    sme.vrad_flag = "none"
+    sme.cscale_flag = "none"
+    sme.specific_intensities_only = True
+    return sme
+
+
+def _synthesize_continuum_with_mode(synth, sme, mode):
+    one = deepcopy(sme)
+    one.continuum_scattering_source = mode
+    out = synth.synthesize_spectrum(one, passNLTE=False)
+    return np.asarray(out.wint[0]), np.asarray(out.cint[0])
 
 
 def test_synthesize_segment_prefers_user_wint_over_cache():
@@ -204,6 +248,73 @@ def test_specific_intensities_only_updates_sme_and_trims_to_wran():
     assert w.size < 9
     assert sint.shape == (len(sme.mu), w.size)
     assert cint.shape == (len(sme.mu), w.size)
+
+
+def test_synthesize_spectrum_sets_continuum_scattering_source_mode_each_time():
+    dll = _DummyDLL(transf_wave=np.linspace(5000.0, 5001.0, 5))
+    synth = Synthesizer(dll=dll)
+    sme = _minimal_sme()
+
+    sme.continuum_scattering_source = False
+    synth.synthesize_spectrum(
+        sme,
+        segments=[0],
+        passAtmosphere=False,
+        passNLTE=False,
+    )
+    sme.continuum_scattering_source = True
+    synth.synthesize_spectrum(
+        sme,
+        segments=[0],
+        passAtmosphere=False,
+        passNLTE=False,
+    )
+    sme.continuum_scattering_source = False
+    synth.synthesize_spectrum(
+        sme,
+        segments=[0],
+        passAtmosphere=False,
+        passNLTE=False,
+    )
+
+    assert dll.continuum_scattering_source_modes == [0, 1, 0]
+
+
+@skipif_smelib
+def test_high_level_continuum_scattering_source_off_on_off_pp():
+    sme = _continuum_scattering_sme(os.path.dirname(__file__), spherical=False)
+    synth = Synthesizer()
+
+    wave_off_1, cont_off_1 = _synthesize_continuum_with_mode(synth, sme, False)
+    wave_on, cont_on = _synthesize_continuum_with_mode(synth, sme, True)
+    wave_off_2, cont_off_2 = _synthesize_continuum_with_mode(synth, sme, False)
+
+    assert np.allclose(wave_on, wave_off_1)
+    assert np.allclose(wave_off_2, wave_off_1)
+    assert np.all(np.isfinite(cont_off_1))
+    assert np.all(np.isfinite(cont_on))
+    assert np.all(np.isfinite(cont_off_2))
+    assert np.allclose(cont_off_2, cont_off_1, rtol=0, atol=0)
+    assert not np.allclose(cont_on, cont_off_1, rtol=1e-8, atol=0)
+
+
+@skipif_smelib
+def test_high_level_continuum_scattering_source_spherical_on():
+    sme = _continuum_scattering_sme(os.path.dirname(__file__), spherical=True)
+    synth = Synthesizer()
+
+    wave_off, cont_off = _synthesize_continuum_with_mode(synth, sme, False)
+    wave_on, cont_on = _synthesize_continuum_with_mode(synth, sme, True)
+    wave_off_2, cont_off_2 = _synthesize_continuum_with_mode(synth, sme, False)
+
+    assert np.allclose(wave_on, wave_off)
+    assert np.allclose(wave_off_2, wave_off)
+    assert cont_on.shape == cont_off.shape
+    assert np.all(np.isfinite(cont_off))
+    assert np.all(np.isfinite(cont_on))
+    assert np.all(np.isfinite(cont_off_2))
+    assert np.allclose(cont_off_2, cont_off, rtol=0, atol=0)
+    assert not np.allclose(cont_on, cont_off, rtol=1e-8, atol=0)
 
 
 def test_profile_nlte_h_summary_uses_default_provider(monkeypatch):

@@ -1607,6 +1607,9 @@ class Synthesizer:
 
         # Input Model data to C library
         dll.SetLibraryPath()
+        dll.SetContinuumScatteringSourceMode(
+            int(sme.continuum_scattering_source)
+        )
         if passLineList:
             linelist_for_smelib = sme.linelist
             if linelist_mode == "dynamic":
