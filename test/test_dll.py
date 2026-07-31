@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from copy import deepcopy
 from pathlib import Path
 from os.path import dirname
 
@@ -289,3 +290,45 @@ def test_transf(
         "SIGH2",
     ]:
         libsme.GetOpacity(switch)
+
+
+def test_continuum_scattering_source_mode_rejects_spherical(
+    libsme,
+    linelist,
+    atmo,
+    abund,
+    teff,
+    grav,
+    vturb,
+    wfirst,
+    wlast,
+    vw_scale,
+    mu,
+    accrt,
+    accwt,
+):
+    """Continuum scattering source mode is currently plane-parallel only."""
+    spherical_atmo = deepcopy(atmo)
+    spherical_atmo.geom = "SPH"
+    spherical_atmo.radius = 10.0
+    spherical_atmo.height = np.linspace(4e7, 0.0, len(spherical_atmo.rhox))
+
+    libsme.SetLibraryPath()
+    libsme.InputLineList(linelist)
+    libsme.InputModel(teff, grav, vturb, spherical_atmo)
+    libsme.InputAbund(abund)
+    libsme.Ionization(0)
+    libsme.SetVWscale(vw_scale)
+    libsme.SetH2broad()
+    libsme.InputWaveRange(wfirst, wlast)
+    libsme.Opacity()
+    libsme.SetContinuumScatteringSourceMode(True)
+
+    message = "not implemented for spherical models"
+    with pytest.raises(RuntimeError, match=message):
+        libsme.Transf(mu, accrt=accrt, accwi=accwt)
+    with pytest.raises(RuntimeError, match=message):
+        libsme.GetLineOpacity(linelist.wlcent[0])
+    with pytest.raises(RuntimeError, match="plane-parallel only"):
+        libsme.GetContinuumScatteringSource(linelist.wlcent[0])
+    libsme.SetContinuumScatteringSourceMode(False)
