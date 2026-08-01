@@ -61,6 +61,21 @@ The current built-in defaults remain unchanged:
 
 Use the explicit `sme` fields for reproducible scripts and notebooks.
 
+## How to include coherent continuum scattering in the continuum source
+
+By default, PySME keeps the historical continuum-source treatment. To include
+coherent continuum scattering in the continuum source function, enable the
+opt-in switch before synthesis:
+
+```py
+from pysme.synthesize import synthesize_spectrum
+
+sme.continuum_scattering_source = True
+sme = synthesize_spectrum(sme)
+```
+
+This option supports plane-parallel and spherical atmospheres.
+
 ## How to get the atmosphere grid
 
 ```py

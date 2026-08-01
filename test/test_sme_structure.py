@@ -83,6 +83,7 @@ def test_empty_structure():
     assert empty.interpolation_policy == "allow"
     assert empty.h_line_mode is None
     assert empty.h_line_form is None
+    assert empty.continuum_scattering_source is False
     assert empty.normalize_resample_mode is None
     assert empty.profile_nlte.correction_construction is None
 
@@ -107,6 +108,25 @@ def test_save_and_load_structure(filename):
     assert np.all(sme.wave[0] == data)
     assert np.all(sme.spec[0] == data)
     assert sme.nseg == 1
+
+
+def test_continuum_scattering_source_field(filename):
+    sme = SME_Struct()
+
+    assert sme.continuum_scattering_source is False
+    sme.continuum_scattering_source = True
+    assert sme.continuum_scattering_source is True
+    sme.continuum_scattering_source = False
+    assert sme.continuum_scattering_source is False
+    sme.continuum_scattering_source = 1
+    assert sme.continuum_scattering_source is True
+    sme.continuum_scattering_source = 0
+    assert sme.continuum_scattering_source is False
+
+    sme.continuum_scattering_source = True
+    sme.save(filename)
+    loaded = SME_Struct.load(filename)
+    assert loaded.continuum_scattering_source is True
 
 
 def test_load_idl_savefile(cwd):

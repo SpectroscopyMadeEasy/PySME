@@ -130,11 +130,17 @@ class _StopLineSelect(RuntimeError):
 
 
 class _FakeDll:
+    def __init__(self):
+        self.continuum_scattering_source_mode = None
+
     def SetLineInfoMode(self, mode):
         self.mode = mode
 
     def SetLibraryPath(self):
         pass
+
+    def SetContinuumScatteringSourceMode(self, mode):
+        self.continuum_scattering_source_mode = int(mode)
 
     def InputLineList(self, linelist):
         raise _StopLineSelect
@@ -293,6 +299,7 @@ def test_jacobian_scale_parameter_shift_within_stale_threshold_does_not_recomput
         synth.synthesize_spectrum(sme, linelist_mode="all", updateStructure=False)
 
     assert called["count"] == 0
+    assert synth.dll.continuum_scattering_source_mode == 0
 
 
 def test_jacobian_scale_parameter_shift_beyond_stale_threshold_recomputes_cdr(monkeypatch):

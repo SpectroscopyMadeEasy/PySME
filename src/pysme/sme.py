@@ -249,6 +249,9 @@ class SME_Structure(Parameters):
         ("cscale_gtol", 1e-8, asfloat, this, "float: tolerance for the continuum least squares fit"),
         ("normalize_by_continuum", True, asbool, this,
             "bool: Whether to normalize the synthetic spectrum by the synthetic continuum spectrum or not"),
+        ("continuum_scattering_source", False, asbool, this,
+            "bool: Whether to include coherent continuum scattering "
+            "in the continuum source function"),
         ("normalize_resample_mode", None, lowercase(oneof(None, "separate", "ratio")), this,
             "str or None: Resampling mode for normalized synthetic spectra; None keeps legacy/default behaviour"),
         ("interpolation_policy", "allow", lowercase(oneof("allow", "error")), this,

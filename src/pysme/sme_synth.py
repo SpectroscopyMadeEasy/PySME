@@ -190,6 +190,10 @@ class SME_DLL:
         """Set handling mode for precomputed line info (0=internal, 1=use_if_valid, 2=trust)."""
         _smelib.SetLineInfoMode(int(mode))
 
+    def SetContinuumScatteringSourceMode(self, mode):
+        """Enable or disable the continuum scattering source for plane-parallel and spherical transfer."""
+        _smelib.SetContinuumScatteringSourceMode(int(bool(mode)))
+
     def InputLinePrecomputedInfo(self, line_range_s, line_range_e, strong_mask, central_depth=None):
         """Input precomputed line ranges and strong mask to SMElib."""
         range_s = np.ascontiguousarray(line_range_s, dtype=np.float64)
@@ -672,6 +676,18 @@ class SME_DLL:
         """
         lop, cop, scr, tsf, csf = _smelib.GetLineOpacity(wave)
         return lop, cop, scr, tsf, csf
+
+    def GetContinuumOpacityComponents(self, wave):
+        """
+        Retrieve true continuum absorption, coherent scattering, and total continuum extinction.
+        """
+        return _smelib.GetContinuumOpacityComponents(wave)
+
+    def GetContinuumScatteringSource(self, wave):
+        """
+        Retrieve continuum-scattering mean intensity and source for the current geometry.
+        """
+        return _smelib.GetContinuumScatteringSource(wave)
 
     def GetLineRange(self):
         """Get the effective wavelength range for each line

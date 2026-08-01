@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from copy import deepcopy
 from pathlib import Path
 from os.path import dirname
 
@@ -228,7 +229,47 @@ def test_transf(
     xna = libsme.GetNatom()
     assert np.allclose(xna, atmo.xna, rtol=1e-1)
 
-    libsme.GetLineOpacity(linelist.wlcent[0])
+    lop, cop, scr, tsf, csf = libsme.GetLineOpacity(linelist.wlcent[0])
+    kappa, sigma, chi = libsme.GetContinuumOpacityComponents(linelist.wlcent[0])
+    assert kappa.shape == sigma.shape == chi.shape == cop.shape == scr.shape
+    assert np.all(np.isfinite(kappa))
+    assert np.all(np.isfinite(sigma))
+    assert np.all(np.isfinite(chi))
+    assert np.all(kappa >= 0)
+    assert np.all(sigma >= 0)
+    assert np.allclose(kappa + sigma, chi, rtol=2e-14, atol=0)
+    assert np.allclose(sigma, scr, rtol=2e-14, atol=0)
+    assert np.allclose(chi, cop, rtol=2e-14, atol=0)
+
+    conwl5 = np.exp(50.7649141 - 5 * np.log(linelist.wlcent[0]))
+    hnuk = 1.43868e8 / linelist.wlcent[0]
+    planck = conwl5 / (np.exp(hnuk / atmo.temp) - 1)
+    assert np.allclose(csf, planck, rtol=2e-14, atol=0)
+
+    jbar, scattering_source = libsme.GetContinuumScatteringSource(
+        linelist.wlcent[0]
+    )
+    assert jbar.shape == scattering_source.shape == chi.shape
+    assert np.all(np.isfinite(jbar))
+    assert np.all(np.isfinite(scattering_source))
+    assert np.all(scattering_source > 0)
+    expected_source = (kappa * planck + sigma * jbar) / chi
+    assert np.allclose(scattering_source, expected_source, rtol=2e-14, atol=0)
+
+    libsme.SetContinuumScatteringSourceMode(True)
+    _, _, _, _, csf_scattering = libsme.GetLineOpacity(linelist.wlcent[0])
+    assert np.allclose(csf_scattering, scattering_source, rtol=2e-14, atol=0)
+    nw_scattering, wave_scattering, synth_scattering, cont_scattering = libsme.Transf(
+        mu, accrt=accrt, accwi=accwt
+    )
+    assert nw_scattering == nw
+    assert np.allclose(wave_scattering, wave)
+    assert np.all(np.isfinite(synth_scattering))
+    assert np.all(np.isfinite(cont_scattering))
+    if np.any(sigma > 0):
+        assert not np.allclose(cont_scattering, cont, rtol=1e-8, atol=0)
+    libsme.SetContinuumScatteringSourceMode(False)
+
     libsme.GetLineRange()
     for switch in [
         "COPSTD",
@@ -249,3 +290,69 @@ def test_transf(
         "SIGH2",
     ]:
         libsme.GetOpacity(switch)
+
+
+def test_continuum_scattering_source_mode_changes_spherical(
+    libsme,
+    linelist,
+    teff,
+    grav,
+    vturb,
+    atmo,
+    abund,
+    vw_scale,
+    wfirst,
+    wlast,
+    mu,
+    accrt,
+    accwt,
+):
+    """Continuum scattering source mode works for spherical transfer."""
+    spherical_atmo = deepcopy(atmo)
+    spherical_atmo.geom = "SPH"
+    spherical_atmo.radius = 10.0
+    spherical_atmo.height = np.linspace(4e7, 0.0, len(spherical_atmo.rhox))
+
+    libsme.SetLibraryPath()
+    libsme.InputLineList(linelist)
+    libsme.InputModel(teff, grav, vturb, spherical_atmo)
+    libsme.InputAbund(abund)
+    libsme.Ionization(0)
+    libsme.SetVWscale(vw_scale)
+    libsme.SetH2broad()
+    libsme.InputWaveRange(wfirst, wlast)
+    libsme.Opacity()
+
+    nw, wave, synth, cont = libsme.Transf(mu, accrt=accrt, accwi=accwt)
+    assert nw == len(wave) == synth.shape[-1] == cont.shape[-1]
+    assert np.all(np.isfinite(synth))
+    assert np.all(np.isfinite(cont))
+
+    lop, cop, scr, tsf_legacy, csf_legacy = libsme.GetLineOpacity(
+        linelist.wlcent[0]
+    )
+    jbar, scattering_source = libsme.GetContinuumScatteringSource(linelist.wlcent[0])
+    assert jbar.shape == scattering_source.shape == cop.shape
+    assert np.all(np.isfinite(jbar))
+    assert np.all(np.isfinite(scattering_source))
+    assert np.all(scattering_source > 0)
+    assert not np.allclose(scattering_source, csf_legacy, rtol=1e-8, atol=0)
+
+    libsme.SetContinuumScatteringSourceMode(True)
+    _, _, _, tsf_scattering, csf_scattering = libsme.GetLineOpacity(
+        linelist.wlcent[0]
+    )
+    nw_scattering, wave_scattering, synth_scattering, cont_scattering = libsme.Transf(
+        mu, accrt=accrt, accwi=accwt
+    )
+
+    assert nw_scattering == nw
+    assert np.allclose(wave_scattering, wave)
+    assert np.all(np.isfinite(synth_scattering))
+    assert np.all(np.isfinite(cont_scattering))
+    assert csf_scattering.shape == scattering_source.shape
+    assert np.allclose(csf_scattering, scattering_source, rtol=2e-14, atol=0)
+    assert tsf_scattering.shape == tsf_legacy.shape
+    assert np.all(np.isfinite(tsf_scattering))
+    assert not np.allclose(cont_scattering, cont, rtol=1e-8, atol=0)
+    libsme.SetContinuumScatteringSourceMode(False)

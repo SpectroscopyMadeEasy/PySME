@@ -232,6 +232,12 @@ class SME_DLL:
         self.lib.ClearH2broad(state=self.state)
         self.h2broad = False
 
+    def SetContinuumScatteringSourceMode(self, mode):
+        """Enable or disable the continuum scattering source for plane-parallel and spherical transfer."""
+        self.lib.SetContinuumScatteringSourceMode(
+            int(bool(mode)), type="int", state=self.state
+        )
+
     def InputLineList(self, linelist):
         """
         Read in line list
@@ -748,6 +754,31 @@ class SME_DLL:
             wave, nmu, lop, cop, scr, tsf, csf, type=type, state=self.state
         )
         return lop, cop, scr, tsf, csf
+
+    def GetContinuumOpacityComponents(self, wave):
+        """
+        Retrieve true continuum absorption, coherent scattering, and total continuum extinction.
+        """
+        nmu = self.ndepth
+        kappa = np.zeros(nmu)
+        sigma = np.zeros(nmu)
+        chi = np.zeros(nmu)
+        self.lib.GetContinuumOpacityComponents(
+            wave, nmu, kappa, sigma, chi, type="dsddd", state=self.state
+        )
+        return kappa, sigma, chi
+
+    def GetContinuumScatteringSource(self, wave):
+        """
+        Retrieve continuum-scattering mean intensity and source for the current geometry.
+        """
+        nmu = self.ndepth
+        jbar = np.zeros(nmu)
+        source = np.zeros(nmu)
+        self.lib.GetContinuumScatteringSource(
+            wave, nmu, jbar, source, type="dsdd", state=self.state
+        )
+        return jbar, source
 
     def GetLineRange(self):
         """Get the effective wavelength range for each line
