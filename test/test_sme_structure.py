@@ -80,6 +80,7 @@ def test_empty_structure():
 
     assert empty.nlte is not None
     assert empty.nlte.elements == []
+    assert empty.h_stark_convolution == "legacy"
 
 
 def test_save_and_load_structure(filename):
@@ -102,6 +103,20 @@ def test_save_and_load_structure(filename):
     assert np.all(sme.wave[0] == data)
     assert np.all(sme.spec[0] == data)
     assert sme.nseg == 1
+
+
+def test_h_stark_convolution_field(filename):
+    sme = SME_Struct()
+
+    assert sme.h_stark_convolution == "legacy"
+    sme.h_stark_convolution = "convolution"
+    sme.save(filename)
+
+    loaded = SME_Struct.load(filename)
+    assert loaded.h_stark_convolution == "convolution"
+
+    with pytest.raises(ValueError):
+        loaded.h_stark_convolution = "unknown"
 
 
 def test_load_idl_savefile(cwd):
