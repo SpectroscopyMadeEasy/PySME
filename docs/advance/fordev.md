@@ -99,6 +99,7 @@ The follwing table shows the version matching between SMElib and PySME.
 
 |PySME version|SMElib release version|SMElib version|
 |:--:|:--:|:--:|
+|v1.0.3|v6.13.18|6.13 (June 2025)|
 |v0.7.0|v6.13.16|6.13 (June 2025)|
 |v0.6.23|v6.13.12|6.13 (June 2025)|
 |v0.4.199|v6.0.6|6.03 (July 2019)|
