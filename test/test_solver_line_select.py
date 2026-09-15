@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from copy import deepcopy
 from os.path import dirname, join
 
 import numpy as np
@@ -130,11 +131,17 @@ class _StopLineSelect(RuntimeError):
 
 
 class _FakeDll:
+    def __init__(self):
+        self.continuum_scattering_source_mode = None
+
     def SetLineInfoMode(self, mode):
         self.mode = mode
 
     def SetLibraryPath(self):
         pass
+
+    def SetContinuumScatteringSourceMode(self, mode):
+        self.continuum_scattering_source_mode = int(mode)
 
     def InputLineList(self, linelist):
         raise _StopLineSelect
@@ -159,6 +166,18 @@ def _make_minimal_synth():
     synth.known_sme = None
     synth.update_cdr_switch = False
     return synth
+
+
+def _fake_cdr_chunk_synthesis(sub_sme):
+    linelist = deepcopy(sub_sme.linelist)
+    wl = np.asarray(linelist["wlcent"], dtype=float)
+    nlines = len(linelist)
+    linelist._lines["central_depth"] = np.full(nlines, 0.02)
+    linelist._lines["line_range_s"] = wl - 0.05
+    linelist._lines["line_range_e"] = wl + 0.05
+    linelist._lines["strong"] = np.ones(nlines, dtype=bool)
+    sub_sme.linelist = linelist
+    return sub_sme
 
 
 def test_cdr_update_uses_resolved_line_select_config(monkeypatch):
@@ -293,6 +312,7 @@ def test_jacobian_scale_parameter_shift_within_stale_threshold_does_not_recomput
         synth.synthesize_spectrum(sme, linelist_mode="all", updateStructure=False)
 
     assert called["count"] == 0
+    assert synth.dll.continuum_scattering_source_mode == 0
 
 
 def test_jacobian_scale_parameter_shift_beyond_stale_threshold_recomputes_cdr(monkeypatch):
@@ -321,6 +341,84 @@ def test_jacobian_scale_parameter_shift_beyond_stale_threshold_recomputes_cdr(mo
         synth.synthesize_spectrum(sme, linelist_mode="all", updateStructure=False)
 
     assert called["count"] == 1
+
+
+def test_update_cdr_parallel_environment_failure_falls_back_to_serial(monkeypatch):
+    sme = _prepare_sme()
+    sme.line_select_policy = "auto"
+    sme.line_select_parallel = True
+    sme.line_select_n_jobs = 2
+    sme.line_select_chunk_size = max(1, len(sme.linelist) // 3)
+
+    synth = _make_minimal_synth()
+    calls = {"count": 0}
+
+    def fake_synthesize(self, sub_sme, *args, **kwargs):
+        calls["count"] += 1
+        return _fake_cdr_chunk_synthesis(sub_sme)
+
+    def fake_pqdm(*args, **kwargs):
+        raise PermissionError(1, "Operation not permitted")
+
+    monkeypatch.setattr(Synthesizer, "synthesize_spectrum", fake_synthesize)
+    monkeypatch.setattr(synth_mod, "pqdm", fake_pqdm)
+
+    expected = _prepare_sme()
+    synth.update_cdr(expected, parallel=False, show_progress_bars=False)
+
+    with pytest.warns(RuntimeWarning, match="falling back to serial"):
+        out = synth.update_cdr(sme, parallel=True, n_jobs=2, show_progress_bars=False)
+
+    assert out is sme
+    for column in ("central_depth", "line_range_s", "line_range_e"):
+        assert column in sme.linelist.columns
+        assert np.array_equal(sme.linelist[column], expected.linelist[column])
+    assert np.allclose(sme.linelist.cdr_paras, [sme.teff, sme.logg, sme.monh, sme.vmic])
+    assert calls["count"] > 1
+
+
+def test_update_cdr_parallel_environment_failure_strict_policy_raises(monkeypatch):
+    sme = _prepare_sme()
+    sme.line_select_policy = "strict"
+    sme.line_select_parallel = True
+    sme.line_select_n_jobs = 2
+    sme.line_select_chunk_size = max(1, len(sme.linelist) // 3)
+
+    synth = _make_minimal_synth()
+
+    def fake_synthesize(self, sub_sme, *args, **kwargs):
+        return _fake_cdr_chunk_synthesis(sub_sme)
+
+    def fake_pqdm(*args, **kwargs):
+        raise PermissionError(1, "Operation not permitted")
+
+    monkeypatch.setattr(Synthesizer, "synthesize_spectrum", fake_synthesize)
+    monkeypatch.setattr(synth_mod, "pqdm", fake_pqdm)
+
+    with pytest.raises(RuntimeError, match="Parallel CDR line selection failed"):
+        synth.update_cdr(sme, parallel=True, n_jobs=2, show_progress_bars=False)
+
+
+def test_update_cdr_parallel_worker_failure_propagates(monkeypatch):
+    sme = _prepare_sme()
+    sme.line_select_policy = "auto"
+    sme.line_select_parallel = True
+    sme.line_select_n_jobs = 2
+    sme.line_select_chunk_size = max(1, len(sme.linelist) // 3)
+
+    synth = _make_minimal_synth()
+
+    def fake_synthesize(self, sub_sme, *args, **kwargs):
+        return _fake_cdr_chunk_synthesis(sub_sme)
+
+    def fake_pqdm(*args, **kwargs):
+        raise ValueError("worker calculation failed")
+
+    monkeypatch.setattr(Synthesizer, "synthesize_spectrum", fake_synthesize)
+    monkeypatch.setattr(synth_mod, "pqdm", fake_pqdm)
+
+    with pytest.raises(ValueError, match="worker calculation failed"):
+        synth.update_cdr(sme, parallel=True, n_jobs=2, show_progress_bars=False)
 
 
 def test_synthesize_aliases_cdr_database_to_line_precompute_database(monkeypatch):

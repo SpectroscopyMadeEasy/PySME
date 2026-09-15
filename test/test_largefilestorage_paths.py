@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import hashlib
 import os
 import shutil
 import tarfile
@@ -58,6 +59,41 @@ def test_get_urls_supports_pointer_lists_and_absolute_urls(tmp_path):
     ]
 
 
+def test_get_urls_supports_pointer_dict_metadata(tmp_path):
+    lfs = LargeFileStorage(
+        server=["https://mirror-a.example"],
+        pointers={
+            "foo.grd": [
+                {
+                    "url": "https://zenodo.org/records/1/files/foo.grd?download=1",
+                    "md5": "00112233445566778899aabbccddeeff",
+                    "sha256": "abc123",
+                    "size": 42,
+                },
+                {
+                    "url": "nlte_grids/foo_v1.grd.gz",
+                    "md5": "ffeeddccbbaa99887766554433221100",
+                    "sha256": "def456",
+                },
+            ]
+        },
+        storage=str(tmp_path / "cache"),
+    )
+
+    targets = lfs.get_targets("foo.grd")
+
+    assert [target.url for target in targets] == [
+        "https://zenodo.org/records/1/files/foo.grd?download=1",
+        "https://mirror-a.example/nlte_grids/foo_v1.grd.gz",
+    ]
+    assert targets[0].md5 == "00112233445566778899aabbccddeeff"
+    assert targets[0].sha256 == "abc123"
+    assert targets[0].size == 42
+    assert targets[1].md5 == "ffeeddccbbaa99887766554433221100"
+    assert targets[1].sha256 == "def456"
+    assert targets[1].size is None
+
+
 def test_get_falls_back_to_next_mirror(monkeypatch, tmp_path):
     payload = tmp_path / "payload.bin"
     payload.write_bytes(b"test")
@@ -85,6 +121,194 @@ def test_get_falls_back_to_next_mirror(monkeypatch, tmp_path):
         "https://mirror-a.example/nlte_grids/foo_v1.grd",
         "https://mirror-b.example/nlte_grids/foo_v1.grd",
     ]
+
+
+def test_get_falls_back_when_first_payload_is_html_error_page(monkeypatch, tmp_path):
+    bad_payload = tmp_path / "bad.html"
+    bad_payload.write_text("<!DOCTYPE html><html><body>login required</body></html>")
+    good_payload = tmp_path / "good.grd"
+    good_payload.write_bytes(b"grid-data")
+
+    calls = []
+
+    def fake_download_file(url, cache=True, pkgname=""):
+        calls.append(url)
+        if "nadc" in url:
+            return str(bad_payload)
+        return str(good_payload)
+
+    monkeypatch.setattr(lfs_module, "download_file", fake_download_file)
+
+    lfs = LargeFileStorage(
+        server=["https://mirror.example"],
+        pointers={
+            "foo.grd": [
+                "https://nadc.example/res/file_upload/download?id=1",
+                "nlte_grids/foo_v1.grd",
+            ]
+        },
+        storage=str(tmp_path / "cache"),
+    )
+
+    got = lfs.get("foo.grd")
+
+    assert got == str(good_payload)
+    assert calls == [
+        "https://nadc.example/res/file_upload/download?id=1",
+        "https://mirror.example/nlte_grids/foo_v1.grd",
+    ]
+
+
+def test_get_falls_back_when_first_payload_size_mismatches(monkeypatch, tmp_path):
+    bad_payload = tmp_path / "bad.grd"
+    bad_payload.write_bytes(b"tiny")
+    good_payload = tmp_path / "good.grd"
+    good_payload.write_bytes(b"grid-data")
+
+    calls = []
+
+    def fake_download_file(url, cache=True, pkgname=""):
+        calls.append(url)
+        if "nadc" in url:
+            return str(bad_payload)
+        return str(good_payload)
+
+    monkeypatch.setattr(lfs_module, "download_file", fake_download_file)
+
+    lfs = LargeFileStorage(
+        server=["https://mirror.example"],
+        pointers={
+            "foo.grd": [
+                {
+                    "url": "https://nadc.example/res/file_upload/download?id=1",
+                    "size": 12,
+                },
+                {"url": "nlte_grids/foo_v1.grd", "size": len(good_payload.read_bytes())},
+            ]
+        },
+        storage=str(tmp_path / "cache"),
+    )
+
+    got = lfs.get("foo.grd")
+
+    assert got == str(good_payload)
+    assert calls == [
+        "https://nadc.example/res/file_upload/download?id=1",
+        "https://mirror.example/nlte_grids/foo_v1.grd",
+    ]
+
+
+def test_get_falls_back_when_first_payload_checksum_mismatches(monkeypatch, tmp_path):
+    bad_payload = tmp_path / "bad.grd"
+    bad_payload.write_bytes(b"grid-a")
+    good_payload = tmp_path / "good.grd"
+    good_payload.write_bytes(b"grid-b")
+    good_sha256 = hashlib.sha256(good_payload.read_bytes()).hexdigest()
+
+    calls = []
+
+    def fake_download_file(url, cache=True, pkgname=""):
+        calls.append(url)
+        if "nadc" in url:
+            return str(bad_payload)
+        return str(good_payload)
+
+    monkeypatch.setattr(lfs_module, "download_file", fake_download_file)
+
+    lfs = LargeFileStorage(
+        server=["https://mirror.example"],
+        pointers={
+            "foo.grd": [
+                {
+                    "url": "https://nadc.example/res/file_upload/download?id=1",
+                    "sha256": "deadbeef",
+                },
+                {
+                    "url": "nlte_grids/foo_v1.grd",
+                    "sha256": good_sha256,
+                },
+            ]
+        },
+        storage=str(tmp_path / "cache"),
+    )
+
+    got = lfs.get("foo.grd")
+
+    assert got == str(good_payload)
+    assert calls == [
+        "https://nadc.example/res/file_upload/download?id=1",
+        "https://mirror.example/nlte_grids/foo_v1.grd",
+    ]
+
+
+def test_get_falls_back_when_first_payload_md5_mismatches(monkeypatch, tmp_path):
+    bad_payload = tmp_path / "bad.grd"
+    bad_payload.write_bytes(b"grid-a")
+    good_payload = tmp_path / "good.grd"
+    good_payload.write_bytes(b"grid-b")
+    good_md5 = hashlib.md5(good_payload.read_bytes()).hexdigest()
+
+    calls = []
+
+    def fake_download_file(url, cache=True, pkgname=""):
+        calls.append(url)
+        if "zenodo" in url:
+            return str(bad_payload)
+        return str(good_payload)
+
+    monkeypatch.setattr(lfs_module, "download_file", fake_download_file)
+
+    lfs = LargeFileStorage(
+        server=["https://mirror.example"],
+        pointers={
+            "foo.grd": [
+                {
+                    "url": "https://zenodo.org/records/1/files/foo.grd?download=1",
+                    "md5": "deadbeef",
+                },
+                {
+                    "url": "nlte_grids/foo_v1.grd",
+                    "md5": good_md5,
+                },
+            ]
+        },
+        storage=str(tmp_path / "cache"),
+    )
+
+    got = lfs.get("foo.grd")
+
+    assert got == str(good_payload)
+    assert calls == [
+        "https://zenodo.org/records/1/files/foo.grd?download=1",
+        "https://mirror.example/nlte_grids/foo_v1.grd",
+    ]
+
+
+def test_get_rejects_when_md5_matches_but_sha256_mismatches(monkeypatch, tmp_path):
+    payload = tmp_path / "payload.grd"
+    payload.write_bytes(b"grid-a")
+    good_md5 = hashlib.md5(payload.read_bytes()).hexdigest()
+
+    monkeypatch.setattr(
+        lfs_module,
+        "download_file",
+        lambda url, cache=True, pkgname="": str(payload),
+    )
+
+    lfs = LargeFileStorage(
+        server=["https://mirror.example"],
+        pointers={
+            "foo.grd": {
+                "url": "https://zenodo.org/records/1/files/foo.grd?download=1",
+                "md5": good_md5,
+                "sha256": "deadbeef",
+            }
+        },
+        storage=str(tmp_path / "cache"),
+    )
+
+    with pytest.raises(FileNotFoundError, match=r"checksum mismatch"):
+        lfs.get("foo.grd")
 
 
 def _make_test_tarball(tmp_path, root_name, members):

@@ -33,6 +33,34 @@ specific intensities or disk-integrated flux:
 This is useful when you want the radiative-transfer output itself (as a function
 of angle), rather than only the final integrated spectrum.
 
+## Spherical atmosphere flux radius
+
+For spherical atmospheres, the raw radiative-transfer output corresponds to the
+outer boundary of the atmosphere, `R_top`.
+
+- With `specific_intensities_only = True`, `sme.sint` and `sme.cint` are raw
+  specific intensities at `R_top`.
+- With `specific_intensities_only = False` and `normalize_by_continuum = False`,
+  `sme.synth` and `sme.cont` are raw disk-integrated fluxes at `R_top`.
+- `sme.wave` and `sme.wint` are wavelength grids and do not carry a radius
+  normalization.
+
+When `normalize_by_continuum = True`, the same spherical radius factor multiplies
+both the spectrum and the continuum, so it cancels in the continuum-normalized
+synthetic spectrum.
+
+Some spherical atmosphere or synthesis programs report absolute flux scaled to
+the MARCS reference radius, `R_ref`, rather than the atmosphere outer boundary.
+When comparing PySME raw spherical fluxes to such output, apply the conversion
+
+$$
+F_\mathrm{ref} = F_\mathrm{outer}
+\left(\frac{R_\mathrm{top}}{R_\mathrm{ref}}\right)^2 .
+$$
+
+PySME currently returns the raw `F_outer` value and does not apply this radius
+conversion automatically.
+
 ## Typical usage
 
 - Normalized stellar spectrum fitting:

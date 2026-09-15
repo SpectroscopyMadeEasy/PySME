@@ -1,22 +1,15 @@
 # Atmosphere
 
-For the spectral synthesis PySME needs a model atmosphere
-to perform the radiative transfer in. PySME does not come
-with a set of atmospheres in each distribution but instead
-uses the LFS (See [lfs](lfs.md)) to fetch only the required
-model atmosphere when run.
+PySME needs a model atmosphere to perform the radiative-transfer calculation.
+Atmospheres are not included in each distribution; PySME uses the LFS (see [lfs](lfs.md)) to fetch the required model when it is first used.
 
 If you want to provide your own model atmosphere file, it should be present in `~/.sme/atmospheres/`.
 
-Each atmosphere model file describes a grid of models, on
-which we then linearly interpolate to the desired stellar parameters.
-Sometimes we dare extrapolate from this grid as well, but in that case,
-we always show a warnning.
+Each atmosphere model file describes a grid on which PySME interpolates to the requested stellar parameters.
+PySME can extrapolate beyond the grid where the interpolation permits it and issues a warning when it does so.
 
-Note that the atmosphere also contains a seperate set of stellar
-parameters, which is usually the same as that of the sme structure,
-but can be different, if for example the atmosphere is embedded, i.e.
-fixed, or has not been calculated yet.
+The atmosphere also contains its own set of stellar parameters, which usually matches the SME structure.
+The values can differ when, for example, the atmosphere is embedded and fixed or has not yet been calculated.
 
 The atmopshere object has the following fields:
 
@@ -69,17 +62,44 @@ The atmopshere object has the following fields:
 
 ### Grid plots
 
+`marcs2012.sav`
 ![](../img/atmosphere/marcs2012_grid.png)
+
+`marcs2012p_t0.0.sav`
 ![](../img/atmosphere/marcs2012p_t0.0_grid.png)
+
+`marcs2012p_t1.0.sav`
 ![](../img/atmosphere/marcs2012p_t1.0_grid.png)
+
+`marcs2012p_t2.0.sav`
 ![](../img/atmosphere/marcs2012p_t2.0_grid.png)
+
+`marcs2012s_t1.0.sav`
 ![](../img/atmosphere/marcs2012s_t1.0_grid.png)
+
+`marcs2012s_t2.0.sav`
 ![](../img/atmosphere/marcs2012s_t2.0_grid.png)
+
+`marcs2012s_t5.0.sav`
 ![](../img/atmosphere/marcs2012s_t5.0_grid.png)
+
+`marcs2012t00cooldwarfs.sav`
 ![](../img/atmosphere/marcs2012t00cooldwarfs_grid.png)
+
+`marcs2012t01cooldwarfs.sav`
 ![](../img/atmosphere/marcs2012t01cooldwarfs_grid.png)
+
+`marcs2012t02cooldwarfs.sav`
 ![](../img/atmosphere/marcs2012t02cooldwarfs_grid.png)
+
+`atlas12.sav`
 ![](../img/atmosphere/atlas12_grid.png)
+
+`atlas9_vmic0.0.sav`
 ![](../img/atmosphere/atlas9_vmic0.0_grid.png)
+
+`atlas9_vmic2.0.sav`
 ![](../img/atmosphere/atlas9_vmic2.0_grid.png)
+
+`ll_vmic2.0.sav`
 ![](../img/atmosphere/ll_vmic2.0_grid.png)

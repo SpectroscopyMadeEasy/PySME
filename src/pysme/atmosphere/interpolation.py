@@ -280,16 +280,14 @@ class AtmosphereInterpolator:
             and "height" in tags2
         )
 
-        def to_interp_space(vtag, values):
+        def to_interp_space(vtag, values, atm):
             values = np.asarray(values)
             if vtag == "height":
-                return values
+                return np.log10(values + atm["radius"]) # combine height and radius for interpolation
             return np.log10(values)
 
         def from_interp_space(vtag, values):
             values = np.asarray(values)
-            if vtag == "height":
-                return values
             return 10.0 ** values
 
         ##
@@ -377,8 +375,8 @@ class AtmosphereInterpolator:
             if vtag not in tags2:
                 raise AtmosphereError("atmo2 does not contain " + vtag)
 
-            vect1 = to_interp_space(vtag, atmo1[vtag][mask1])
-            vect2 = to_interp_space(vtag, atmo2[vtag][mask2])
+            vect1 = to_interp_space(vtag, atmo1[vtag][mask1], atmo1)
+            vect2 = to_interp_space(vtag, atmo2[vtag][mask2], atmo2)
 
             # Fit the second atmosphere onto the first by finding the best horizontal
             # shift in depth2 and the best vertical shift in vect2.
@@ -435,8 +433,8 @@ class AtmosphereInterpolator:
         for ivtag, (vtag, par) in enumerate(zip(vtags, pars)):
 
             # Extract data
-            vect1 = to_interp_space(vtag, atmo1[vtag][mask1])
-            vect2 = to_interp_space(vtag, atmo2[vtag][mask2])
+            vect1 = to_interp_space(vtag, atmo1[vtag][mask1], atmo1)
+            vect2 = to_interp_space(vtag, atmo2[vtag][mask2], atmo2)
 
             # Identify output depth points that require extrapolation of atmosphere vector.
             depth1f = depth1 - par[0] * frac
@@ -472,17 +470,23 @@ class AtmosphereInterpolator:
         atmo = Atmo(interp=interpvar)
         stags = ["teff", "logg", "monh", "vturb", "lonh", "abund"]
         ndep_orig = len(_field(atmo1, "temp"))
+        if has_spherical_height:
+            pair_logg = (1 - frac) * atmo1["logg"] + frac * atmo2["logg"]
+            mass1 = atmo1["logg"] - logg_sun - 2 * np.log10(R_sun / atmo1["radius"])
+            mass2 = atmo2["logg"] - logg_sun - 2 * np.log10(R_sun / atmo2["radius"])
+            mass = np.mean([mass1,mass2])
+            pair_radius = R_sun * 10 ** ((logg_sun - pair_logg + mass) * 0.5)
+            
+        else:
+            pair_radius = 0
+            pair_logg = 0
+
         for tag in tags1:
 
             # Default is to copy value from atmo1. Trim vectors.
             value = atmo1[tag]
             if np.size(value) == ndep_orig and tag != "abund":
                 value = value[:ndep]
-
-            # Vector quantities that have already been interpolated.
-            if tag in vtags:
-                ivtag = [i for i in range(nvtag) if tag == vtags[i]][0]
-                value = from_interp_space(tag, vects[ivtag])
 
             # Scalar quantities that should be interpolated using frac.
             if tag in stags:
@@ -492,6 +496,25 @@ class AtmosphereInterpolator:
                     value = (1 - frac) * atmo1[tag] + frac * atmo2[tag]
                 else:
                     value = atmo1[tag]
+                
+            # Vector quantities that have already been interpolated.
+            if tag in vtags:
+                ivtag = [i for i in range(nvtag) if tag == vtags[i]][0]
+
+                value = from_interp_space(tag, vects[ivtag])
+                if tag == "height":
+                    if not has_spherical_height:
+                        raise AtmosphereError(
+                            "Cannot interpolate 'height': both atmospheres must be "
+                            "spherical (radius > 1) to recover height from the "
+                            "combined height+radius quantity used for interpolation."
+                        )
+                    value = value - pair_radius
+
+            # Store the pair-consistent radius, so a subsequent interpolation stage
+            # recombines 'height' with the same radius that was just subtracted from it.
+            if tag == "radius" and has_spherical_height:
+                value = pair_radius
 
             # Remaining cases.
             if tag == "ndep":

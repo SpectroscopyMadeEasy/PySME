@@ -21,7 +21,7 @@ from pysme.util import disable_progress_bars
 from .iliffe_vector import Iliffe_vector
 from .sme import MASK_VALUES
 from .sme_synth import SME_DLL
-from .util import show_progress_bars
+from . import util
 
 logger = logging.getLogger(__name__)
 
@@ -405,8 +405,7 @@ class ContinuumNormalizationMCMC(ContinuumNormalizationAbstract):
             if rv.shape[1] == 1 and nseg > 1:
                 rv = np.tile(rv, [1, nseg])
             if cflag:
-                cs = par[:, sep:]
-                cs.shape = nwalkers, nseg, ndeg + 1
+                cs = par[:, sep:].reshape(nwalkers, nseg, ndeg + 1)
             else:
                 cs = cscale[None, ...]
 
@@ -432,7 +431,8 @@ class ContinuumNormalizationMCMC(ContinuumNormalizationAbstract):
                 resid[mask] = 0
                 prob = -0.5 * np.sum(resid, axis=-1)
                 # Need to rescale here, to account for the ignored points before
-                prob *= mask.shape[1] / npoints
+                with np.errstate(divide="ignore", invalid="ignore"):
+                    prob *= mask.shape[1] / npoints
                 prob[np.isnan(prob)] = -np.inf
                 total += prob
             return prior + total
@@ -478,7 +478,7 @@ class ContinuumNormalizationMCMC(ContinuumNormalizationAbstract):
 
         # Now we'll sample for up to max_n steps
         with tqdm(
-            leave=False, desc="RV", total=max_n, disable=~show_progress_bars
+            leave=False, desc="RV", total=max_n, disable=not util.show_progress_bars
         ) as t:
             for _ in sampler.sample(p0, iterations=max_n):
                 t.update()
@@ -516,7 +516,10 @@ class ContinuumNormalizationMCMC(ContinuumNormalizationAbstract):
 
         if cflag:
             vmin, cscale, vmax = np.percentile(samples[:, sep:], (32, 50, 68), axis=0)
-            vmin.shape = cscale.shape = vmax.shape = nseg, ndeg + 1
+            shape = (nseg, ndeg + 1)
+            vmin = vmin.reshape(shape)
+            cscale = cscale.reshape(shape)
+            vmax = vmax.reshape(shape)
 
             cscale_unc[..., 0] = cscale - vmin
             cscale_unc[..., 1] = vmax - cscale

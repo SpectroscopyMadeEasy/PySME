@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 from pysme.atmosphere.atmosphere import Atmosphere
-from pysme.atmosphere.interpolation import AtmosphereInterpolator
+from pysme.atmosphere.interpolation import AtmosphereInterpolator, R_sun, logg_sun
 from pysme.atmosphere.savfile import SavFile
 
 from .test_largefilestorage import lfs_atmo, skipif_lfs
@@ -71,7 +71,9 @@ def _make_spherical_test_atmo(temp_offset=0.0, height_shift=0.0):
     atmo.monh = -0.5
     atmo.vturb = 1.5
     atmo.lonh = 1.5
-    atmo.radius = 10.0
+    # Radius consistent with logg=2.0 (a giant) at ~1 solar mass, via the same
+    # mass-conservation relation the production code uses (see interp_atmo_pair).
+    atmo.radius = R_sun * 10 ** ((logg_sun - atmo.logg) * 0.5)
     atmo.rhox = np.array([1e-4, 3e-4, 1e-3, 3e-3, 1e-2], dtype=float)
     atmo.tau = np.array([1e-5, 3e-5, 1e-4, 3e-4, 1e-3], dtype=float)
     atmo.temp = np.array([4000.0, 4200.0, 4400.0, 4600.0, 4800.0], dtype=float) + temp_offset
@@ -93,4 +95,19 @@ def test_interp_atmo_pair_interpolates_spherical_height():
     assert len(out.height) == len(out.temp)
     assert not np.allclose(out.height, atmo1.height[: len(out.height)])
     assert not np.allclose(out.height, atmo2.height[: len(out.height)])
-    assert np.allclose(out.height, 0.5 * (atmo1.height + atmo2.height), atol=1.0)
+
+    # Coarse check: combining log(height+radius) is close to averaging height directly
+    # when radius dominates. atol accounts for curve_fit's registration precision on
+    # log10(height+radius)~12, which amplifies to an absolute noise floor of order
+    # radius * (fit tolerance) ~ 1e4 cm once converted back out of log-space.
+    assert np.allclose(
+        out.height, 0.5 * (atmo1.height + atmo2.height), atol=1e5
+    )
+    # Exact check: at frac=0.5 with equal radius/logg, the combined-log result should be
+    # the geometric mean of (height + radius), not the arithmetic mean used above; atol
+    # allows for the same curve_fit registration noise described above.
+    radius = atmo1.radius
+    expected_height = np.sqrt((atmo1.height + radius) * (atmo2.height + radius)) - radius
+    assert np.allclose(
+        out.height, expected_height[: len(out.height)], atol=5e4, rtol=1e-3
+    )

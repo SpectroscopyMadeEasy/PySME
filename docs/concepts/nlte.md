@@ -84,6 +84,31 @@ For the default `nlte_*_pysme.grd` pointers shipped with PySME, the preferred so
 
 The order above is implemented in `datafiles_nlte.json` using ordered pointer lists. Relative paths are expanded against path-compatible mirrors such as Uppsala, while NADC and Zenodo entries are usually provided as explicit download URLs.
 
+For checksum metadata in `datafiles_nlte.json`, PySME validates the downloaded object named by the pointer URL itself. In practice this means:
+
+- Zenodo `.tar.gz` links are validated as tarballs before extraction.
+- Zenodo direct `.grd` links are validated as downloaded `.grd` files.
+- Mirror-relative `.grd.gz` entries are validated as downloaded gzip payloads.
+
+Zenodo commonly publishes `md5` and `size` for hosted files, so those are the most practical validation fields to add first for Zenodo-backed NLTE pointers.
+
+## Fallback behaviour and strict mode
+
+By default, PySME treats requested NLTE as a best-effort enhancement. If NLTE was requested but cannot be applied for the current synthesis, PySME logs a warning and continues in LTE for the affected case.
+
+This LTE fallback currently happens in cases such as:
+
+- the line list is short-format VALD data and therefore lacks the level metadata required for NLTE matching
+- an element was requested for NLTE, but no usable NLTE lines were matched for that element in the current line list
+
+If you want these situations to stop the run instead of silently proceeding in LTE, enable strict mode:
+
+```python
+sme.nlte.strict = True
+```
+
+When `sme.nlte.strict` is `True`, PySME raises an exception instead of falling back to LTE for those requested-NLTE cases.
+
 ## Deprecated grids
 
   - H 
@@ -134,7 +159,5 @@ The order above is implemented in `datafiles_nlte.json` using ordered pointer li
     - marcs2012p_t1.0_Ba.grd [(Mashonkina et al. 1999)](https://ui.adsabs.harvard.edu/abs/1999A%26A...343..519M)
   - Eu
     - nlte_Eu.grd
-
-
 
 

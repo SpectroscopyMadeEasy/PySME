@@ -43,13 +43,7 @@ LEGACY_EW_REL_TOL = 0.005  # 0.5%
 
 WORKER = r'''
 import os, sys
-from pathlib import Path
 import numpy as np
-sys.meta_path[:] = [
-    finder for finder in sys.meta_path
-    if finder.__class__.__module__ != "_editable_skbc_pysme_astro"
-]
-sys.path.insert(0, str(Path({root!r}) / "src"))
 from pysme.abund import Abund
 from pysme.linelist.vald import ValdFile
 from pysme.sme import SME_Structure
@@ -68,7 +62,6 @@ sme.wave = [wave]
 sme.normalize_by_continuum = True
 sme.vrad_flag = "none"
 sme.cscale_flag = "none"
-sme.normalize_resample_mode = "ratio"
 mode = {mode!r}
 if mode is not None:
     sme.h_stark_convolution = mode
@@ -83,7 +76,6 @@ def _synthesize_ew(mode: str, center: float, half: float) -> float:
     # Explicit modes use the public API field.  None leaves the SME_Structure
     # default untouched for the default-path test.
     script = WORKER.format(
-        root=str(ROOT),
         mode=mode,
         sun=SUN,
         linelist=str(LINELIST),
@@ -92,7 +84,6 @@ def _synthesize_ew(mode: str, center: float, half: float) -> float:
     )
     env = os.environ.copy()
     env.pop("PYSME_H_STARK_CONVOLUTION", None)  # rely on the API field, not env
-    env["PYSME_RESAMPLE_NORM_MODE"] = "ratio"
     proc = subprocess.run(
         [sys.executable, "-c", script],
         cwd=str(ROOT),

@@ -28,7 +28,6 @@ from .large_file_storage import setup_lfs
 from .sme import MASK_VALUES
 from .sme_synth import SME_DLL
 from .util import (
-    show_progress_bars,
     boundary_vertices,
     safe_interpolation,
     interpolate_3DNLTEH_intensity_continuum_RBF,
@@ -219,6 +218,24 @@ def _same_path(a, b):
     return os.path.abspath(os.path.expanduser(str(a))) == os.path.abspath(
         os.path.expanduser(str(b))
     )
+
+
+def _iter_exception_chain(exc):
+    seen = set()
+    current = exc
+    while current is not None and id(current) not in seen:
+        yield current
+        seen.add(id(current))
+        current = current.__cause__ or current.__context__
+
+
+def _is_parallel_environment_error(exc):
+    for current in _iter_exception_chain(exc):
+        if isinstance(current, PermissionError):
+            return True
+        if isinstance(current, OSError) and getattr(current, "errno", None) in {1, 13, 38}:
+            return True
+    return False
 
 
 def _normalize_line_precompute_database_arg(
@@ -1028,13 +1045,16 @@ class Synthesizer:
         cdr_grid_overwrite=False,
         mode='linear',
         dims=['teff', 'logg', 'monh'],
-        show_progress_bars=show_progress_bars,
+        show_progress_bars=None,
         allow_compute=True,
     ):
         """
         Compute ALMAX/range preselection for the full linelist and update columns:
         'almax_ratio', 'strong', 'line_range_s', 'line_range_e'.
         """
+
+        if show_progress_bars is None:
+            show_progress_bars = util.show_progress_bars
 
         if chunk_size is None:
             chunk_size = getattr(
@@ -1439,7 +1459,7 @@ class Synthesizer:
                         line_precompute_database=line_precompute_database,
                         cdr_database=cdr_database,
                         cdr_create=cdr_create,
-                        show_progress_bars=show_progress_bars,
+                        show_progress_bars=util.show_progress_bars,
                         allow_compute=allow_compute,
                     )
                 except FileNotFoundError as exc:
@@ -1554,7 +1574,7 @@ class Synthesizer:
                         line_precompute_database=line_precompute_database,
                         cdr_database=cdr_database,
                         cdr_create=cdr_create,
-                        show_progress_bars=show_progress_bars,
+                        show_progress_bars=util.show_progress_bars,
                         allow_compute=allow_compute,
                     )
                 except FileNotFoundError as exc:
@@ -1574,6 +1594,9 @@ class Synthesizer:
 
         # Input Model data to C library
         dll.SetLibraryPath()
+        dll.SetContinuumScatteringSourceMode(
+            int(sme.continuum_scattering_source)
+        )
         if passLineList:
             linelist_for_smelib = sme.linelist
             if linelist_mode == "dynamic":
@@ -1658,7 +1681,7 @@ class Synthesizer:
             keep_line_opacity_eff = True
         compute_lineinfo = bool(self.update_cdr_switch)
         sme.first_segment = True
-        for il in tqdm(segments, desc="Segments", leave=True, disable=not show_progress_bars):
+        for il in tqdm(segments, desc="Segments", leave=True, disable=not util.show_progress_bars):
             wmod[il], smod[il], cmod[il], central_depth[il], line_range[il], opacity[il] = self.synthesize_segment(
                 sme,
                 il,
@@ -1707,7 +1730,7 @@ class Synthesizer:
         # For testing wavegrid
         sme.wmod = wmod.copy()
         sme.smod = smod.copy()
-        sme.comd = cmod.copy()
+        sme.cmod = cmod.copy()
         sme.opacity = opacity.copy()
 
         # Fit continuum and radial velocity
@@ -1876,8 +1899,8 @@ class Synthesizer:
         #     dll.SetH2broad(sme.h2broad)
 
         # if passNLTE:
-        #     sme.nlte.update_coefficients(sme, dll, self.lfs_nlte, sme.first_segment)        
-        
+        #     sme.nlte.update_coefficients(sme, dll, self.lfs_nlte, sme.first_segment)
+
         # Priority for wavelength grid passed to SMElib:
         # 1) user-provided sme.wint for this segment
         # 2) internal cache when reuse_wavelength_grid=True
@@ -1898,11 +1921,12 @@ class Synthesizer:
         else:
             wint_seg = None
 
-        # Only calculate line opacities in the first segment
-        #   Calculate spectral synthesis for each
         with _temporary_brackett_convolution_env(sme):
             dll.InputWaveRange(wbeg-2, wend+2)
             dll.Opacity()
+
+            # Only calculate line opacities in the first segment
+            #   Calculate spectral synthesis for each
             _, wint, sint, cint = dll.Transf(
                 sme.mu,
                 accrt=sme.accrt,  # threshold line opacity / cont opacity
@@ -1913,7 +1937,14 @@ class Synthesizer:
 
         # Insert the new 3DNLTE correction
         if self._is_profile_nlte_h_applied(sme):
-            interpolator = interp1d(util.lambda_H_3DNLTE, sme.tdnlte_H_correction, kind="linear", fill_value=1, bounds_error=False, assume_sorted=True)
+            interpolator = interp1d(
+                sme.tdnlte_H_correction[0],
+                sme.tdnlte_H_correction[1],
+                kind="linear",
+                fill_value=1,
+                bounds_error=False,
+                assume_sorted=True,
+            )
             correction_3dnlte_H_interp = interpolator(wint)
 
             sint *= correction_3dnlte_H_interp
@@ -2003,13 +2034,16 @@ class Synthesizer:
         cdr_grid_overwrite=False,
         mode='linear',
         dims=['teff', 'logg', 'monh'],
-        show_progress_bars=show_progress_bars,
+        show_progress_bars=None,
         allow_compute=True,
     ):
         '''
         Update or get the central depth and wavelength range of a line list. This version separate the parallel and non-parallel mode completely.
         Author: Mingjie Jian
         '''
+
+        if show_progress_bars is None:
+            show_progress_bars = util.show_progress_bars
 
         if chunk_size is None:
             chunk_size = getattr(
@@ -2039,6 +2073,7 @@ class Synthesizer:
         n_jobs = int(max(1, n_jobs))
         if n_jobs < 2:
             parallel = False
+        policy = str(getattr(sme, "line_select_policy", "auto")).lower()
         if worker_output is None:
             pysme_out = bool(getattr(sme, "cdr_pysme_out", False))
         else:
@@ -2094,14 +2129,21 @@ class Synthesizer:
             sub_sme_init.line_select_policy = "auto"
             sub_sme_init.line_select_recompute = "if_stale"
 
-            if not parallel:
+            def _run_serial_cdr(sub_sme_template):
+                stack_linelist_local = None
                 for i in tqdm(range(N_chunk), disable=not show_progress_bars):
-                    sub_sme_init.linelist = sub_linelist[i]
-                    sub_sme_init = self.synthesize_spectrum(sub_sme_init)
+                    sub_sme_template.linelist = sub_linelist[i]
+                    sub_sme_template = self.synthesize_spectrum(sub_sme_template)
                     if i == 0:
-                        stack_linelist = deepcopy(sub_sme_init.linelist)
+                        stack_linelist_local = deepcopy(sub_sme_template.linelist)
                     else:
-                        stack_linelist._lines = pd.concat([stack_linelist._lines, sub_sme_init.linelist._lines])
+                        stack_linelist_local._lines = pd.concat(
+                            [stack_linelist_local._lines, sub_sme_template.linelist._lines]
+                        )
+                return stack_linelist_local
+
+            if not parallel:
+                stack_linelist = _run_serial_cdr(sub_sme_init)
             else:
                 sub_sme = []
                 sub_sme_init.linelist = sme.linelist[:1]
@@ -2110,17 +2152,45 @@ class Synthesizer:
                     sub_sme.append(deepcopy(sub_sme_init))
                     sub_sme[i].linelist = sub_linelist[i]
 
-                if pysme_out:
-                    sub_sme = pqdm(sub_sme, self.synthesize_spectrum, n_jobs=n_jobs, disable=not show_progress_bars)
-                else:
-                    with redirect_stdout(open(f"/dev/null", 'w')):
+                try:
+                    if pysme_out:
                         sub_sme = pqdm(sub_sme, self.synthesize_spectrum, n_jobs=n_jobs, disable=not show_progress_bars)
-                
-                for i in range(N_chunk):
-                    sub_linelist[i] = sub_sme[i].linelist
-                stack_linelist = deepcopy(sub_linelist[0])
-                stack_linelist._lines = pd.concat([ele._lines for ele in sub_linelist])  
-                # logger.info(f'{sub_linelist}')
+                    else:
+                        with open(os.devnull, "w") as devnull:
+                            with redirect_stdout(devnull):
+                                sub_sme = pqdm(
+                                    sub_sme,
+                                    self.synthesize_spectrum,
+                                    n_jobs=n_jobs,
+                                    disable=not show_progress_bars,
+                                )
+                except Exception as exc:
+                    if not _is_parallel_environment_error(exc):
+                        raise
+                    if policy == "strict":
+                        raise RuntimeError(
+                            "Parallel CDR line selection failed in this environment. "
+                            "Set line_select_parallel=False or use line_select_policy='auto' "
+                            "to allow serial fallback."
+                        ) from exc
+                    warnings.warn(
+                        "Parallel CDR line selection is unavailable in this environment; "
+                        "falling back to serial execution.",
+                        RuntimeWarning,
+                        stacklevel=2,
+                    )
+                    logger.warning(
+                        "[cdr] Parallel line selection failed with %s; falling back to serial.",
+                        exc,
+                        exc_info=True,
+                    )
+                    stack_linelist = _run_serial_cdr(sub_sme_init)
+                else:
+                    for i in range(N_chunk):
+                        sub_linelist[i] = sub_sme[i].linelist
+                    stack_linelist = deepcopy(sub_linelist[0])
+                    stack_linelist._lines = pd.concat([ele._lines for ele in sub_linelist])
+                    # logger.info(f'{sub_linelist}')
 
             # Remove
             if len(stack_linelist) != len(sme.linelist):
@@ -2159,7 +2229,7 @@ class Synthesizer:
         cdr_grid_overwrite=False,
         mode='linear',
         dims=['teff', 'logg', 'monh'],
-        show_progress_bars=False,
+        show_progress_bars=None,
         method="cdr",
         metric_name="central_depth",
         threshold=None,
@@ -2167,6 +2237,9 @@ class Synthesizer:
         bin_width=0.2,
         allow_compute=True,
     ):
+        if show_progress_bars is None:
+            show_progress_bars = util.show_progress_bars
+
         if method not in ("cdr", "almax"):
             raise ValueError("method must be 'cdr' or 'almax'")
 
@@ -2454,7 +2527,7 @@ class Synthesizer:
         keep[invalid_depth] = False
         return keep
 
-    def flag_strong_lines_by_bins_old(self, df, bin_width=0.2, threshold=0.01, wl_col="wlcent", depth_col="central_depth", out_col="keep_mask", show_progress_bars=show_progress_bars):
+    def flag_strong_lines_by_bins_old(self, df, bin_width=0.2, threshold=0.01, wl_col="wlcent", depth_col="central_depth", out_col="keep_mask", show_progress_bars=None):
         """
         Add a boolean 'keep_mask' column to the VALD line list indicating strong / weak lines.
 
@@ -2478,6 +2551,9 @@ class Synthesizer:
         pandas.Series (dtype=bool)
             Boolean mask aligned to `df.index`; True → strong line.
         """
+        if show_progress_bars is None:
+            show_progress_bars = util.show_progress_bars
+
         # ----- 0.  Prepare numpy views -----
         wl = df[wl_col].to_numpy()
         depth = df[depth_col].to_numpy()
@@ -2665,7 +2741,7 @@ class Synthesizer:
     def get_H_3dnlte_correction_rbf(self, sme):
         """
         Compute the 3D NLTE correction factor for hydrogen lines, using RBF interpolator and in intensities.
-    
+
         """
 
         logger.info(f"Getting H 3dnlte correction using RBF")

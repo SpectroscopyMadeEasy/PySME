@@ -437,9 +437,6 @@ def parse_args():
     return args.sme, args.vald, args.fitparameters
 
 config = Config()
-H_lineprof = pd.read_csv(os.path.expanduser(f"{config['data.hlineprof']}/lineprof.dat"), sep=' +', names=['Teff', 'logg', 'Fe_H', 'nu', 'wl', 'wlair', 'mu', 'wmu', 'Ic', 'I'], engine='python')
-H_lineprof['wl'] *= 10
-H_lineprof['wl'] = vac2air(H_lineprof['wl'])
 
 boundary_vertices = [
     (4000, 1.5), (4500, 1.5), (7000, 4.5), (7000, 5.0),
@@ -570,110 +567,156 @@ class Scalar:
         else:
             self.mean, self.std = np.load(name)
 
-_unique_grid = (
-    H_lineprof[["Teff", "logg", "Fe_H", "mu"]].drop_duplicates().reset_index(drop=True)
-)
-_unique_mu_weight = (
-    H_lineprof[["mu", "wmu"]].drop_duplicates().sort_values("mu").reset_index(drop=True)
-)
-mu_H_3DNLTE = _unique_mu_weight["mu"].to_numpy()
-wmu_H_3DNLTE = _unique_mu_weight["wmu"].to_numpy()
+_HLINE_LAZY_NAMES = frozenset({
+    "H_lineprof",
+    "lambda_H_3DNLTE",
+    "mu_H_3DNLTE",
+    "wmu_H_3DNLTE",
+    "rbf_Halpha", "rbf_Hbeta", "rbf_Hgamma",
+    "rbf_Halpha_I", "rbf_Hbeta_I", "rbf_Hgamma_I",
+    "rbf_Halpha_Ic", "rbf_Hbeta_Ic", "rbf_Hgamma_Ic",
+    "_scalar",
+})
 
-_indices_H_gamma = (H_lineprof['wl'] < 4500)
-_indices_H_beta = (H_lineprof['wl'] > 4500) & (H_lineprof['wl'] < 5500)
-_indices_H_alpha = (H_lineprof['wl'] > 5500)
+_hline_data_loaded = False
 
-_H_alpha_Ir = []
-_H_beta_Ir = []
-_H_gamma_Ir = []
-_H_alpha_I = []
-_H_beta_I = []
-_H_gamma_I = []
-_H_alpha_Ic = []
-_H_beta_Ic = []
-_H_gamma_Ic = []
-for i in _unique_grid.index:
-    _indices = np.isclose(H_lineprof['Teff'], _unique_grid.loc[i, 'Teff']) 
-    _indices &= np.isclose(H_lineprof['logg'], _unique_grid.loc[i, 'logg']) 
-    _indices &= np.isclose(H_lineprof['Fe_H'], _unique_grid.loc[i, 'Fe_H']) 
-    _indices &= np.isclose(H_lineprof['mu'], _unique_grid.loc[i, 'mu'])
-    _H_alpha_spectrum = H_lineprof[_indices & _indices_H_alpha]
-    _H_beta_spectrum = H_lineprof[_indices & _indices_H_beta]
-    _H_gamma_spectrum = H_lineprof[_indices & _indices_H_gamma]
-    if i == 0:
-        _lambda_H_alpha = _H_alpha_spectrum['wl'].values
-        _lambda_H_beta = _H_beta_spectrum['wl'].values
-        _lambda_H_gamma = _H_gamma_spectrum['wl'].values
-    _H_alpha_I.append(_H_alpha_spectrum['I'].values)
-    _H_beta_I.append(_H_beta_spectrum['I'].values)
-    _H_gamma_I.append(_H_gamma_spectrum['I'].values)
-    _H_alpha_Ic.append(_H_alpha_spectrum['Ic'].values)
-    _H_beta_Ic.append(_H_beta_spectrum['Ic'].values)
-    _H_gamma_Ic.append(_H_gamma_spectrum['Ic'].values)
-    _H_alpha_Ir.append(_H_alpha_spectrum['I'].values/_H_alpha_spectrum['Ic'].values)
-    _H_beta_Ir.append(_H_beta_spectrum['I'].values/_H_beta_spectrum['Ic'].values)
-    _H_gamma_Ir.append(_H_gamma_spectrum['I'].values/_H_gamma_spectrum['Ic'].values)
 
-_H_alpha_Ir = np.array(_H_alpha_Ir)
-_H_beta_Ir = np.array(_H_beta_Ir)
-_H_gamma_Ir = np.array(_H_gamma_Ir)
-_H_alpha_I = np.array(_H_alpha_I)
-_H_beta_I = np.array(_H_beta_I)
-_H_gamma_I = np.array(_H_gamma_I)
-_H_alpha_Ic = np.array(_H_alpha_Ic)
-_H_beta_Ic = np.array(_H_beta_Ic)
-_H_gamma_Ic = np.array(_H_gamma_Ic)
+def load_hline_data():
+    """Read lineprof.dat and fit the 3D NLTE H-line RBF interpolators.
 
-lambda_H_3DNLTE = np.concatenate([_lambda_H_gamma, _lambda_H_beta, _lambda_H_alpha])
+    Doing this at import time cost every ``import pysme`` several seconds and
+    required the H-line grid to be on disk, even for users who never touch
+    3D NLTE hydrogen. It now runs on first access to any of the names in
+    ``_HLINE_LAZY_NAMES`` (see the module ``__getattr__`` below), or when
+    called explicitly.
+    """
+    global _hline_data_loaded
+    if _hline_data_loaded:
+        return
 
-_scalar = Scalar()
-_scalar.fit(_unique_grid)
-_X = _scalar.transform(_unique_grid).values
-rbf_Halpha = RBFInterpolator(
-            _X, _H_alpha_Ir,
+    H_lineprof = pd.read_csv(
+        os.path.expanduser(f"{config['data.hlineprof']}/lineprof.dat"),
+        sep=' +',
+        names=['Teff', 'logg', 'Fe_H', 'nu', 'wl', 'wlair', 'mu', 'wmu', 'Ic', 'I'],
+        engine='python',
+    )
+    H_lineprof['wl'] *= 10
+    H_lineprof['wl'] = vac2air(H_lineprof['wl'])
+
+    unique_grid = (
+        H_lineprof[["Teff", "logg", "Fe_H", "mu"]].drop_duplicates().reset_index(drop=True)
+    )
+    unique_mu_weight = (
+        H_lineprof[["mu", "wmu"]].drop_duplicates().sort_values("mu").reset_index(drop=True)
+    )
+
+    indices_H_gamma = (H_lineprof['wl'] < 4500)
+    indices_H_beta = (H_lineprof['wl'] > 4500) & (H_lineprof['wl'] < 5500)
+    indices_H_alpha = (H_lineprof['wl'] > 5500)
+
+    H_alpha_Ir, H_beta_Ir, H_gamma_Ir = [], [], []
+    H_alpha_I, H_beta_I, H_gamma_I = [], [], []
+    H_alpha_Ic, H_beta_Ic, H_gamma_Ic = [], [], []
+    for i in unique_grid.index:
+        indices = np.isclose(H_lineprof['Teff'], unique_grid.loc[i, 'Teff'])
+        indices &= np.isclose(H_lineprof['logg'], unique_grid.loc[i, 'logg'])
+        indices &= np.isclose(H_lineprof['Fe_H'], unique_grid.loc[i, 'Fe_H'])
+        indices &= np.isclose(H_lineprof['mu'], unique_grid.loc[i, 'mu'])
+        H_alpha_spectrum = H_lineprof[indices & indices_H_alpha]
+        H_beta_spectrum = H_lineprof[indices & indices_H_beta]
+        H_gamma_spectrum = H_lineprof[indices & indices_H_gamma]
+        if i == 0:
+            lambda_H_alpha = H_alpha_spectrum['wl'].values
+            lambda_H_beta = H_beta_spectrum['wl'].values
+            lambda_H_gamma = H_gamma_spectrum['wl'].values
+        H_alpha_I.append(H_alpha_spectrum['I'].values)
+        H_beta_I.append(H_beta_spectrum['I'].values)
+        H_gamma_I.append(H_gamma_spectrum['I'].values)
+        H_alpha_Ic.append(H_alpha_spectrum['Ic'].values)
+        H_beta_Ic.append(H_beta_spectrum['Ic'].values)
+        H_gamma_Ic.append(H_gamma_spectrum['Ic'].values)
+        H_alpha_Ir.append(H_alpha_spectrum['I'].values/H_alpha_spectrum['Ic'].values)
+        H_beta_Ir.append(H_beta_spectrum['I'].values/H_beta_spectrum['Ic'].values)
+        H_gamma_Ir.append(H_gamma_spectrum['I'].values/H_gamma_spectrum['Ic'].values)
+
+    H_alpha_Ir = np.array(H_alpha_Ir)
+    H_beta_Ir = np.array(H_beta_Ir)
+    H_gamma_Ir = np.array(H_gamma_Ir)
+    H_alpha_I = np.array(H_alpha_I)
+    H_beta_I = np.array(H_beta_I)
+    H_gamma_I = np.array(H_gamma_I)
+    H_alpha_Ic = np.array(H_alpha_Ic)
+    H_beta_Ic = np.array(H_beta_Ic)
+    H_gamma_Ic = np.array(H_gamma_Ic)
+
+    scalar = Scalar()
+    scalar.fit(unique_grid)
+    X = scalar.transform(unique_grid).values
+
+    globals().update(
+        H_lineprof=H_lineprof,
+        mu_H_3DNLTE=unique_mu_weight["mu"].to_numpy(),
+        wmu_H_3DNLTE=unique_mu_weight["wmu"].to_numpy(),
+        lambda_H_3DNLTE=np.concatenate(
+            [lambda_H_gamma, lambda_H_beta, lambda_H_alpha]
+        ),
+        _scalar=scalar,
+        rbf_Halpha=RBFInterpolator(
+            X, H_alpha_Ir,
             neighbors=50,
             kernel="cubic"
-        )
-rbf_Hbeta = RBFInterpolator(
-            _X, np.log10(np.clip(_H_beta_Ir, 1e-12, None)),
+        ),
+        rbf_Hbeta=RBFInterpolator(
+            X, np.log10(np.clip(H_beta_Ir, 1e-12, None)),
             neighbors=None,
             kernel="cubic"
-        )
-rbf_Hgamma = RBFInterpolator(
-            _X, np.log10(np.clip(_H_gamma_Ir, 1e-12, None)),
+        ),
+        rbf_Hgamma=RBFInterpolator(
+            X, np.log10(np.clip(H_gamma_Ir, 1e-12, None)),
             neighbors=None,
             kernel="cubic"
-        )
-rbf_Halpha_I = RBFInterpolator(
-            _X, np.log10(np.clip(_H_alpha_I, 1e-12, None)),
+        ),
+        rbf_Halpha_I=RBFInterpolator(
+            X, np.log10(np.clip(H_alpha_I, 1e-12, None)),
             neighbors=50,
             kernel="cubic"
-        )
-rbf_Hbeta_I = RBFInterpolator(
-            _X, np.log10(np.clip(_H_beta_I, 1e-12, None)),
+        ),
+        rbf_Hbeta_I=RBFInterpolator(
+            X, np.log10(np.clip(H_beta_I, 1e-12, None)),
             neighbors=None,
             kernel="cubic"
-        )
-rbf_Hgamma_I = RBFInterpolator(
-            _X, np.log10(np.clip(_H_gamma_I, 1e-12, None)),
+        ),
+        rbf_Hgamma_I=RBFInterpolator(
+            X, np.log10(np.clip(H_gamma_I, 1e-12, None)),
             neighbors=None,
             kernel="cubic"
-        )
-rbf_Halpha_Ic = RBFInterpolator(
-            _X, np.log10(np.clip(_H_alpha_Ic, 1e-12, None)),
+        ),
+        rbf_Halpha_Ic=RBFInterpolator(
+            X, np.log10(np.clip(H_alpha_Ic, 1e-12, None)),
             neighbors=50,
             kernel="cubic"
-        )
-rbf_Hbeta_Ic = RBFInterpolator(
-            _X, np.log10(np.clip(_H_beta_Ic, 1e-12, None)),
+        ),
+        rbf_Hbeta_Ic=RBFInterpolator(
+            X, np.log10(np.clip(H_beta_Ic, 1e-12, None)),
             neighbors=None,
             kernel="cubic"
-        )
-rbf_Hgamma_Ic = RBFInterpolator(
-            _X, np.log10(np.clip(_H_gamma_Ic, 1e-12, None)),
+        ),
+        rbf_Hgamma_Ic=RBFInterpolator(
+            X, np.log10(np.clip(H_gamma_Ic, 1e-12, None)),
             neighbors=None,
             kernel="cubic"
-        )
+        ),
+    )
+    _hline_data_loaded = True
+
+
+def __getattr__(name):
+    # PEP 562: only fires for names not already in the module dict, so the
+    # first `util.<name>` access builds the grid and later ones are direct.
+    if name in _HLINE_LAZY_NAMES:
+        load_hline_data()
+        return globals()[name]
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 # def interpolate_H_spectrum(
 #     df: pd.DataFrame,
@@ -773,6 +816,9 @@ def interpolate_3DNLTEH_intensity_continuum_RBF(teff, logg, monh, mu, boundary_v
         Cosine of the viewing angle.
     Returns
     """
+    # module-level __getattr__ does not fire for globals read inside the module
+    load_hline_data()
+
     point_star_2d = (teff, logg)
     polygon = Path(boundary_vertices)
     in_boundary = polygon.contains_point(point_star_2d)

@@ -50,6 +50,7 @@ extern "C" const char *SME_DLL ClearH2broad(int n, void *arg[]);      /* Clear f
 extern "C" const char *SME_DLL SetHlinopWarningMode(int n, void *arg[]); /* Set HLINPROF->HLINOP warning mode */
 extern "C" const char *SME_DLL GetHlinopWarnings(int n, void *arg[]);    /* Return and clear HLINOP fallback warning summary */
 extern "C" const char *SME_DLL SetLineInfoMode(int n, void *arg[]);   /* Set handling mode for precomputed line info */
+extern "C" const char *SME_DLL SetContinuumScatteringSourceMode(int n, void *arg[]); /* Enable continuum scattering source */
 extern "C" const char *SME_DLL InputLinePrecomputedInfo(int n, void *arg[]); /* Input precomputed line ranges/strong mask */
 extern "C" const char *SME_DLL InputLineList(int n, void *arg[]);     /* Read in line list */
 extern "C" const char *SME_DLL OutputLineList(int n, void *arg[]);    /* Return line list */
@@ -62,6 +63,8 @@ extern "C" const char *SME_DLL ResetDepartureCoefficients(int n, void *arg[]); /
 extern "C" const char *SME_DLL InputAbund(int n, void *arg[]);                 /* Read in abundances */
 extern "C" const char *SME_DLL Opacity(int n, void *arg[]);                    /* Calculate opacities */
 extern "C" const char *SME_DLL GetOpacity(int n, void *arg[]);                 /* Returns specific cont. opacity */
+extern "C" const char *SME_DLL GetContinuumOpacityComponents(int n, void *arg[]); /* Returns true absorption, scattering, and total continuum opacity */
+extern "C" const char *SME_DLL GetContinuumScatteringSource(int n, void *arg[]); /* Returns continuum scattering mean intensity and source */
 extern "C" const char *SME_DLL GetFraction(int n, void *arg[]);                /* Returns fraction or partition function */
 extern "C" const char *SME_DLL Ionization(int n, void *arg[]);                 /* Perfrom EOS calculations */
 extern "C" const char *SME_DLL GetDensity(int n, void *arg[]);                 /* Returns density in g/cm^3 */

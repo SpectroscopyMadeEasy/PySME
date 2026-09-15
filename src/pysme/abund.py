@@ -159,6 +159,25 @@ archivePrefix = {arXiv},
 }
 """
 
+_citation_amarsi2026 = r"""
+@ARTICLE{2026arXiv260823155A,
+       author = {{Amarsi}, A.~M. and {Grevesse}, N.},
+        title = "{Solar chemical composition}",
+      journal = {arXiv e-prints},
+     keywords = {Solar and Stellar Astrophysics, Earth and Planetary Astrophysics, Instrumentation and Methods for Astrophysics},
+         year = 2026,
+        month = aug,
+          eid = {arXiv:2608.23155},
+        pages = {arXiv:2608.23155},
+          doi = {10.48550/arXiv.2608.23155},
+archivePrefix = {arXiv},
+       eprint = {2608.23155},
+ primaryClass = {astro-ph.SR},
+       adsurl = {https://ui.adsabs.harvard.edu/abs/2026arXiv260823155A},
+      adsnote = {Provided by the SAO/NASA Astrophysics Data System}
+}
+"""
+
 _citation_lodders2003 = r"""
 @ARTICLE{2003ApJ...591.1220L,
     author = {{Lodders}, Katharina},
@@ -366,8 +385,8 @@ _asplund2009 = (
     None,
     )
 
-# Asplund, Grevesse, Sauval, Scott (2009,  Annual Review of Astronomy
-# and Astrophysics, 47, 481)
+# Asplund, Amarsi, Grevesse (2021,  Astronomy & Astrophysics,
+# Volume 653, A141)
 _asplund2021 = (
     12.00, 10.914,
     0.96,  1.38,  2.70,  8.46,  7.83,  8.69,  4.40,  8.06,
@@ -382,6 +401,24 @@ _asplund2021 = (
     0.26,  1.35,  1.32,  1.61,  0.91,  1.17,  0.92,  1.95,
     0.65,  None,  None,  None,  None,  None,  None,  0.03,
     None,  -0.54,  None,  None,  None,  None,  None,  None,
+    None,
+    )
+
+# Amarsi & Grevesse, arXiv:2608.23155
+_amarsi2026 = (
+    12.00,  10.934,
+    0.96,  1.21,  2.70,  8.47,  7.84,  8.70,  4.40,  8.07,
+    6.22,  7.56,  6.43,  7.55,  5.35,  7.06,  5.31,  6.38,
+    5.07,  6.30,  3.13,  4.97,  3.90,  5.65,  5.47,  7.46,
+    4.94,  6.20,  4.18,  4.56,  3.02,  3.62,  2.29,  3.32,
+    2.55,  3.19,  2.34,  2.84,  2.29,  2.59,  1.47,  1.88,
+    None,  1.75,  1.06,  1.57,  1.15,  1.66,  0.80,  2.02,
+    1.01,  2.14,  1.66,  2.26,  1.03,  2.27,  1.12,  1.58,
+    0.75,  1.42,  None,  0.95,  0.49,  1.08,  0.31,  1.10,
+    0.48,  0.93,  0.11,  0.85,  0.10,  0.86,  -0.14,  0.79,
+    0.29,  1.31,  1.32,  1.60,  0.91,  1.04,  0.92,  1.95,
+    0.61,  None,  None,  None,  None,  None,  None,  0.03,
+    None,  -0.52,  None,  None,  None,  None,  None,  None,
     None,
     )
 
@@ -830,8 +867,8 @@ class Abund(IPersist):
         ----------
         pattern_name : str
             Name of the predefined option to use. One of:
-            'grevesse2007', 'asplund2009', 'asplund2021', 'asplund2005',
-            'lodders2003', 'anders1989', 'grevesse1996', 'grevesse1998', ,'lodders2010',
+            'grevesse2007', 'asplund2009', 'asplund2021', 'asplund2005', 'amarsi2026',
+            'lodders2003', 'anders1989', 'grevesse1996', 'grevesse1998', 'lodders2010',
             'empty'
 
         Raises
@@ -862,6 +899,9 @@ class Abund(IPersist):
         elif pattern_name.lower() in ["asplund2021"]:
             self._pattern = np.array(_asplund2021, dtype=float)
             self.citation_info += _citation_asplund2021
+        elif pattern_name.lower() in ["amarsi2026"]:
+            self._pattern = np.array(_amarsi2026, dtype=float)
+            self.citation_info += _citation_amarsi2026
         elif pattern_name.lower() == "lodders2003":
             self._pattern = np.array(_lodders2003, dtype=float)
             self.citation_info += _citation_lodders2003
@@ -875,7 +915,7 @@ class Abund(IPersist):
                 f"Got abundance pattern name {pattern_name}. It should be one of: "
                 "'grevesse2007' (or 'solar'), 'asplund2009', 'asplund2021', "
                 "'asplund2005', 'lodders2003', 'lodders2010', 'anders1989', "
-                "'grevesse1996', 'grevesse1998', or 'empty'."
+                "'grevesse1996', 'grevesse1998', 'amarsi2026', or 'empty'."
             )
         self._set_reference_metadata(
             self._pattern,

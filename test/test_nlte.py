@@ -11,7 +11,7 @@ import pytest
 
 from pysme.abund import Abund
 from pysme.linelist.vald import ValdFile
-from pysme.nlte import DirectAccessFile, Grid, nlte
+from pysme.nlte import DirectAccessFile, Grid, NLTE, nlte
 from pysme.sme import SME_Structure as SME_Struct
 from pysme.sme_synth import SME_DLL
 from pysme.synthesize import Synthesizer, synthesize_spectrum
@@ -221,6 +221,63 @@ def test_h_old_scaled_rel_abund_would_show_pattern_offset():
     assert grid.scaled_rel_abund(abund) == pytest.approx(0.0)
 
 
+def test_update_coefficients_short_format_defaults_to_warning_and_lte(caplog):
+    sme = make_minimum_structure()
+    sme.linelist = ValdFile("{}/testcase1.lin".format(cwd))
+    sme.nlte.set_nlte("Ca", "marcs2012p_t1.0_Ca.grd")
+    sme.nlte.first = True
+    dll = _FakeDLL()
+
+    with caplog.at_level("WARNING"):
+        result = sme.nlte.update_coefficients(sme, dll, lfs_nlte=None)
+
+    assert result is sme
+    assert dll.reset_calls == 1
+    assert "Line formation will proceed under LTE." in caplog.text
+
+
+def test_update_coefficients_short_format_raises_in_strict_mode():
+    sme = make_minimum_structure()
+    sme.linelist = ValdFile("{}/testcase1.lin".format(cwd))
+    sme.nlte.set_nlte("Ca", "marcs2012p_t1.0_Ca.grd")
+    sme.nlte.strict = True
+    sme.nlte.first = True
+    dll = _FakeDLL()
+
+    with pytest.raises(ValueError, match="Strict NLTE mode forbids LTE fallback"):
+        sme.nlte.update_coefficients(sme, dll, lfs_nlte=None)
+
+
+def test_update_coefficients_raises_in_strict_mode_when_nlte_lines_missing(monkeypatch):
+    sme = make_minimum_structure()
+    sme.nlte.set_nlte("Ca", "marcs2012p_t1.0_Ca.grd")
+    sme.nlte.strict = True
+    sme.nlte.first = True
+    dll = _FakeDLL()
+    fake_grid = _FakeRuntimeGrid(iused=[False, False])
+
+    monkeypatch.setattr(NLTE, "get_grid", lambda self, sme_obj, elem, lfs: fake_grid)
+
+    with pytest.raises(RuntimeError, match="Strict NLTE mode forbids LTE fallback"):
+        sme.nlte.update_coefficients(sme, dll, lfs_nlte=None)
+
+
+def test_update_coefficients_default_mode_removes_element_when_nlte_lines_missing(monkeypatch, caplog):
+    sme = make_minimum_structure()
+    sme.nlte.set_nlte("Ca", "marcs2012p_t1.0_Ca.grd")
+    sme.nlte.first = True
+    dll = _FakeDLL()
+    fake_grid = _FakeRuntimeGrid(iused=[False, False])
+
+    monkeypatch.setattr(NLTE, "get_grid", lambda self, sme_obj, elem, lfs: fake_grid)
+
+    with caplog.at_level("WARNING"):
+        sme.nlte.update_coefficients(sme, dll, lfs_nlte=None)
+
+    assert "No Ca NLTE lines found" in caplog.text
+    assert "Ca" not in sme.nlte.elements
+
+
 class _FakeLineList:
     def __init__(self, species, use_indices=None):
         self.species = np.asarray(species)
@@ -241,6 +298,32 @@ class _FakeLineList:
 class _FakeSME:
     def __init__(self, linelist):
         self.linelist = linelist
+
+
+class _FakeDLL:
+    def __init__(self):
+        self.reset_calls = 0
+
+    def ResetDepartureCoefficients(self):
+        self.reset_calls += 1
+
+    def InputDepartureCoefficients(self, bmat, lineindex):
+        pass
+
+
+class _FakeRuntimeGrid:
+    def __init__(self, iused, linerefs=None, bmat=None):
+        self.iused = np.asarray(iused, dtype=bool)
+        self.linerefs = (
+            np.asarray(linerefs, dtype=int)
+            if linerefs is not None
+            else np.zeros((0, 2), dtype=int)
+        )
+        self.lineindices = np.zeros(len(self.linerefs), dtype=int)
+        self._bmat = bmat
+
+    def get(self, abund, teff, logg, monh, atmo):
+        return self._bmat
 
 
 def _make_grid_for_matching_cache(selection="energy"):

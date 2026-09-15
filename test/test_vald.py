@@ -87,6 +87,19 @@ def test_medium():
     assert vf.medium == "vac"
 
 
+def test_header_without_vmicro_separator():
+    """Accept VALD-compatible headers missing the comma after Vmicro."""
+    vald = ValdFile.__new__(ValdFile)
+    nlines = vald.parse_header(
+        "3600.00000, 8000.00000, 25488, 303039, 2.0 Wavelength region, "
+        "lines selected, lines processed, Vmicro"
+    )
+
+    assert nlines == 25488
+    assert vald._nlines_proc == 303039
+    assert vald._vmicro == 2.0
+
+
 def test_short_format():
     linelist = ValdFile(join(dirname(__file__), "testcase1.lin"))
 

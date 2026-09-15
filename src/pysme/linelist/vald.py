@@ -287,7 +287,10 @@ class ValdFile(LineList):
         ValdError
             If the header is not understood
         """
-        words = [w.strip() for w in line.split(",")]
+        # Some VALD-compatible producers omit the comma between Vmicro and
+        # the descriptive labels, e.g. ``2.0 Wavelength region``.  Split
+        # only the numeric header fields and accept either spelling.
+        words = [w.strip() for w in line.split(",", maxsplit=5)]
         # if len(words) < 5 or words[5] != "Wavelength region":
         #     raise ValdError(f"{self.filename} is not a VALD line data file")
         try:
@@ -295,7 +298,13 @@ class ValdFile(LineList):
             self._wavehi = float(words[1])
             self.nlines = int(words[2])
             self._nlines_proc = int(words[3])
-            self._vmicro = float(words[4])
+            vmicro = re.match(
+                r"^([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)\b",
+                words[4],
+            )
+            if vmicro is None:
+                raise ValueError
+            self._vmicro = float(vmicro.group(1))
         except:
             raise ValdError(f"{self.filename} is not a VALD line data file")
         return self.nlines

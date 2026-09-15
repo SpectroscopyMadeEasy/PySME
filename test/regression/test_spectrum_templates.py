@@ -25,6 +25,7 @@ TEMPLATE_DIR = Path(__file__).resolve().parent / "data" / "templates"
 MEAN_ABS_LIMIT = 5e-4
 MAX_ABS_LIMIT = 3e-3
 CORE_DEPTH_LIMIT = 1e-3
+NLTE_EFFECT_MIN = 1e-2
 
 
 def load_template(name: str) -> tuple[np.ndarray, np.ndarray, dict]:
@@ -40,8 +41,12 @@ def load_linelist(metadata: dict):
     return ll[(wl >= w0 - 3.0) & (wl <= w1 + 3.0)]
 
 
-def synthesize_from_metadata(metadata: dict) -> np.ndarray:
-    wave = np.arange(metadata["wave_range"][0], metadata["wave_range"][1], metadata["deltalambda"])
+def synthesize_from_metadata(metadata: dict) -> tuple[np.ndarray, np.ndarray]:
+    wave = np.arange(
+        metadata["wave_range"][0],
+        metadata["wave_range"][1],
+        metadata["deltalambda"],
+    )
     sme = SME_Structure()
     sme.teff = metadata["teff"]
     sme.logg = metadata["logg"]
@@ -58,18 +63,16 @@ def synthesize_from_metadata(metadata: dict) -> np.ndarray:
     sme.wave = [wave]
     sme.normalize_by_continuum = True
     for elem in metadata["nlte_elements"]:
-        sme.nlte.set_nlte(elem)
+        sme.nlte.set_nlte(elem, metadata.get("nlte_grids", {}).get(elem))
     out = synthesize_spectrum(sme)
-    return np.asarray(out.synth[0], dtype=float)
+    return np.asarray(out.synth[0], dtype=float), np.asarray(out.nlte.flags, dtype=bool)
 
 
 def core_depth(flux: np.ndarray) -> float:
     return 1.0 - float(np.nanmin(flux))
 
 
-def assert_template(name: str) -> None:
-    wave_ref, flux_ref, metadata = load_template(name)
-    flux_cur = synthesize_from_metadata(metadata)
+def assert_spectrum_matches_reference(flux_cur: np.ndarray, flux_ref: np.ndarray) -> None:
     mean_abs = float(np.nanmean(np.abs(flux_cur - flux_ref)))
     max_abs = float(np.nanmax(np.abs(flux_cur - flux_ref)))
     depth_diff = abs(core_depth(flux_cur) - core_depth(flux_ref))
@@ -78,12 +81,27 @@ def assert_template(name: str) -> None:
     assert depth_diff < CORE_DEPTH_LIMIT
 
 
+def assert_template(name: str) -> None:
+    _, flux_ref, metadata = load_template(name)
+    flux_cur, _ = synthesize_from_metadata(metadata)
+    assert_spectrum_matches_reference(flux_cur, flux_ref)
+
+
 def test_regression_sun_halpha():
     assert_template("sun_halpha_ref.npz")
 
 
-def test_regression_sun_ca5002():
-    assert_template("sun_ca5002_ref.npz")
+def test_regression_sun_na6154_6160():
+    _, flux_ref, metadata = load_template("sun_na6154_6160_ref.npz")
+    flux_nlte, flags = synthesize_from_metadata(metadata)
+    lte_metadata = dict(metadata)
+    lte_metadata["nlte_elements"] = []
+    flux_lte, _ = synthesize_from_metadata(lte_metadata)
+
+    assert flags.shape == (len(load_linelist(metadata)),)
+    assert np.all(flags)
+    assert np.max(np.abs(flux_nlte - flux_lte)) > NLTE_EFFECT_MIN
+    assert_spectrum_matches_reference(flux_nlte, flux_ref)
 
 
 def test_regression_arcturus_halpha():

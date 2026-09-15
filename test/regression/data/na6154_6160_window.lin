@@ -1,0 +1,44 @@
+                                                                     Lande factors        Damping parameters
+Elm Ion       WL_air(A)  log gf* E_low(eV) J lo  E_up(eV) J up   lower   upper    mean   Rad.  Stark    Waals
+'Na 1',      6154.22327,  -2.052,  2.1023,  0.5,  4.1164,  0.5, 99.000, 99.000, 99.000, 7.850,-4.390, 0.000,
+  LS                                                                            2p6.3p 2P*
+  LS                                                                             2p6.5s 2S
+'NA         CNO, Na 1, Mg 1:   00 wl:NIST10 00 gf:NIST10 00 NIST10 00 NIST10 665 KP 665 KP 665 KP 665 KP 00 NIST10 hfs:GINR,TLG Na'
+'Na 1',      6154.22523,  -2.751,  2.1023,  0.5,  4.1164,  0.5, 99.000, 99.000, 99.000, 7.850,-4.390, 0.000,
+  LS                                                                            2p6.3p 2P*
+  LS                                                                             2p6.5s 2S
+'NA         CNO, Na 1, Mg 1:   00 wl:NIST10 00 gf:NIST10 00 NIST10 00 NIST10 665 KP 665 KP 665 KP 665 KP 00 NIST10 hfs:GINR,TLG Na'
+'Na 1',      6154.22566,  -2.052,  2.1023,  0.5,  4.1164,  0.5, 99.000, 99.000, 99.000, 7.850,-4.390, 0.000,
+  LS                                                                            2p6.3p 2P*
+  LS                                                                             2p6.5s 2S
+'NA         CNO, Na 1, Mg 1:   00 wl:NIST10 00 gf:NIST10 00 NIST10 00 NIST10 665 KP 665 KP 665 KP 665 KP 00 NIST10 hfs:GINR,TLG Na'
+'Na 1',      6154.22762,  -2.052,  2.1023,  0.5,  4.1164,  0.5, 99.000, 99.000, 99.000, 7.850,-4.390, 0.000,
+  LS                                                                            2p6.3p 2P*
+  LS                                                                             2p6.5s 2S
+'NA         CNO, Na 1, Mg 1:   00 wl:NIST10 00 gf:NIST10 00 NIST10 00 NIST10 665 KP 665 KP 665 KP 665 KP 00 NIST10 hfs:GINR,TLG Na'
+'Na 1',      6160.74573,  -2.751,  2.1044,  1.5,  4.1164,  0.5, 99.000, 99.000, 99.000, 7.850,-4.390, 0.000,
+  LS                                                                            2p6.3p 2P*
+  LS                                                                             2p6.5s 2S
+'NA         CNO, Na 1, Mg 1:   00 wl:NIST10 00 gf:NIST10 00 NIST10 00 NIST10 665 KP 665 KP 665 KP 665 KP 00 NIST10 hfs:YSH,TLG Na'
+'Na 1',      6160.74616,  -2.052,  2.1044,  1.5,  4.1164,  0.5, 99.000, 99.000, 99.000, 7.850,-4.390, 0.000,
+  LS                                                                            2p6.3p 2P*
+  LS                                                                             2p6.5s 2S
+'NA         CNO, Na 1, Mg 1:   00 wl:NIST10 00 gf:NIST10 00 NIST10 00 NIST10 665 KP 665 KP 665 KP 665 KP 00 NIST10 hfs:YSH,TLG Na'
+'Na 1',      6160.74690,  -1.605,  2.1044,  1.5,  4.1164,  0.5, 99.000, 99.000, 99.000, 7.850,-4.390, 0.000,
+  LS                                                                            2p6.3p 2P*
+  LS                                                                             2p6.5s 2S
+'NA         CNO, Na 1, Mg 1:   00 wl:NIST10 00 gf:NIST10 00 NIST10 00 NIST10 665 KP 665 KP 665 KP 665 KP 00 NIST10 hfs:YSH,TLG Na'
+'Na 1',      6160.74749,  -2.450,  2.1044,  1.5,  4.1164,  0.5, 99.000, 99.000, 99.000, 7.850,-4.390, 0.000,
+  LS                                                                            2p6.3p 2P*
+  LS                                                                             2p6.5s 2S
+'NA         CNO, Na 1, Mg 1:   00 wl:NIST10 00 gf:NIST10 00 NIST10 00 NIST10 665 KP 665 KP 665 KP 665 KP 00 NIST10 hfs:YSH,TLG Na'
+'Na 1',      6160.74769,  -2.052,  2.1044,  1.5,  4.1164,  0.5, 99.000, 99.000, 99.000, 7.850,-4.390, 0.000,
+  LS                                                                            2p6.3p 2P*
+  LS                                                                             2p6.5s 2S
+'NA         CNO, Na 1, Mg 1:   00 wl:NIST10 00 gf:NIST10 00 NIST10 00 NIST10 665 KP 665 KP 665 KP 665 KP 00 NIST10 hfs:YSH,TLG Na'
+'Na 1',      6160.74813,  -2.052,  2.1044,  1.5,  4.1164,  0.5, 99.000, 99.000, 99.000, 7.850,-4.390, 0.000,
+  LS                                                                            2p6.3p 2P*
+  LS                                                                             2p6.5s 2S
+'NA         CNO, Na 1, Mg 1:   00 wl:NIST10 00 gf:NIST10 00 NIST10 00 NIST10 665 KP 665 KP 665 KP 665 KP 00 NIST10 hfs:YSH,TLG Na'
+* oscillator strengths were scaled by the solar isotopic ratios.
+ References:

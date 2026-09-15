@@ -23,7 +23,7 @@ from pysme.synthesize import synthesize_spectrum
 TEMPLATE_DIR = Path(__file__).resolve().parent / "data" / "templates"
 REGRESSION_DATA = Path(__file__).resolve().parent / "data"
 HALPHA_LINELIST = REGRESSION_DATA / "halpha_window_cdr_union.lin"
-CA5002_LINELIST = REGRESSION_DATA / "ca5002_window.lin"
+NA6154_6160_LINELIST = REGRESSION_DATA / "na6154_6160_window.lin"
 DELTA_LAMBDA = 0.02
 
 
@@ -46,17 +46,18 @@ WINDOWS = {
         "nlte_elements": ["H"],
         "template_name": "sun_halpha_ref.npz",
     },
-    "sun_ca5002": {
-        "wave_range": (4999.8, 5003.8),
+    "sun_na6154_6160": {
+        "wave_range": (6153.5, 6161.5),
         "teff": 5771.0,
         "logg": 4.44,
         "monh": 0.0,
         "vmic": 1.0,
         "vmac": 4.19,
         "vsini": 1.6,
-        "linelist_path": repo_relpath(CA5002_LINELIST),
-        "nlte_elements": ["Ca"],
-        "template_name": "sun_ca5002_ref.npz",
+        "linelist_path": repo_relpath(NA6154_6160_LINELIST),
+        "nlte_elements": ["Na"],
+        "nlte_grids": {"Na": "nlte_Na_multi_sun.grd"},
+        "template_name": "sun_na6154_6160_ref.npz",
     },
     "arcturus_halpha": {
         "wave_range": (6552.8, 6572.8),
@@ -110,7 +111,7 @@ def synthesize_window(cfg: dict) -> tuple[np.ndarray, np.ndarray]:
     sme.wave = [wave]
     sme.normalize_by_continuum = True
     for elem in cfg["nlte_elements"]:
-        sme.nlte.set_nlte(elem)
+        sme.nlte.set_nlte(elem, cfg.get("nlte_grids", {}).get(elem))
     result = synthesize_spectrum(sme)
     return np.asarray(result.wave[0], dtype=float), np.asarray(result.synth[0], dtype=float)
 
@@ -130,6 +131,7 @@ def write_template(name: str, cfg: dict) -> Path:
         "vsini": cfg["vsini"],
         "linelist_path": cfg["linelist_path"],
         "nlte_elements": cfg["nlte_elements"],
+        "nlte_grids": cfg.get("nlte_grids", {}),
         "atmo_source": "default",
         "pysme_commit": get_git_rev(ROOT),
         "smelib_commit": get_git_rev(ROOT / "smelib"),
