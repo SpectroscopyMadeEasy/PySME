@@ -1,10 +1,32 @@
 # Changelog
 
-## 2026-09-09
+## v1.1.0 - 2026-09-15
 
-- Added `sme.h_stark_convolution = "convolution"` for Br10 and higher.
-  The default remains `"legacy"`.
-  See the [SMElib v6.13.18 documentation](https://github.com/SpectroscopyMadeEasy/SMElib/blob/v6.13.18/docs/brackett_stark_convolution.md).
+### Added
+
+- Added an opt-in continuum-scattering source for plane-parallel and spherical atmospheres; the Planck source remains the default.
+- Added the Amarsi & Grevesse (2026) solar abundance pattern as `amarsi2026`.
+- Added `sme.nlte.strict` for runs that must stop instead of falling back to LTE when requested NLTE data cannot be applied.
+- Added checksum and size validation for downloaded atmosphere and NLTE data.
+
+### Changed
+
+- Interpolate spherical-atmosphere height and radius as a combined logarithmic quantity.
+- Build the 3D NLTE hydrogen interpolation grid only when it is first used.
+- Pin the bundled SMElib source to v6.13.19.
+
+### Fixed
+
+- Accept VALD-compatible headers that omit the comma after `Vmicro`.
+- Fall back to serial CDR line selection when the runtime cannot create worker processes, unless strict line-selection policy is requested.
+- Apply progress-bar settings at call time and use the correct Boolean test for disabling progress bars.
+- Avoid NumPy shape-assignment warnings in continuum and radial-velocity fitting.
+- Close persistence files after failed reads and use a plain Plotly figure outside notebooks.
+
+## v1.0.3 - 2026-09-09
+
+- Added `sme.h_stark_convolution = "convolution"` for Br10 and higher; the default remains `"legacy"`.
+- See the [SMElib v6.13.18 documentation](https://github.com/SpectroscopyMadeEasy/SMElib/blob/v6.13.18/docs/brackett_stark_convolution.md).
 
 ## 2026-06-26
 

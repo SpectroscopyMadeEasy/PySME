@@ -13,11 +13,10 @@ Detailed per-release changes are maintained on GitHub Releases:
 - Use the Git tags list for older historical versions.
 - Keep this page concise, focused on major milestones and migration notes.
 
-## Unreleased
+## v1.1.0
 
-- Preparing for the first stable 1.x milestone (`v1.0.0`).
-- Release and documentation workflows were standardized for long-term maintenance.
-- No intentional scientific-model behavior break from the latest 0.7.x line.
+- Added optional continuum scattering, strict NLTE fallback handling, improved spherical-atmosphere interpolation, and updated solar-abundance and data-download support.
+- PySME v1.1.0 is paired with SMElib v6.13.19.
 
 ## Legacy 0.x notes
 
