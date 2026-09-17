@@ -14,6 +14,7 @@ from pysme.linelist.linelist import LineList
 from pysme.sme import SME_Structure as SME_Struct
 from pysme.synthesize import (
     Synthesizer,
+    _build_smelib_line_index_map,
     _compute_linelist_hash,
     _compute_almax_lineinfo_for_sme,
     _load_lineinfo_cache_file,
@@ -72,11 +73,14 @@ def test_synthesis_segment(sme_2segments):
 
 
 class _DummyDLL:
-    def __init__(self, transf_wave=None):
+    def __init__(self, transf_wave=None, discard_mask=None, nlte_flags=None):
         self.last_wave = "unset"
         self.transf_wave = transf_wave
+        self.discard_mask = discard_mask
+        self.nlte_flags = nlte_flags
         self._nlines = 0
         self.continuum_scattering_source_modes = []
+        self.line_updates = []
 
     def SetLibraryPath(self):
         return None
@@ -105,13 +109,31 @@ class _DummyDLL:
     def SetLineInfoMode(self, *_):
         return None
 
+    def InputLinePrecomputedInfo(self, *_):
+        return None
+
     def SetContinuumScatteringSourceMode(self, mode):
         self.continuum_scattering_source_modes.append(int(mode))
         return None
 
     def InputLineList(self, linelist):
-        self._nlines = len(linelist)
-        return np.zeros(self._nlines, dtype=bool)
+        if self.discard_mask is None:
+            discard_mask = np.zeros(len(linelist), dtype=bool)
+        else:
+            discard_mask = np.asarray(self.discard_mask, dtype=bool)
+            if discard_mask.shape != (len(linelist),):
+                raise ValueError("test discard mask does not match line list")
+        self._nlines = int(np.count_nonzero(~discard_mask))
+        return discard_mask
+
+    def UpdateLineList(self, atomic, species, index):
+        self.line_updates.append(
+            (
+                np.asarray(atomic).copy(),
+                np.asarray(species).copy(),
+                np.asarray(index).copy(),
+            )
+        )
 
     def Transf(self, mu, accrt, accwi, keep_lineop, wave=None):
         self.last_wave = wave
@@ -139,7 +161,12 @@ class _DummyDLL:
         return np.zeros(self._nlines), np.zeros((self._nlines, 2))
 
     def GetNLTEflags(self):
-        return np.zeros(self._nlines, dtype=bool)
+        if self.nlte_flags is None:
+            return np.zeros(self._nlines, dtype=bool)
+        flags = np.asarray(self.nlte_flags, dtype=bool)
+        if flags.shape != (self._nlines,):
+            raise ValueError("test NLTE flags do not match retained lines")
+        return flags
 
 
 def _minimal_sme():
@@ -196,6 +223,117 @@ def _synthesize_continuum_with_mode(synth, sme, mode):
     one.continuum_scattering_source = mode
     out = synth.synthesize_spectrum(one, passNLTE=False)
     return np.asarray(out.wint[0]), np.asarray(out.cint[0])
+
+
+def test_build_smelib_line_index_map_compacts_retained_rows():
+    mapping = _build_smelib_line_index_map([False, True, False, True, False])
+
+    assert np.array_equal(mapping, np.array([0, -1, 1, -1, 2]))
+
+
+def test_synthesis_passes_compact_line_index_map_to_nlte(monkeypatch):
+    dll = _DummyDLL(discard_mask=[False, True, False, False])
+    synth = Synthesizer(dll=dll)
+    sme = _minimal_sme()
+    _set_minimal_species_linelist(sme, ["Fe 1", "Ni 7", "Li 1", "Ti 1"])
+    captured = {}
+
+    def capture_update(self, sme_obj, dll_obj, lfs_nlte, line_index_map=None):
+        captured["line_index_map"] = np.asarray(line_index_map).copy()
+        return sme_obj
+
+    monkeypatch.setattr(type(sme.nlte), "update_coefficients", capture_update)
+
+    synth.synthesize_spectrum(
+        sme,
+        passAtmosphere=False,
+        passNLTE=True,
+        updateStructure=False,
+    )
+
+    assert np.array_equal(captured["line_index_map"], np.array([0, -1, 1, 2]))
+    assert np.array_equal(sme.line_ion_mask, [False, True, False, False])
+
+
+def test_reused_linelist_maps_incremental_updates_to_smelib_indices():
+    dll = _DummyDLL(discard_mask=[False, True, False, False])
+    synth = Synthesizer(dll=dll)
+    sme = _minimal_sme()
+    _set_minimal_species_linelist(sme, ["Fe 1", "Ni 7", "Li 1", "Ti 1"])
+
+    synth.synthesize_spectrum(
+        sme,
+        passAtmosphere=False,
+        passNLTE=False,
+        updateStructure=False,
+    )
+    synth.synthesize_spectrum(
+        sme,
+        passLineList=False,
+        passAtmosphere=False,
+        passNLTE=False,
+        updateStructure=False,
+        updateLineList=[1, 2, 3],
+    )
+
+    assert len(dll.line_updates) == 1
+    atomic, species, indices = dll.line_updates[0]
+    assert atomic.shape[0] == 3
+    assert np.array_equal(species, ["Fe 1", "Li 1", "Ti 1"])
+    assert np.array_equal(indices, [1, 2])
+
+
+def test_dynamic_synthesis_maps_selected_and_discarded_lines(monkeypatch):
+    dll = _DummyDLL(
+        discard_mask=[True, False, False],
+        nlte_flags=[True, False],
+    )
+    synth = Synthesizer(dll=dll)
+    sme = _minimal_sme()
+    sme.specific_intensities_only = False
+    sme.wave = np.linspace(5000.0, 5001.0, 11)
+    _set_minimal_species_linelist(sme, ["Ni 7", "Li 1", "Ti 1", "Fe 1"])
+    sme.linelist._lines["central_depth"] = [0.2, 0.2, 0.2, 0.0]
+    sme.linelist._lines["line_range_s"] = [4999.0, 4999.0, 4999.0, np.nan]
+    sme.linelist._lines["line_range_e"] = [5002.0, 5002.0, 5002.0, np.nan]
+    sme.linelist._lines["strong"] = [True, True, True, False]
+    sme.line_select_method = "cdr"
+    sme.ipres = 1e9
+    sme.linelist.cdr_paras = np.array([sme.teff, sme.logg, sme.monh, sme.vmic])
+    sme.linelist.cdr_paras_h_stark_convolution = "legacy"
+    sme.linelist.cdr_paras_thres["strong_depth"] = sme.strong_depth_thres
+    sme.linelist.cdr_paras_thres["strong_bin_width"] = sme.strong_bin_width
+    captured = {}
+
+    def capture_update(self, sme_obj, dll_obj, lfs_nlte, line_index_map=None):
+        captured["line_index_map"] = np.asarray(line_index_map).copy()
+        return sme_obj
+
+    monkeypatch.setattr(type(sme.nlte), "update_coefficients", capture_update)
+
+    synth.synthesize_spectrum(
+        sme,
+        passAtmosphere=False,
+        passNLTE=True,
+        updateStructure=True,
+        linelist_mode="dynamic",
+    )
+
+    assert np.array_equal(sme.linelist["use_indices"], [True, True, True, False])
+    assert np.array_equal(captured["line_index_map"], [-1, 0, 1])
+    assert np.array_equal(sme.line_ion_mask, [True, False, False, False])
+    assert np.array_equal(sme.nlte.flags, [False, True, False, False])
+    assert np.array_equal(sme.linelist["nlte_flag"], [-1, 1, 0, -1])
+
+    captured.clear()
+    synth.synthesize_spectrum(
+        sme,
+        passLineList=False,
+        passAtmosphere=False,
+        passNLTE=True,
+        updateStructure=False,
+    )
+    assert np.array_equal(captured["line_index_map"], [-1, 0, 1])
 
 
 def test_synthesize_segment_prefers_user_wint_over_cache():

@@ -4,6 +4,15 @@
 
 # PySME
 
+> [!WARNING]
+> **NLTE correctness notice:** PySME versions from v0.4.151 through v1.1.0
+> can assign NLTE departure coefficients to the wrong spectral transitions
+> when SMElib discards transitions with unsupported ionization stages. These
+> releases are no longer recommended for scientific NLTE synthesis. Upgrade to
+> PySME v1.1.1 or later and rerun affected NLTE calculations. LTE synthesis is
+> not affected by this specific issue. See the [NLTE documentation](https://pysme-astro.readthedocs.io/en/latest/concepts/nlte.html)
+> for details.
+
 Spectroscopy Made Easy (SME) is a software tool that fits an observed
 spectrum of a star with a model spectrum. Since its initial release in
 [1996](http://adsabs.harvard.edu/abs/1996A%26AS..118..595V), SME has been a
