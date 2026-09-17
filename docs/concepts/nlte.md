@@ -5,6 +5,14 @@ PySME supports them using pre-computed grids of NLTE departure coefficients, whi
 For common elements PySME provides grids (see below) via the LFS (see [](lfs.md)). 
 If any of these grids are used, please kindly take care to cite the papers describing the NLTE models and departure coefficient calculations.
 
+```{warning}
+PySME versions from v0.4.151 through v1.1.0 contain a line-indexing defect
+that can assign NLTE departure coefficients to the wrong transitions when
+SMElib discards transitions with unsupported ionization stages. These releases
+are no longer recommended for scientific NLTE synthesis. Upgrade to v1.1.1 or
+later and rerun affected NLTE calculations.
+```
+
 NLTE calculations need to be specified for each element they are supposed to be used for individually using `sme.nlte.set_nlte(el, grid)` (the `grid` can be omitted if there is a grid in lfs).
 Similarly they can be disabled for each element using `sme.nlte.remove_nlte(el)`, where sme is your SME structure.
 If no element is set to NLTE in the structure PySME will perform
@@ -18,7 +26,7 @@ LTE calculations only.
     to speed up calculations. This sets the size of that cache
     by defining the number of points in each
     axis (rabund, teff, logg, monh).
-- `flags`: After the synthesis all lines are flaged if they used NLTE
+- `flags`: After synthesis, all lines are flagged according to whether they used NLTE
 
 ## Grid interpolation
 
@@ -40,13 +48,30 @@ of the model atmosphere we specified (See [](atmosphere)).
 We then use the linelist to find only the relevant transitions in the grid,
 and pass the departure coefficients for each line to the C library.
 
+## Line-list indexing during NLTE synthesis
+
+PySME keeps the user's Python line list unchanged during synthesis. SMElib may
+discard transitions with unsupported ionization stages and stores the retained
+transitions in a compact internal line list. PySME maps indices from the
+original or dynamically selected Python line-list view to this compact SMElib
+index space before assigning NLTE departure coefficients. Users do not need to
+prefilter their line lists to keep the two index spaces aligned.
+
+After synthesis, `sme.nlte.flags` is a boolean array aligned with the complete
+Python line list. `True` means that the line used NLTE departure coefficients;
+`False` includes lines treated in LTE as well as lines that were not included
+in the current synthesis pass. Use the `nlte_flag` line-list column when these
+cases need to be distinguished.
+
 ## NLTE flags in line list
 
-PySME provides information on whehter a line is synthesized in NLTE through the `nlte_flag` column in the line list.
+PySME provides information on whether a line is synthesized in NLTE through the `nlte_flag` column in the line list.
 
-- `1`: this line was synthesized with in NLTE.
+- `1`: this line was synthesized in NLTE.
 - `0`: this line was synthesized in LTE.
-- `-1`: this line was not included in the current synthesis pass (see [](../advance/line_filtering.md)).
+- `-1`: this line was not included in the current synthesis pass, either
+  because it was not selected or because SMElib discarded it (see
+  [](../advance/line_filtering.md)).
 
 ## Recommended and default grids
 
@@ -159,5 +184,3 @@ When `sme.nlte.strict` is `True`, PySME raises an exception instead of falling b
     - marcs2012p_t1.0_Ba.grd [(Mashonkina et al. 1999)](https://ui.adsabs.harvard.edu/abs/1999A%26A...343..519M)
   - Eu
     - nlte_Eu.grd
-
-

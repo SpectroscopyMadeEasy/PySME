@@ -3,6 +3,15 @@ PySME documentation
 
 Version: |release|
 
+.. warning::
+
+   **NLTE correctness notice:** PySME versions from v0.4.151 through v1.1.0
+   can assign NLTE departure coefficients to the wrong spectral transitions
+   when SMElib discards transitions with unsupported ionization stages. These
+   releases are no longer recommended for scientific NLTE synthesis. Upgrade
+   to PySME v1.1.1 or later and rerun affected NLTE calculations. LTE synthesis
+   is not affected by this specific issue. See :doc:`concepts/nlte` for details.
+
 More than two decades ago `Valenti & Piskunov (1996) <https://ui.adsabs.harvard.edu/abs/1996A&AS..118..595V>`_ developed SME - Spectroscopy Made Easy, a high-precision stellar-spectra synthesis/analysis engine that has powered hundreds of studies.
 PySME is its modern Python front-end: a wrapper around the original C++/Fortran core that lets you (1) compute accurate, high-resolution synthetic spectra from a linelist + model atmosphere, (2) invert observed spectra to derive stellar parameters, and (3) explore NLTE corrections — all from an interactive notebook or scripted pipeline. The same capabilities make PySME invaluable for exoplanet work, where characterising the host star is essential for understanding its planets.
 
@@ -57,5 +66,6 @@ Indices and tables
 * :ref:`search`
 
 .. rubric:: Quick links
+
 :GitHub repository: https://github.com/SpectroscopyMadeEasy/PySME
 :Issue tracker:     https://github.com/SpectroscopyMadeEasy/PySME/issues
