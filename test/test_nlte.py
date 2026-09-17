@@ -303,27 +303,114 @@ class _FakeSME:
 class _FakeDLL:
     def __init__(self):
         self.reset_calls = 0
+        self.departure_calls = []
 
     def ResetDepartureCoefficients(self):
         self.reset_calls += 1
 
     def InputDepartureCoefficients(self, bmat, lineindex):
-        pass
+        self.departure_calls.append((np.asarray(bmat), int(lineindex)))
 
 
 class _FakeRuntimeGrid:
-    def __init__(self, iused, linerefs=None, bmat=None):
+    def __init__(self, iused, linerefs=None, lineindices=None, bmat=None):
         self.iused = np.asarray(iused, dtype=bool)
         self.linerefs = (
             np.asarray(linerefs, dtype=int)
             if linerefs is not None
             else np.zeros((0, 2), dtype=int)
         )
-        self.lineindices = np.zeros(len(self.linerefs), dtype=int)
+        self.lineindices = (
+            np.asarray(lineindices, dtype=int)
+            if lineindices is not None
+            else np.zeros(len(self.linerefs), dtype=int)
+        )
         self._bmat = bmat
 
     def get(self, abund, teff, logg, monh, atmo):
         return self._bmat
+
+
+def test_update_coefficients_remaps_python_indices_after_line_filtering(monkeypatch):
+    sme = make_minimum_structure()
+    sme.nlte.set_nlte("Ca", "marcs2012p_t1.0_Ca.grd")
+    dll = _FakeDLL()
+    fake_grid = _FakeRuntimeGrid(
+        iused=[True, True],
+        linerefs=[[0, 1], [0, 1], [0, 1]],
+        lineindices=[0, 2, 3],
+        bmat=np.ones((4, 2)),
+    )
+    monkeypatch.setattr(NLTE, "get_grid", lambda self, sme_obj, elem, lfs: fake_grid)
+
+    # Python row 1 was discarded, so rows 0, 2 and 3 become SMElib rows 0, 1 and 2.
+    sme.nlte.update_coefficients(
+        sme,
+        dll,
+        lfs_nlte=None,
+        line_index_map=np.array([0, -1, 1, 2]),
+    )
+
+    assert [lineindex for _, lineindex in dll.departure_calls] == [0, 1, 2]
+
+
+def test_update_coefficients_skips_nlte_transition_discarded_by_smelib(monkeypatch):
+    sme = make_minimum_structure()
+    sme.nlte.set_nlte("Ca", "marcs2012p_t1.0_Ca.grd")
+    dll = _FakeDLL()
+    fake_grid = _FakeRuntimeGrid(
+        iused=[True, True],
+        linerefs=[[0, 1]],
+        lineindices=[1],
+        bmat=np.ones((4, 2)),
+    )
+    monkeypatch.setattr(NLTE, "get_grid", lambda self, sme_obj, elem, lfs: fake_grid)
+
+    sme.nlte.update_coefficients(
+        sme,
+        dll,
+        lfs_nlte=None,
+        line_index_map=np.array([0, -1, 1]),
+    )
+
+    assert dll.departure_calls == []
+
+
+def test_update_coefficients_rejects_invalid_line_index_mapping(monkeypatch):
+    sme = make_minimum_structure()
+    sme.nlte.set_nlte("Ca", "marcs2012p_t1.0_Ca.grd")
+    dll = _FakeDLL()
+    fake_grid = _FakeRuntimeGrid(
+        iused=[True, True],
+        linerefs=[[0, 1]],
+        lineindices=[3],
+        bmat=np.ones((4, 2)),
+    )
+    monkeypatch.setattr(NLTE, "get_grid", lambda self, sme_obj, elem, lfs: fake_grid)
+
+    with pytest.raises(RuntimeError, match="outside the Python-to-SMElib"):
+        sme.nlte.update_coefficients(
+            sme,
+            dll,
+            lfs_nlte=None,
+            line_index_map=np.array([0, -1, 1]),
+        )
+
+    with pytest.raises(ValueError, match="contiguous SMElib indices"):
+        sme.nlte.update_coefficients(
+            sme,
+            dll,
+            lfs_nlte=None,
+            line_index_map=np.array([0, -1, 2, 3]),
+        )
+
+    with pytest.raises(ValueError, match="only use -1"):
+        sme.nlte.update_coefficients(
+            sme,
+            dll,
+            lfs_nlte=None,
+            line_index_map=np.array([0, -2, 1]),
+        )
 
 
 def _make_grid_for_matching_cache(selection="energy"):
