@@ -56,6 +56,19 @@ logger = logging.getLogger(__name__)
 clight = speed_of_light * 1e-3  # km/s
 
 
+def _build_smelib_line_index_map(discard_mask):
+    """Map an imported Python line-list view onto SMElib's compact indices."""
+    discard_mask = np.asarray(discard_mask, dtype=bool)
+    if discard_mask.ndim != 1:
+        raise ValueError("SMElib line discard mask must be one-dimensional")
+
+    line_index_map = np.full(discard_mask.size, -1, dtype=np.intp)
+    line_index_map[~discard_mask] = np.arange(
+        np.count_nonzero(~discard_mask), dtype=np.intp
+    )
+    return line_index_map
+
+
 @contextmanager
 def _temporary_brackett_convolution_env(sme):
     """Scope the PySME Brackett mode to one native synthesis call."""
@@ -1371,6 +1384,8 @@ class Synthesizer:
         central_depth = [[] for _ in range(n_segments)]
         line_range = [[] for _ in range(n_segments)]
         opacity = [[] for _ in range(n_segments)]
+        line_index_map = None
+        smelib_line_mask = None
         if contribution_function:
             sme.contribution_function = [[] for _ in range(n_segments)]
         if updateStructure:
@@ -1598,6 +1613,7 @@ class Synthesizer:
             int(sme.continuum_scattering_source)
         )
         if passLineList:
+            line_selection_mask = np.ones(len(sme.linelist), dtype=bool)
             linelist_for_smelib = sme.linelist
             if linelist_mode == "dynamic":
                 line_indices = sme.linelist['wlcent'] < 0
@@ -1606,9 +1622,37 @@ class Synthesizer:
                     line_indices |= (sme.linelist['line_range_e'] > sme.wran[i][0] * (1 - vbroad_expend_ratio*v_broad/clight)) & (sme.linelist['line_range_s'] < sme.wran[i][1] * (1 + vbroad_expend_ratio*v_broad/clight))
                 line_indices &= np.asarray(sme.linelist['strong'], dtype=bool)
                 sme.linelist._lines['use_indices'] = line_indices
+                line_selection_mask = np.asarray(line_indices, dtype=bool)
                 linelist_for_smelib = sme.linelist[line_indices]
-            line_ion_mask = dll.InputLineList(linelist_for_smelib)
-            sme.line_ion_mask = line_ion_mask
+            elif "use_indices" in sme.linelist._lines.columns:
+                # ``use_indices`` is internal state from an earlier dynamic
+                # synthesis.  It must not affect NLTE matching in all-lines mode.
+                del sme.linelist._lines["use_indices"]
+
+            line_ion_mask = np.asarray(
+                dll.InputLineList(linelist_for_smelib), dtype=bool
+            )
+            if line_ion_mask.ndim != 1 or line_ion_mask.size != len(
+                linelist_for_smelib
+            ):
+                raise RuntimeError(
+                    "SMElib returned a line discard mask that does not match "
+                    "the imported Python line list"
+                )
+
+            # NLTE matching uses indices in ``linelist_for_smelib`` while
+            # SMElib compacts that list by removing unsupported ionization
+            # stages.  Preserve the explicit mapping between both index spaces.
+            line_index_map = _build_smelib_line_index_map(line_ion_mask)
+
+            selected_rows = np.flatnonzero(line_selection_mask)
+            kept_rows = selected_rows[~line_ion_mask]
+            discarded_rows = selected_rows[line_ion_mask]
+            smelib_line_mask = np.zeros(len(sme.linelist), dtype=bool)
+            smelib_line_mask[kept_rows] = True
+            full_line_ion_mask = np.zeros(len(sme.linelist), dtype=bool)
+            full_line_ion_mask[discarded_rows] = True
+            sme.line_ion_mask = full_line_ion_mask
 
             if lineinfo_mode in (1, 2):
                 cols = set(linelist_for_smelib._lines.columns)
@@ -1654,9 +1698,60 @@ class Synthesizer:
                         dll.InputLinePrecomputedInfo(range_s, range_e, strong_mask, depth)
                     else:
                         dll.InputLinePrecomputedInfo(range_s, range_e, strong_mask)
-        if hasattr(updateLineList, "__len__") and len(updateLineList) > 0:
-            # TODO Currently Updates the whole linelist, could be improved to only change affected lines
-            dll.UpdateLineList(sme.atomic, sme.species, updateLineList)
+        else:
+            # Reuse the mapping associated with the line list already resident
+            # in this SMElib instance.  This keeps ``passLineList=False``
+            # compatible while retaining the same index contract.
+            if "use_indices" in sme.linelist._lines.columns:
+                line_selection_mask = np.asarray(
+                    sme.linelist["use_indices"], dtype=bool
+                )
+            else:
+                line_selection_mask = np.ones(len(sme.linelist), dtype=bool)
+
+            full_line_ion_mask = np.asarray(
+                getattr(
+                    sme,
+                    "line_ion_mask",
+                    np.zeros(len(sme.linelist), dtype=bool),
+                ),
+                dtype=bool,
+            )
+            if full_line_ion_mask.shape != (len(sme.linelist),):
+                raise RuntimeError(
+                    "Stored SMElib line discard mask does not match the Python line list"
+                )
+            line_index_map = _build_smelib_line_index_map(
+                full_line_ion_mask[line_selection_mask]
+            )
+            smelib_line_mask = line_selection_mask & ~full_line_ion_mask
+        if (
+            not passLineList
+            and hasattr(updateLineList, "__len__")
+            and len(updateLineList) > 0
+        ):
+            # InputLineList already includes all current Python-side values.  An
+            # incremental update is only needed when reusing the line list that
+            # is resident in SMElib.  Translate requested Python indices into
+            # the compact SMElib index space before applying that update.
+            update_indices = np.asarray(updateLineList, dtype=np.intp)
+            if update_indices.ndim != 1:
+                raise ValueError("updateLineList must be a one-dimensional array")
+            if np.any((update_indices < 0) | (update_indices >= len(sme.linelist))):
+                raise IndexError("updateLineList contains an invalid Python line index")
+
+            python_to_smelib = np.full(len(sme.linelist), -1, dtype=np.intp)
+            python_to_smelib[smelib_line_mask] = np.arange(
+                np.count_nonzero(smelib_line_mask), dtype=np.intp
+            )
+            smelib_update_indices = python_to_smelib[update_indices]
+            smelib_update_indices = smelib_update_indices[smelib_update_indices >= 0]
+            if smelib_update_indices.size:
+                dll.UpdateLineList(
+                    sme.atomic[smelib_line_mask],
+                    sme.species[smelib_line_mask],
+                    smelib_update_indices,
+                )
         if passAtmosphere:
             sme = self.get_atmosphere(sme)
             dll.InputModel(sme.teff, sme.logg, sme.vmic, sme.atmo)
@@ -1669,7 +1764,12 @@ class Synthesizer:
             dll.SetVWscale(sme.gam6)
             dll.SetH2broad(sme.h2broad)
         if passNLTE:
-            sme.nlte.update_coefficients(sme, dll, self.lfs_nlte)
+            sme.nlte.update_coefficients(
+                sme,
+                dll,
+                self.lfs_nlte,
+                line_index_map=line_index_map,
+            )
 
         # Loop over segments
         #   Input Wavelength range and Opacity
@@ -1780,10 +1880,25 @@ class Synthesizer:
             if passLineList and self.update_cdr_switch:
                 s = 0
                 if len(central_depth[s]) > 0:
-                    sme.linelist._lines.loc[~sme.line_ion_mask, 'central_depth'] = central_depth[s]
+                    if (
+                        smelib_line_mask is None
+                        or len(central_depth[s])
+                        != np.count_nonzero(smelib_line_mask)
+                    ):
+                        raise RuntimeError(
+                            "SMElib line diagnostics do not match the imported "
+                            "line-list mapping"
+                        )
+                    sme.linelist._lines.loc[
+                        smelib_line_mask, 'central_depth'
+                    ] = central_depth[s]
                     sme.linelist._lines.loc[sme.line_ion_mask, 'central_depth'] = np.nan
-                    sme.linelist._lines.loc[~sme.line_ion_mask, 'line_range_s'] = line_range[s][:, 0]
-                    sme.linelist._lines.loc[~sme.line_ion_mask, 'line_range_e'] = line_range[s][:, 1]
+                    sme.linelist._lines.loc[
+                        smelib_line_mask, 'line_range_s'
+                    ] = line_range[s][:, 0]
+                    sme.linelist._lines.loc[
+                        smelib_line_mask, 'line_range_e'
+                    ] = line_range[s][:, 1]
                     sme.linelist._lines.loc[sme.line_ion_mask, 'line_range_s'] = np.nan
                     sme.linelist._lines.loc[sme.line_ion_mask, 'line_range_e'] = np.nan
                     sme.linelist.cdr_paras = np.array([sme.teff, sme.logg, sme.monh, sme.vmic])
@@ -1806,11 +1921,18 @@ class Synthesizer:
             sme.vrad = np.asarray(vrad)
             sme.vrad_unc = np.asarray(vrad_unc)
             nlte_flags = dll.GetNLTEflags()
-            if linelist_mode == 'dynamic':
-                sme.linelist._lines.loc[sme.linelist._lines['use_indices'], 'nlte_flag'] = nlte_flags.astype(int)
-            else:
-                sme.nlte.flags = nlte_flags
-                sme.linelist._lines.loc[~sme.line_ion_mask, 'nlte_flag'] = nlte_flags.astype(int)
+            if smelib_line_mask is None or len(nlte_flags) != np.count_nonzero(
+                smelib_line_mask
+            ):
+                raise RuntimeError(
+                    "SMElib NLTE flags do not match the imported line-list mapping"
+                )
+            full_nlte_flags = np.zeros(len(sme.linelist), dtype=bool)
+            full_nlte_flags[smelib_line_mask] = np.asarray(nlte_flags, dtype=bool)
+            sme.nlte.flags = full_nlte_flags
+            sme.linelist._lines.loc[smelib_line_mask, 'nlte_flag'] = np.asarray(
+                nlte_flags, dtype=int
+            )
 
         # Store the adaptive wavelength grid for the future
 

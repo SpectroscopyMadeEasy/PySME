@@ -1154,11 +1154,41 @@ class NLTE(Collection):
         logger.warning("%s", message)
 
     # @profile
-    def update_coefficients(self, sme, dll, lfs_nlte):
+    def update_coefficients(self, sme, dll, lfs_nlte, line_index_map=None):
         """pass departure coefficients to C library;
             If bmat, linerefs, lineindices are given, use those instead of recalculating them 
             and the code will not check if the line level, energy is matched or not. 
+
+        Parameters
+        ----------
+        line_index_map : array-like of int, optional
+            Map from indices in the Python line list view used for NLTE
+            matching to indices in SMElib's internal line list.  SMElib
+            removes unsupported ionization stages while importing a line
+            list, so the two index spaces are not necessarily identical.
+            Removed lines must map to ``-1``.
         """
+
+        if line_index_map is not None:
+            line_index_map = np.asarray(line_index_map)
+            if line_index_map.ndim != 1 or not np.issubdtype(
+                line_index_map.dtype, np.integer
+            ):
+                raise ValueError(
+                    "line_index_map must be a one-dimensional integer array"
+                )
+            if np.any(line_index_map < -1):
+                raise ValueError(
+                    "line_index_map may only use -1 for removed lines"
+                )
+
+            kept_indices = line_index_map[line_index_map >= 0]
+            expected_indices = np.arange(kept_indices.size, dtype=kept_indices.dtype)
+            if not np.array_equal(kept_indices, expected_indices):
+                raise ValueError(
+                    "line_index_map must map retained lines monotonically onto "
+                    "contiguous SMElib indices"
+                )
 
         # Reset the departure coefficient every time, just to be sure
         # It would be more efficient to just Update the values, but this doesn't take long
@@ -1222,7 +1252,19 @@ class NLTE(Collection):
                     # loop through the list of relevant _lines_, substitute both their levels into the main b matrix
                     # Make sure both levels have corrections available
                     if lr[0] != -1 and lr[1] != -1:
-                        dll.InputDepartureCoefficients(bmat[:, lr], li)
+                        smelib_index = int(li)
+                        if line_index_map is not None:
+                            if smelib_index < 0 or smelib_index >= line_index_map.size:
+                                raise RuntimeError(
+                                    "NLTE line index is outside the Python-to-SMElib "
+                                    "line-index mapping"
+                                )
+                            smelib_index = int(line_index_map[smelib_index])
+                            if smelib_index < 0:
+                                # The matched transition itself is unsupported by
+                                # SMElib and was removed during line-list import.
+                                continue
+                        dll.InputDepartureCoefficients(bmat[:, lr], smelib_index)
         for elem in marked_for_removal:
             self.remove_nlte(elem)
 
