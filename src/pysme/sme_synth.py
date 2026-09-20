@@ -194,6 +194,14 @@ class SME_DLL:
         """Enable or disable the continuum scattering source for plane-parallel and spherical transfer."""
         _smelib.SetContinuumScatteringSourceMode(int(bool(mode)))
 
+    def SetEosWarmStartMode(self, mode):
+        """Enable exact EOS history reuse for the current fit lifecycle."""
+        setter = getattr(_smelib, "SetEosWarmStartMode", None)
+        if setter is None:
+            return False
+        setter(int(bool(mode)))
+        return True
+
     def InputLinePrecomputedInfo(self, line_range_s, line_range_e, strong_mask, central_depth=None):
         """Input precomputed line ranges and strong mask to SMElib."""
         range_s = np.ascontiguousarray(line_range_s, dtype=np.float64)

@@ -102,6 +102,18 @@ def test_basic(libsme, wfirst, wlast, vw_scale):
     # assert libsme.h2broad
 
 
+def test_eos_warm_start_mode_api(libsme):
+    assert libsme.SetEosWarmStartMode(True)
+    assert libsme.SetEosWarmStartMode(False)
+
+
+def test_eos_warm_start_mode_tolerates_older_extension(libsme, monkeypatch):
+    import pysme.sme_synth as sme_synth
+
+    monkeypatch.setattr(sme_synth._smelib, "SetEosWarmStartMode", None)
+    assert not libsme.SetEosWarmStartMode(True)
+
+
 def test_linelist(libsme, linelist):
     """Test linelist behaviour"""
     libsme.InputLineList(linelist)

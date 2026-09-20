@@ -238,6 +238,10 @@ class SME_DLL:
             int(bool(mode)), type="int", state=self.state
         )
 
+    def SetEosWarmStartMode(self, mode):
+        """Enable exact EOS history reuse for the current fit lifecycle."""
+        self.lib.SetEosWarmStartMode(int(bool(mode)), type="int", state=self.state)
+
     def InputLineList(self, linelist):
         """
         Read in line list
