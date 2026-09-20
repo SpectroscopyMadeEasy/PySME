@@ -252,9 +252,9 @@ class AtmosphereGrid(np.recarray):
         cls = self.__class__
         value = super().__getitem__(key)
         if isinstance(value, cls) and value.size == 1:
-            return value[0]
+            value = value[0]
 
-        if isinstance(value, np.record):
+        if isinstance(value, (np.record, np.void)):
             kwargs = {s: value[s] for s in value.dtype.names}
             value = Atmosphere(**kwargs)
         if isinstance(value, (Atmosphere, cls)):

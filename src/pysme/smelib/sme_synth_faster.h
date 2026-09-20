@@ -51,6 +51,7 @@ extern "C" const char *SME_DLL SetHlinopWarningMode(int n, void *arg[]); /* Set 
 extern "C" const char *SME_DLL GetHlinopWarnings(int n, void *arg[]);    /* Return and clear HLINOP fallback warning summary */
 extern "C" const char *SME_DLL SetLineInfoMode(int n, void *arg[]);   /* Set handling mode for precomputed line info */
 extern "C" const char *SME_DLL SetContinuumScatteringSourceMode(int n, void *arg[]); /* Enable continuum scattering source */
+extern "C" const char *SME_DLL SetEosWarmStartMode(int n, void *arg[]); /* Scope exact EOS history reuse */
 extern "C" const char *SME_DLL InputLinePrecomputedInfo(int n, void *arg[]); /* Input precomputed line ranges/strong mask */
 extern "C" const char *SME_DLL InputLineList(int n, void *arg[]);     /* Read in line list */
 extern "C" const char *SME_DLL OutputLineList(int n, void *arg[]);    /* Return line list */

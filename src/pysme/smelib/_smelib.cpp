@@ -250,6 +250,28 @@ static PyObject *smelib_SetContinuumScatteringSourceMode(PyObject *self, PyObjec
     Py_RETURN_NONE;
 }
 
+static char smelib_SetEosWarmStartMode_docstring[] = "Scope exact EOS history reuse to a fit lifecycle";
+static PyObject *smelib_SetEosWarmStartMode(PyObject *self, PyObject *args)
+{
+    const int n = 1;
+    const char *result = NULL;
+    void *args_c[n];
+    int mode = 0;
+
+    if (!PyArg_ParseTuple(args, "i", &mode))
+        return NULL;
+
+    args_c[0] = &mode;
+    result = SetEosWarmStartMode(n, args_c);
+    if (result != NULL && result[0] != OK_response)
+    {
+        PyErr_SetString(PyExc_RuntimeError, result);
+        return NULL;
+    }
+
+    Py_RETURN_NONE;
+}
+
 static char smelib_InputLinePrecomputedInfo_docstring[] = "Input precomputed line ranges and strong mask";
 static PyObject *smelib_InputLinePrecomputedInfo(PyObject *self, PyObject *args)
 {
@@ -1791,6 +1813,7 @@ static PyMethodDef module_methods[] = {
     {"ClearH2broad", smelib_ClearH2broad, METH_NOARGS, smelib_ClearH2broad_docstring},
     {"SetLineInfoMode", smelib_SetLineInfoMode, METH_VARARGS, smelib_SetLineInfoMode_docstring},
     {"SetContinuumScatteringSourceMode", smelib_SetContinuumScatteringSourceMode, METH_VARARGS, smelib_SetContinuumScatteringSourceMode_docstring},
+    {"SetEosWarmStartMode", smelib_SetEosWarmStartMode, METH_VARARGS, smelib_SetEosWarmStartMode_docstring},
     {"InputLinePrecomputedInfo", smelib_InputLinePrecomputedInfo, METH_VARARGS, smelib_InputLinePrecomputedInfo_docstring},
     {"InputLineList", smelib_InputLineList, METH_VARARGS, smelib_InputLineList_docstring},
     {"OutputLineList", smelib_OutputLineList, METH_NOARGS, smelib_OutputLineList_docstring},

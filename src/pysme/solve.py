@@ -1062,11 +1062,30 @@ def solve(
         )
         kwargs["cdr_database"] = None
     solver = SME_Solver(filename=filename, restore=restore)
-    return solver.solve(
-        sme,
-        param_names,
-        segments,
-        derived_param=derived_param,
-        dynamic_param=dynamic_param,
-        **kwargs,
+    synthesizer = getattr(solver, "synthesizer", None)
+    get_dll = getattr(synthesizer, "get_dll", None)
+    dll = get_dll() if get_dll is not None else getattr(synthesizer, "dll", None)
+    warm_control = getattr(dll, "SetEosWarmStartMode", None)
+    requested_parameters = param_names
+    if requested_parameters is None:
+        requested_parameters = getattr(sme, "fitparameters", ())
+    if requested_parameters is None:
+        requested_parameters = ()
+    use_eos_history = any(
+        str(name).strip().lower().startswith("abund")
+        for name in requested_parameters
     )
+    if warm_control is not None and use_eos_history:
+        warm_control(True)
+    try:
+        return solver.solve(
+            sme,
+            param_names,
+            segments,
+            derived_param=derived_param,
+            dynamic_param=dynamic_param,
+            **kwargs,
+        )
+    finally:
+        if warm_control is not None and use_eos_history:
+            warm_control(False)
