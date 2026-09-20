@@ -26,7 +26,7 @@ from .continuum_and_radial_velocity import (
 from .iliffe_vector import Iliffe_vector
 from .large_file_storage import setup_lfs
 from .sme import MASK_VALUES
-from .sme_synth import SME_DLL
+from .sme_synth import SME_DLL, serialized_smelib_session
 from .util import (
     boundary_vertices,
     safe_interpolation,
@@ -1286,6 +1286,7 @@ class Synthesizer:
         return sme
     
     # @profile
+    @serialized_smelib_session
     def synthesize_spectrum(
         self,
         sme,
@@ -1947,6 +1948,7 @@ class Synthesizer:
         return result
 
     # @profile
+    @serialized_smelib_session
     def synthesize_segment(
         self,
         sme,

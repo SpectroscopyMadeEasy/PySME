@@ -25,6 +25,7 @@ from .atmosphere.savfile import SavFile
 from .large_file_storage import setup_lfs
 from .nlte import DirectAccessFile
 from .sme import MASK_VALUES
+from .sme_synth import serialized_smelib_session
 from .synthesize import Synthesizer, _normalize_line_precompute_database_arg
 from . import util
 from .util import print_to_log
@@ -782,6 +783,7 @@ class SME_Solver:
                     f"expected length {nw}, got {nf}."
                 )
 
+    @serialized_smelib_session
     def solve(
         self,
         sme,
@@ -1044,6 +1046,7 @@ class SME_Solver:
         return sme
 
 
+@serialized_smelib_session
 def solve(
     sme,
     param_names=None,

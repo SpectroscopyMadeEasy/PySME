@@ -3,9 +3,12 @@
 
 import logging
 import os, sys
+from contextlib import contextmanager
 from ctypes import cdll
+from functools import wraps
 from importlib import import_module
 from os.path import normpath
+from threading import RLock
 from .smelib import libtools
 import numpy as np
 
@@ -15,6 +18,25 @@ logger = logging.getLogger(__name__)
 
 _smelib = None
 CURRENT_LIB = None
+_SMELIB_PROCESS_LOCK = RLock()
+
+
+@contextmanager
+def smelib_session():
+    """Serialize one complete SMElib stateful workflow within this process."""
+    with _SMELIB_PROCESS_LOCK:
+        yield
+
+
+def serialized_smelib_session(function):
+    """Run a complete high-level workflow under the process-wide SMElib lock."""
+
+    @wraps(function)
+    def locked(*args, **kwargs):
+        with smelib_session():
+            return function(*args, **kwargs)
+
+    return locked
 
 
 def ensure_smelib_ready(libfile=None):
@@ -70,13 +92,20 @@ class SME_DLL:
     """Object Oriented interface for the SME C library"""
 
     def __init__(self, libfile=None, datadir=None):
-        self.libfile = libfile
-        reload_lib(libfile)
+        with smelib_session():
+            self.libfile = libfile
+            reload_lib(libfile)
 
-        if hasattr(_smelib, "SetHlinopWarningMode"):
-            _smelib.SetHlinopWarningMode(1)
-        self.SetLibraryPath(datadir)
-        self.check_data_files_exist()
+            if hasattr(_smelib, "SetHlinopWarningMode"):
+                _smelib.SetHlinopWarningMode(1)
+            self.SetLibraryPath(datadir)
+            self.check_data_files_exist()
+
+    @contextmanager
+    def session(self):
+        """Protect a multi-call low-level SMElib transaction from other threads."""
+        with smelib_session():
+            yield self
 
     @property
     def datadir(self):
