@@ -252,7 +252,7 @@ def test_almax_update_uses_resolved_line_select_config(monkeypatch):
     synth.update_cdr_switch = False
 
     with pytest.raises(_StopLineSelect):
-        synth.synthesize_spectrum(sme, linelist_mode="all")
+        synth.synthesize_spectrum(sme, linelist_mode="all", passLineList=False)
 
     assert captured["chunk_size"] == 19
     assert captured["parallel"] is False

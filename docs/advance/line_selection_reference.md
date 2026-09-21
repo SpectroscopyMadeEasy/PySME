@@ -15,7 +15,7 @@ Line selection in PySME is controlled in three layers:
 2. `line_select_method`
    - `internal`: no external CDR/ALMAX metadata path
    - `cdr`: use `central_depth` and `line_range_*`
-   - `almax`: use `almax_ratio` and `line_range_*`
+   - `almax` (default): use `almax_ratio` and `line_range_*`
 3. `line_select_policy`
    - `auto`: use method-dependent automatic line-info handling
    - `strict`: require explicit method-specific line-info handling
@@ -25,6 +25,32 @@ In practice:
 - `linelist_mode` decides whether dynamic filtering is used
 - `line_select_method` decides how line metadata is generated/interpreted
 - `line_select_policy` decides how strictly that metadata is enforced
+
+## Fixed-grid interval lookup
+
+When valid `line_range_*` metadata is available, SMElib's fixed-grid transfer
+path uses a wavelength sweep to visit only the intervals containing the
+current wavelength. The candidate indices remain in original line-list order,
+so this changes lookup cost rather than opacity summation or numerical line
+selection. In automatic mode the sweep is skipped when the ranges are too
+broad to save at least roughly 20% of the full scan.
+
+For diagnostic A/B runs, set `SME_INTERVAL_INDEX=0` to disable the sweep or
+`SME_INTERVAL_INDEX=1` to force it. Leaving the variable unset (or setting it
+to `auto`) uses the automatic cost check.
+
+`ALMAXRange` also leaves its computed line-opacity and Voigt arrays available
+for a one-shot hand-off to the next `Transf` call on the same DLL state. The
+hand-off requires valid precomputed ranges/masks at the same `accrt`. Updating
+the model, abundances, line list, NLTE coefficients, continuum opacity, or
+broadening settings invalidates it. This avoids repeating `LINEOPAC` during
+first-use precomputation while keeping cached line-info use conservative.
+
+The default non-parallel `linelist_mode="all"` workflow performs a missing or
+stale ALMAX calculation inside the main synthesis DLL, after preparing the
+first segment's continuum opacity. Its first `Transf` therefore consumes this
+one-shot state. Parallel, cache-backed, and dynamic-subsetting workflows use a
+separate precompute state and do not receive this first-call reuse.
 
 ## Shared parameters
 
@@ -38,9 +64,9 @@ Function argument in `solve(...)` and `synthesize_spectrum(...)`.
 
 ### `sme.line_select_method`
 
+- `almax` (default)
 - `internal`
 - `cdr`
-- `almax`
 
 Controls which metadata path is used for line preselection.
 
@@ -65,6 +91,9 @@ Worker count for parallel metadata updates.
 ### `sme.line_select_chunk_size`
 
 Chunk size used when splitting the line list for metadata updates.
+
+This does not affect the default non-parallel, full-line-list ALMAX fast path,
+which computes directly in the main synthesis DLL without chunk workers.
 
 ### `sme.line_select_recompute`
 
@@ -114,6 +143,11 @@ Threshold used by ALMAX-based selection.
 
 If `None`, it falls back to `sme.accrt`.
 
+This is a local line-to-continuum opacity-ratio cutoff, not a requested bound
+on the final normalized-flux error. Contributions from many individually weak
+line wings can accumulate, so the spectrum-level error must be validated for
+the intended stellar-parameter and wavelength domain.
+
 ### `sme.line_select_almax_use_bins`
 
 Boolean switch controlling which ALMAX strong-line rule is used:
@@ -124,6 +158,11 @@ Boolean switch controlling which ALMAX strong-line rule is used:
 ### `sme.line_select_almax_bin_width`
 
 Bin width used when `line_select_almax_use_bins=True`.
+
+The cumulative bin selector itself lives in SMElib under the CamelCase API
+name `SelectStrongLinesByBins`. The Python
+`Synthesizer.flag_strong_lines_by_bins` method is retained as a compatibility
+wrapper, and both the CDR and binned-ALMAX paths use the native implementation.
 
 ## Deprecated or legacy parameters
 

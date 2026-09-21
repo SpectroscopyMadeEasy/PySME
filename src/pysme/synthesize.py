@@ -916,7 +916,7 @@ class Synthesizer:
         line_precompute_database,
         cdr_database,
     ):
-        method = str(getattr(sme, "line_select_method", "internal")).lower()
+        method = str(getattr(sme, "line_select_method", "almax")).lower()
         policy = str(getattr(sme, "line_select_policy", "auto")).lower()
         recompute = str(getattr(sme, "line_select_recompute", "if_stale")).lower()
         reuse = str(getattr(sme, "line_select_reuse", "none")).lower()
@@ -1414,6 +1414,8 @@ class Synthesizer:
         line_select_method = ls_cfg["method"]
         lineinfo_mode = ls_cfg["lineinfo_mode"]
         line_precompute_database = ls_cfg["line_precompute_database"]
+        defer_almax_to_main_dll = False
+        prepared_opacity_segment = None
 
         # Re-entrancy guard: update_cdr internally calls synthesize_spectrum on
         # chunked sub-SME objects to compute line information. Those internal
@@ -1577,36 +1579,52 @@ class Synthesizer:
             if need_update_almax:
                 logger.info("Updating linelist ALMAX and line range.")
                 allow_compute = ls_cfg["recompute"] != "never"
-                try:
-                    sme = self.update_almax(
-                        sme,
-                        threshold=ls_cfg["almax_threshold"],
-                        use_bins=ls_cfg["almax_use_bins"],
-                        bin_width=ls_cfg["almax_bin_width"],
-                        chunk_size=ls_cfg["chunk_size"],
-                        parallel=ls_cfg["parallel"],
-                        n_jobs=ls_cfg["n_jobs"],
-                        worker_output=ls_cfg["worker_output"],
-                        line_precompute_database=line_precompute_database,
-                        cdr_database=cdr_database,
-                        cdr_create=cdr_create,
-                        show_progress_bars=util.show_progress_bars,
-                        allow_compute=allow_compute,
-                    )
-                except FileNotFoundError as exc:
-                    if line_precompute_database is None:
-                        msg = (
-                            "line_select_recompute='never' but ALMAX line-info is missing/stale "
-                            "and no line_precompute_database was provided."
+                # With the full line list resident in the main DLL, compute
+                # ALMAX after that DLL's model/opacity setup.  The immediately
+                # following Transf can then consume the one-shot LINEOPAC/Voigt
+                # state instead of calculating it a second time.  Dynamic
+                # filtering needs the ranges before InputLineList, while cache
+                # and parallel workflows intentionally keep their existing
+                # precompute paths.
+                defer_almax_to_main_dll = bool(
+                    allow_compute
+                    and passLineList
+                    and linelist_mode == "all"
+                    and not ls_cfg["parallel"]
+                    and line_precompute_database is None
+                    and len(segments) > 0
+                )
+                if not defer_almax_to_main_dll:
+                    try:
+                        sme = self.update_almax(
+                            sme,
+                            threshold=ls_cfg["almax_threshold"],
+                            use_bins=ls_cfg["almax_use_bins"],
+                            bin_width=ls_cfg["almax_bin_width"],
+                            chunk_size=ls_cfg["chunk_size"],
+                            parallel=ls_cfg["parallel"],
+                            n_jobs=ls_cfg["n_jobs"],
+                            worker_output=ls_cfg["worker_output"],
+                            line_precompute_database=line_precompute_database,
+                            cdr_database=cdr_database,
+                            cdr_create=cdr_create,
+                            show_progress_bars=util.show_progress_bars,
+                            allow_compute=allow_compute,
                         )
-                    else:
-                        msg = (
-                            "line_select_recompute='never' but ALMAX line-info is missing/stale "
-                            "and no matching entry was found in line_precompute_database."
-                        )
-                    raise ValueError(
-                        msg
-                    ) from exc
+                    except FileNotFoundError as exc:
+                        if line_precompute_database is None:
+                            msg = (
+                                "line_select_recompute='never' but ALMAX line-info is missing/stale "
+                                "and no line_precompute_database was provided."
+                            )
+                        else:
+                            msg = (
+                                "line_select_recompute='never' but ALMAX line-info is missing/stale "
+                                "and no matching entry was found in line_precompute_database."
+                            )
+                        raise ValueError(
+                            msg
+                        ) from exc
 
         # Input Model data to C library
         dll.SetLibraryPath()
@@ -1655,7 +1673,7 @@ class Synthesizer:
             full_line_ion_mask[discarded_rows] = True
             sme.line_ion_mask = full_line_ion_mask
 
-            if lineinfo_mode in (1, 2):
+            if lineinfo_mode in (1, 2) and not defer_almax_to_main_dll:
                 cols = set(linelist_for_smelib._lines.columns)
                 required_cols = {"line_range_s", "line_range_e"}
                 missing_cols = sorted(required_cols - cols)
@@ -1772,6 +1790,61 @@ class Synthesizer:
                 line_index_map=line_index_map,
             )
 
+        if defer_almax_to_main_dll:
+            # Prepare the first requested segment exactly as synthesize_segment
+            # would, then keep that opacity state intact through ALMAXRange and
+            # the first Transf call.
+            first_segment = int(next(iter(segments)))
+            vrad_seg = (
+                sme.vrad[first_segment]
+                if sme.vrad[first_segment] is not None
+                else 0
+            )
+            wbeg, wend = self.get_wavelengthrange(
+                sme.wran[first_segment], vrad_seg, sme.vsini
+            )
+            with _temporary_brackett_convolution_env(sme):
+                dll.InputWaveRange(wbeg - 2, wend + 2)
+                dll.Opacity()
+                almax, ranges = dll.ALMAXRange(accrt=ls_cfg["almax_threshold"])
+
+            almax = np.asarray(almax, dtype=np.float64)
+            ranges = np.asarray(ranges, dtype=np.float64)
+            n_smelib_lines = int(np.count_nonzero(smelib_line_mask))
+            if almax.shape != (n_smelib_lines,) or ranges.shape != (
+                n_smelib_lines,
+                2,
+            ):
+                raise RuntimeError(
+                    "SMElib ALMAX output does not match the imported line-list mapping"
+                )
+
+            almax_all = np.full(len(sme.linelist), np.nan, dtype=np.float64)
+            range_s_all = np.full(len(sme.linelist), np.nan, dtype=np.float64)
+            range_e_all = np.full(len(sme.linelist), np.nan, dtype=np.float64)
+            almax_all[smelib_line_mask] = almax
+            range_s_all[smelib_line_mask] = ranges[:, 0]
+            range_e_all[smelib_line_mask] = ranges[:, 1]
+            sme.linelist._lines["almax_ratio"] = almax_all
+            sme.linelist._lines["line_range_s"] = range_s_all
+            sme.linelist._lines["line_range_e"] = range_e_all
+            self._finalize_almax_fields(
+                sme,
+                threshold=ls_cfg["almax_threshold"],
+                use_bins=ls_cfg["almax_use_bins"],
+                bin_width=ls_cfg["almax_bin_width"],
+                line_ion_mask=sme.line_ion_mask,
+            )
+
+            dll.InputLinePrecomputedInfo(
+                range_s_all[smelib_line_mask],
+                range_e_all[smelib_line_mask],
+                np.asarray(sme.linelist["strong"], dtype=np.uint8)[
+                    smelib_line_mask
+                ],
+            )
+            prepared_opacity_segment = first_segment
+
         # Loop over segments
         #   Input Wavelength range and Opacity
         #   Calculate spectral synthesis for each
@@ -1792,6 +1865,7 @@ class Synthesizer:
                 keep_line_opacity=keep_line_opacity_eff,
                 contribution_function=contribution_function,
                 compute_lineinfo=compute_lineinfo,
+                opacity_is_prepared=(il == prepared_opacity_segment),
             )
         for il in segments:
             if "wave" not in sme or len(sme.wave[il]) == 0:
@@ -1959,6 +2033,7 @@ class Synthesizer:
         get_opacity=False,
         contribution_function=False,
         compute_lineinfo=True,
+        opacity_is_prepared=False,
     ):
         """Create the synthetic spectrum of a single segment
 
@@ -2046,8 +2121,9 @@ class Synthesizer:
             wint_seg = None
 
         with _temporary_brackett_convolution_env(sme):
-            dll.InputWaveRange(wbeg-2, wend+2)
-            dll.Opacity()
+            if not opacity_is_prepared:
+                dll.InputWaveRange(wbeg-2, wend+2)
+                dll.Opacity()
 
             # Only calculate line opacities in the first segment
             #   Calculate spectral synthesis for each
@@ -2596,60 +2672,14 @@ class Synthesizer:
     def flag_strong_lines_by_bins(
         wl, depth, bin_width=0.2, threshold=0.001, valid_mask=None
     ):
-        wl = np.asarray(wl, dtype=float)
-        depth = np.asarray(depth, dtype=float)
-        if wl.shape != depth.shape:
-            raise ValueError("wl and depth must have the same shape")
-
-        if valid_mask is None:
-            valid_mask = np.ones(depth.shape, dtype=bool)
-        else:
-            valid_mask = np.asarray(valid_mask, dtype=bool)
-            if valid_mask.shape != depth.shape:
-                raise ValueError("valid_mask must have the same shape as wl/depth")
-
-        # Sanitize invalid/negative depths so they cannot poison cumulative sums.
-        invalid_depth = ~np.isfinite(depth)
-        depth_sanitized = np.where(invalid_depth, 0.0, depth)
-        depth_sanitized = np.where(depth_sanitized > 0, depth_sanitized, 0.0)
-
-        candidate = valid_mask
-
-        # 1) build bin indices
-        if not np.any(candidate):
-            return np.zeros(depth.shape, dtype=bool)
-        wl_min = np.min(wl, where=candidate, initial=np.inf)
-        wl_max = np.max(wl, where=candidate, initial=-np.inf)
-        edges = np.arange(wl_min, wl_max + bin_width, bin_width)
-
-        # 2) group sort by (bin, depth asc: weak -> strong)
-        candidate_idx = np.flatnonzero(candidate)
-        wl_candidate = wl[candidate_idx]
-        depth_candidate = depth_sanitized[candidate_idx]
-        bin_idx = np.searchsorted(edges, wl_candidate, side="right") - 1
-
-        order = np.lexsort((depth_candidate, bin_idx))
-        bin_sorted = bin_idx[order]
-        depth_sorted = depth_candidate[order]
-
-        # 3) slice boundaries per bin
-        starts = np.r_[0, np.flatnonzero(np.diff(bin_sorted)) + 1]
-        counts = np.diff(np.r_[starts, depth_sorted.size])
-
-        # 4) within each bin, drop weakest lines until cumulative depth > threshold
-        # Equivalent to per-bin searchsorted(cumsum, threshold, side="right"), but vectorized.
-        csum = np.cumsum(depth_sorted)
-        group_start = np.repeat(starts, counts)
-        local = csum.copy()
-        nz = group_start > 0
-        local[nz] -= csum[group_start[nz] - 1]
-        keep_sorted = local > threshold
-
-        # 5) map back to original order and force invalid-depth / invalid-mask lines to False
-        keep = np.zeros(depth.shape, dtype=bool)
-        keep[candidate_idx[order]] = keep_sorted
-        keep[invalid_depth] = False
-        return keep
+        """Compatibility wrapper for SMElib's cumulative bin selector."""
+        return SME_DLL.SelectStrongLinesByBins(
+            wl,
+            depth,
+            bin_width=bin_width,
+            threshold=threshold,
+            valid_mask=valid_mask,
+        )
 
     def flag_strong_lines_by_bins_old(self, df, bin_width=0.2, threshold=0.01, wl_col="wlcent", depth_col="central_depth", out_col="keep_mask", show_progress_bars=None):
         """

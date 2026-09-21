@@ -612,9 +612,12 @@ class SME_DLL:
         mu : array of shape (nmu,)
             mu angles (1 - cos(phi)) of different limb points along the stellar surface
         accrt : float
-            accuracy of the radiative transfer integration
+            Local line-to-continuum opacity-ratio threshold used for line
+            screening/ranges; not a global spectrum-error bound.
         accwi : float
-            accuracy of the interpolation on the wavelength grid
+            Adaptive wavelength-grid refinement threshold evaluated on the
+            largest-``mu`` ray; ignored for a fixed ``wave`` grid and not a
+            global interpolation-error bound.
         keep_lineop : bool, optional
             if True do not recompute the line opacities (default: False)
         long_continuum : bool, optional
@@ -706,7 +709,8 @@ class SME_DLL:
         mu : array of size (nmu,)
             mu values along the stellar disk to calculate
         accrt : float
-            precision of the radiative transfer calculation
+            Retained for API compatibility; the current SMElib
+            ``CentralDepth`` implementation does not use this value.
 
         Returns
         -------

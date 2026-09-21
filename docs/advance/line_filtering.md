@@ -11,9 +11,9 @@ Use `linelist_mode` and `line_select_method` together in synthesis or solve:
 - `"all"`: use all lines (default).
 - `"dynamic"`: filter lines by precomputed line properties (recommended for long spectra).
 - `"auto"`: legacy alias of `"dynamic"` (deprecated).
-- `line_select_method="internal"`: no external preselection metadata.
+- `line_select_method="almax"`: use `almax_ratio` + `line_range_*` (default).
+- `line_select_method="internal"`: use SMElib's legacy internal selection.
 - `line_select_method="cdr"`: use `central_depth` + `line_range_*`.
-- `line_select_method="almax"`: use `almax_ratio` + `line_range_*`.
 
 ## How Dynamic Filtering Works
 
@@ -78,8 +78,25 @@ Legacy `cdr_database` is still accepted as a deprecated alias.
 rules. If it is `None`, it falls back to `sme.accrt` (legacy-compatible
 behavior).
 
+`accrt` and `line_select_almax_threshold` are local line-to-continuum opacity
+ratio cutoffs, not bounds on the final normalized-flux error. The default is
+`1e-4`; accumulated weak-line contributions can produce a larger flux change.
+
+For a missing or stale ALMAX result in non-parallel `"all"` mode, PySME runs
+`ALMAXRange` in the synthesis DLL and immediately reuses its line-opacity and
+Voigt state in the first transfer calculation. Cached, parallel, and
+`"dynamic"` workflows retain their separate precompute path.
+
 CDR does not have a separate `use_bins` switch because its current strong-line
 selection already uses the bin-based helper internally.
+
+The cumulative bin rule is implemented once in SMElib as
+`SelectStrongLinesByBins`. Both CDR and optional binned-ALMAX selection call
+that native implementation. With `linelist_mode="dynamic"`, Python still uses
+the returned mask and ranges to reduce the line list before passing it to the
+main synthesis DLL; parallel CDR calculation and cache handling are unchanged.
+This first-stage integration does not change the default individual ALMAX rule
+or solve its accumulated-weak-line limitation.
 
 ## Example 1: Dynamic Filtering in Synthesis (CDR)
 
@@ -127,8 +144,9 @@ sme = solve(
 
 ## Practical Guidance
 
-- Start with `line_select_method="cdr"` for continuity with existing CDR workflows.
-- For ALMAX, start with `line_select_almax_threshold = sme.accrt`.
+- The default is `line_select_method="almax"` with
+  `line_select_almax_threshold = None`, which uses `sme.accrt`.
+- Set `line_select_method="internal"` to reproduce the legacy selection path.
 - Enable `line_select_almax_use_bins=True` when you want bin-wise cumulative pruning.
 - Use `"all"` for short, narrow windows where filtering overhead may not help.
 - Use `"dynamic"` for wide ranges or many segments.

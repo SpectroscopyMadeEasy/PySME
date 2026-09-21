@@ -219,6 +219,40 @@ class SME_DLL:
         """Set handling mode for precomputed line info (0=internal, 1=use_if_valid, 2=trust)."""
         _smelib.SetLineInfoMode(int(mode))
 
+    @staticmethod
+    def SelectStrongLinesByBins(
+        wavelength, metric, bin_width=0.2, threshold=0.001, valid_mask=None
+    ):
+        """Select lines by cumulative metric within wavelength bins.
+
+        The weakest lines in each bin are discarded while their cumulative
+        metric remains at or below ``threshold``. The returned mask is aligned
+        with the input arrays and uses ``True`` for retained lines.
+        """
+        wavelength = np.ascontiguousarray(wavelength, dtype=np.float64)
+        metric = np.ascontiguousarray(metric, dtype=np.float64)
+        if wavelength.ndim != 1 or metric.ndim != 1:
+            raise ValueError("wavelength and metric must be one-dimensional")
+        if wavelength.shape != metric.shape:
+            raise ValueError("wavelength and metric must have the same shape")
+        if valid_mask is None:
+            valid = np.ones(wavelength.shape, dtype=np.uint8)
+        else:
+            valid = np.ascontiguousarray(valid_mask, dtype=np.uint8)
+            if valid.ndim != 1 or valid.shape != wavelength.shape:
+                raise ValueError("valid_mask must have the same shape as wavelength")
+
+        with smelib_session():
+            ensure_smelib_ready()
+            strong = _smelib.SelectStrongLinesByBins(
+                wavelength,
+                metric,
+                valid,
+                float(bin_width),
+                float(threshold),
+            )
+        return np.asarray(strong, dtype=bool)
+
     def SetContinuumScatteringSourceMode(self, mode):
         """Enable or disable the continuum scattering source for plane-parallel and spherical transfer."""
         _smelib.SetContinuumScatteringSourceMode(int(bool(mode)))
@@ -603,9 +637,15 @@ class SME_DLL:
         mu : array of shape (nmu,)
             mu angles (1 - cos(phi)) of different limb points along the stellar surface
         accrt : float
-            accuracy of the radiative transfer integration
+            Local line-to-continuum opacity-ratio threshold used when SMElib
+            constructs line-validity ranges. It is not a bound on the final
+            spectrum error. With a fixed ``wave`` grid and legacy internal
+            line selection, it does not refine the wavelength sampling.
         accwi : float
-            accuracy of the interpolation on the wavelength grid
+            Adaptive wavelength-grid refinement threshold. It controls a
+            midpoint linear-interpolation heuristic on the disk-center
+            (largest ``mu``) ray and is ignored when ``wave`` supplies a fixed
+            grid. It is not a global interpolation-error bound.
         keep_lineop : bool, optional
             if True do not recompute the line opacities (default: False)
         long_continuum : bool, optional
@@ -658,7 +698,8 @@ class SME_DLL:
         mu : array of size (nmu,)
             mu values along the stellar disk to calculate
         accrt : float
-            precision of the radiative transfer calculation
+            Retained for API compatibility; the current SMElib
+            ``CentralDepth`` implementation does not use this value.
 
         Returns
         -------
@@ -672,6 +713,11 @@ class SME_DLL:
 
     def ALMAXRange(self, accrt=1e-4):
         """Compute first-stage ALMAX and line ranges from SMElib preselection logic.
+
+        On the same DLL state, the next ``Transf`` call can reuse the line
+        opacity and Voigt arrays computed here when it receives valid
+        precomputed ranges/masks at the same ``accrt``. Any intervening
+        physical-state update invalidates this one-shot reuse.
 
         Parameters
         ----------

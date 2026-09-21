@@ -72,6 +72,20 @@ def test_synthesis_segment(sme_2segments):
     assert np.all(sme2.synth[0] == orig)
 
 
+@skipif_smelib
+def test_default_almax_first_transfer_matches_cached_recompute(sme_2segments):
+    sme_2segments.line_select_recompute = "if_stale"
+    first = synthesize_spectrum(sme_2segments)
+    first_profiles = [np.asarray(profile).copy() for profile in first.synth]
+
+    second = synthesize_spectrum(first)
+
+    assert all(
+        np.array_equal(reference, np.asarray(recomputed))
+        for reference, recomputed in zip(first_profiles, second.synth)
+    )
+
+
 class _DummyDLL:
     def __init__(self, transf_wave=None, discard_mask=None, nlte_flags=None):
         self.last_wave = "unset"
@@ -81,11 +95,13 @@ class _DummyDLL:
         self._nlines = 0
         self.continuum_scattering_source_modes = []
         self.line_updates = []
+        self.events = []
 
     def SetLibraryPath(self):
         return None
 
     def InputWaveRange(self, *_):
+        self.events.append("InputWaveRange")
         return None
 
     def InputModel(self, *_):
@@ -104,12 +120,15 @@ class _DummyDLL:
         return None
 
     def Opacity(self):
+        self.events.append("Opacity")
         return None
 
     def SetLineInfoMode(self, *_):
+        self.events.append("SetLineInfoMode")
         return None
 
     def InputLinePrecomputedInfo(self, *_):
+        self.events.append("InputLinePrecomputedInfo")
         return None
 
     def SetContinuumScatteringSourceMode(self, mode):
@@ -136,6 +155,7 @@ class _DummyDLL:
         )
 
     def Transf(self, mu, accrt, accwi, keep_lineop, wave=None):
+        self.events.append("Transf")
         self.last_wave = wave
         self.brackett_mode = os.environ.get("PYSME_H_STARK_CONVOLUTION")
         if wave is None:
@@ -157,6 +177,7 @@ class _DummyDLL:
         return np.zeros((0, 2), dtype=float)
 
     def ALMAXRange(self, accrt):
+        self.events.append("ALMAXRange")
         self.almax_mode = os.environ.get("PYSME_H_STARK_CONVOLUTION")
         return np.zeros(self._nlines), np.zeros((self._nlines, 2))
 
@@ -499,11 +520,36 @@ def test_switching_brackett_mode_invalidates_lineinfo(monkeypatch, method, metri
     with pytest.raises(RuntimeError, match="mode switch"):
         synth.synthesize_spectrum(
             sme,
+            passLineList=False,
             passAtmosphere=False,
             passNLTE=False,
             updateStructure=False,
         )
     assert called["count"] == 1
+
+
+def test_default_almax_uses_main_dll_immediately_before_first_transf():
+    dll = _DummyDLL(discard_mask=[False, True])
+    synth = Synthesizer(dll=dll)
+    sme = _minimal_sme()
+    _set_minimal_species_linelist(sme, ["Fe 1", "Ni 7"])
+
+    assert sme.line_select_method == "almax"
+    synth.synthesize_spectrum(
+        sme,
+        passAtmosphere=False,
+        passNLTE=False,
+        updateStructure=False,
+    )
+
+    relevant = [
+        event
+        for event in dll.events
+        if event in {"Opacity", "ALMAXRange", "InputLinePrecomputedInfo", "Transf"}
+    ]
+    assert relevant == ["Opacity", "ALMAXRange", "InputLinePrecomputedInfo", "Transf"]
+    assert np.isfinite(sme.linelist["almax_ratio"][0])
+    assert np.isnan(sme.linelist["almax_ratio"][1])
 
 
 def test_specific_intensities_only_updates_sme_and_trims_to_wran():
@@ -735,17 +781,13 @@ def _flag_strong_lines_by_bins_reference(wl, depth, bin_width=0.2, threshold=0.0
     depth_sorted = depth_sanitized[order]
 
     starts = np.r_[0, np.flatnonzero(np.diff(bin_sorted)) + 1]
-    ends = np.r_[starts[1:], len(depth_sorted)]
-
-    keep_sorted = np.empty_like(depth_sorted, dtype=bool)
-    for s, e in zip(starts, ends):
-        if s == e:
-            continue
-        local = np.cumsum(depth_sorted[s:e])
-        cut = np.searchsorted(local, threshold, side="right")
-        keep_sorted[s:e] = True
-        if cut > 0:
-            keep_sorted[s : s + cut] = False
+    counts = np.diff(np.r_[starts, depth_sorted.size])
+    csum = np.cumsum(depth_sorted)
+    group_start = np.repeat(starts, counts)
+    local = csum.copy()
+    nonzero_start = group_start > 0
+    local[nonzero_start] -= csum[group_start[nonzero_start] - 1]
+    keep_sorted = local > threshold
 
     keep = np.empty_like(keep_sorted)
     keep[order] = keep_sorted

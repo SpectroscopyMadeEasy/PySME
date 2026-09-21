@@ -228,6 +228,81 @@ static PyObject *smelib_SetLineInfoMode(PyObject *self, PyObject *args)
     Py_RETURN_NONE;
 }
 
+static char smelib_SelectStrongLinesByBins_docstring[] =
+    "Select strong lines by cumulative metric within wavelength bins";
+static PyObject *smelib_SelectStrongLinesByBins(PyObject *self, PyObject *args)
+{
+    const char *result = NULL;
+    PyObject *wavelength_obj = NULL, *metric_obj = NULL, *valid_obj = NULL;
+    PyArrayObject *wavelength_arr = NULL, *metric_arr = NULL;
+    PyArrayObject *valid_arr = NULL, *strong_arr = NULL;
+    void *args_c[7];
+    npy_intp dims[1];
+    int nlines = 0;
+    double bin_width = 0.0, threshold = 0.0;
+
+    if (!PyArg_ParseTuple(args, "OOOdd", &wavelength_obj, &metric_obj, &valid_obj,
+                          &bin_width, &threshold))
+        return NULL;
+
+    wavelength_arr = (PyArrayObject *)PyArray_FROM_OTF(
+        wavelength_obj, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY);
+    metric_arr = (PyArrayObject *)PyArray_FROM_OTF(
+        metric_obj, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY);
+    valid_arr = (PyArrayObject *)PyArray_FROM_OTF(
+        valid_obj, NPY_UBYTE, NPY_ARRAY_IN_ARRAY);
+    if (wavelength_arr == NULL || metric_arr == NULL || valid_arr == NULL)
+        goto fail;
+
+    if (PyArray_NDIM(wavelength_arr) != 1 || PyArray_NDIM(metric_arr) != 1 ||
+        PyArray_NDIM(valid_arr) != 1)
+    {
+        PyErr_SetString(PyExc_ValueError,
+                        "Expected 1D arrays for wavelength, metric, and valid_mask");
+        goto fail;
+    }
+
+    nlines = (int)PyArray_DIM(wavelength_arr, 0);
+    if ((int)PyArray_DIM(metric_arr, 0) != nlines ||
+        (int)PyArray_DIM(valid_arr, 0) != nlines)
+    {
+        PyErr_SetString(PyExc_ValueError,
+                        "Expected wavelength, metric, and valid_mask to have same length");
+        goto fail;
+    }
+
+    dims[0] = nlines;
+    strong_arr = (PyArrayObject *)PyArray_ZEROS(1, dims, NPY_UBYTE, 0);
+    if (strong_arr == NULL)
+        goto fail;
+
+    args_c[0] = &nlines;
+    args_c[1] = PyArray_DATA(wavelength_arr);
+    args_c[2] = PyArray_DATA(metric_arr);
+    args_c[3] = PyArray_DATA(valid_arr);
+    args_c[4] = &bin_width;
+    args_c[5] = &threshold;
+    args_c[6] = PyArray_DATA(strong_arr);
+    result = SelectStrongLinesByBins(7, args_c);
+    if (result != NULL && result[0] != OK_response)
+    {
+        PyErr_SetString(PyExc_RuntimeError, result);
+        goto fail;
+    }
+
+    Py_DECREF(wavelength_arr);
+    Py_DECREF(metric_arr);
+    Py_DECREF(valid_arr);
+    return (PyObject *)strong_arr;
+
+fail:
+    Py_XDECREF(wavelength_arr);
+    Py_XDECREF(metric_arr);
+    Py_XDECREF(valid_arr);
+    Py_XDECREF(strong_arr);
+    return NULL;
+}
+
 static char smelib_SetContinuumScatteringSourceMode_docstring[] = "Enable continuum scattering source for plane-parallel and spherical transfer";
 static PyObject *smelib_SetContinuumScatteringSourceMode(PyObject *self, PyObject *args)
 {
@@ -1812,6 +1887,7 @@ static PyMethodDef module_methods[] = {
     {"SetH2broad", smelib_SetH2broad, METH_NOARGS, smelib_SetH2broad_docstring},
     {"ClearH2broad", smelib_ClearH2broad, METH_NOARGS, smelib_ClearH2broad_docstring},
     {"SetLineInfoMode", smelib_SetLineInfoMode, METH_VARARGS, smelib_SetLineInfoMode_docstring},
+    {"SelectStrongLinesByBins", smelib_SelectStrongLinesByBins, METH_VARARGS, smelib_SelectStrongLinesByBins_docstring},
     {"SetContinuumScatteringSourceMode", smelib_SetContinuumScatteringSourceMode, METH_VARARGS, smelib_SetContinuumScatteringSourceMode_docstring},
     {"SetEosWarmStartMode", smelib_SetEosWarmStartMode, METH_VARARGS, smelib_SetEosWarmStartMode_docstring},
     {"InputLinePrecomputedInfo", smelib_InputLinePrecomputedInfo, METH_VARARGS, smelib_InputLinePrecomputedInfo_docstring},

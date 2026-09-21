@@ -173,12 +173,20 @@ For more information see [system_info](../concepts/system_info.md).
 
     See the [SMElib v6.13.18 Brackett documentation](https://github.com/SpectroscopyMadeEasy/SMElib/blob/v6.13.18/docs/brackett_stark_convolution.md) for its scope and validation.
 :accrt:
-    Minimum accuracy for synthethized spectrum at wavelength grid
-    points in `sme.wint` (or SMElib adaptive grid if `sme.wint` is not set).
-    Values below 1e-4 are not meaningful.
+    Local line-to-continuum opacity-ratio threshold used by SMElib to reject
+    weak lines and determine finite line-validity ranges on its adaptive grid.
+    ALMAX line selection also uses this value unless
+    `line_select_almax_threshold` is set explicitly. It is not a bound on the
+    error of the final synthesized spectrum. With the legacy `internal` line
+    selection and a fixed `sme.wint`, it does not control wavelength-grid
+    accuracy.
 :accwi:
-    Minimum accuracy for linear spectrum interpolation vs. wavelength.
-    Values below 1e-4 are not meaningful.
+    Threshold for SMElib's adaptive wavelength-grid heuristic. The heuristic
+    compares a newly synthesized midpoint intensity with a linear midpoint
+    estimate (including a small endpoint-slope term) for the disk-center
+    (largest `mu`) ray.
+    It is ignored when a fixed `sme.wint` is supplied and is not a global
+    interpolation-error guarantee.
 :version: The version of sme used to create this structure and spectrum
 :id:
     The date and time when this structure or the

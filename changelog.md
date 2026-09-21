@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- Made ALMAX-based line selection the default. A missing or stale ALMAX result
+  in the non-parallel, full-line-list workflow is now calculated in the main
+  SMElib instance so the first transfer reuses its line-opacity and Voigt
+  state. Set `sme.line_select_method = "internal"` for the legacy behavior.
+- Clarified that `accrt` is a local line-to-continuum opacity-ratio threshold,
+  not a bound on the final synthesized-spectrum error.
+- Moved cumulative wavelength-bin line selection into SMElib as
+  `SelectStrongLinesByBins`. CDR and optional binned-ALMAX selection now share
+  this native implementation while Python dynamic line-list pruning remains
+  available.
+
 ## v1.1.0 - 2026-09-15
 
 ### Added

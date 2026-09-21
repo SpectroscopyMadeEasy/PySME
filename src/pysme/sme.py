@@ -259,9 +259,11 @@ class SME_Structure(Parameters):
             "the additive profile and 'convolution' enables the shared-support "
             "convolution for Brackett lines with upper level m >= 10"),
         ("accwi", 3e-3, asfloat, this,
-            "float: minimum accuracy for linear spectrum interpolation vs. wavelength."),
+            "float: adaptive wavelength-grid refinement threshold; ignored when "
+            "a fixed wavelength grid is supplied and not a global error bound."),
         ("accrt", 1e-4, asfloat, this,
-            "float: minimum accuracy for synthethized spectrum at wavelength grid points in sme.wint."),
+            "float: local line-to-continuum opacity-ratio threshold used for "
+            "line screening/ranges; not a global synthesized-spectrum error bound."),
         ("leastsquares_method", "dogbox", asstr, this, "str: leastsquares method to use, see scipy least_squares for details, default: 'dogbox'."),
         ("leastsquares_loss", "linear", asstr, this, "str: leastsquares loss to use, see scipy least_squares for details, default: 'linear'"),
         ("leastsquares_xscale", 1.0, this, this, "str, arraylike: leastsquare x-scale to use, see scipy least_squares for details, default: 1"),
@@ -341,7 +343,7 @@ class SME_Structure(Parameters):
         self.strong_depth_thres = 0.001
         self.strong_bin_width = 0.2
         # Unified line-selection controls (preferred over legacy cdr_* knobs).
-        self.line_select_method = "internal"  # internal | cdr | almax
+        self.line_select_method = "almax"  # almax (default) | internal | cdr
         self.line_select_policy = "auto"      # auto | strict
         self.line_select_parallel = False
         self.line_select_n_jobs = None

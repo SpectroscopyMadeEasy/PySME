@@ -21,7 +21,11 @@ def cwd():
 
 @pytest.fixture
 def libsme():
-    return SME_DLL()
+    dll = SME_DLL()
+    # SMElib keeps this mode in process-global state, so isolate tests that
+    # intentionally enable strict precomputed-line-info handling.
+    dll.SetLineInfoMode(0)
+    return dll
 
 
 @pytest.fixture
@@ -112,6 +116,25 @@ def test_eos_warm_start_mode_tolerates_older_extension(libsme, monkeypatch):
 
     monkeypatch.setattr(sme_synth._smelib, "SetEosWarmStartMode", None)
     assert not libsme.SetEosWarmStartMode(True)
+
+
+def test_select_strong_lines_by_bins_native_api():
+    wavelength = np.array([5000.0, 5000.01, 5000.02, 5000.2, 5000.21])
+    metric = np.array([2e-4, 3e-4, 8e-4, 4e-4, np.nan])
+    valid = np.array([True, True, True, True, True])
+
+    strong = SME_DLL.SelectStrongLinesByBins(
+        wavelength,
+        metric,
+        bin_width=0.2,
+        threshold=5e-4,
+        valid_mask=valid,
+    )
+
+    assert np.array_equal(strong, [False, False, True, False, False])
+    assert SME_DLL.SelectStrongLinesByBins([], []).size == 0
+    with pytest.raises(RuntimeError, match="bin_width"):
+        SME_DLL.SelectStrongLinesByBins(wavelength, metric, bin_width=0)
 
 
 def test_linelist(libsme, linelist):
@@ -302,6 +325,140 @@ def test_transf(
         "SIGH2",
     ]:
         libsme.GetOpacity(switch)
+
+
+@pytest.mark.parametrize("spherical", [False, True])
+def test_fixed_grid_interval_index_preserves_exact_output(
+    monkeypatch,
+    spherical,
+    libsme,
+    linelist,
+    teff,
+    grav,
+    vturb,
+    atmo,
+    abund,
+    vw_scale,
+    wfirst,
+    wlast,
+    mu,
+):
+    """Interval lookup changes line discovery, not the synthesized values."""
+    model_atmo = atmo
+    if spherical:
+        model_atmo = deepcopy(atmo)
+        model_atmo.geom = "SPH"
+        model_atmo.radius = 10.0
+        model_atmo.height = np.linspace(4e7, 0.0, len(model_atmo.rhox))
+
+    libsme.SetLibraryPath()
+    libsme.InputLineList(linelist)
+    libsme.InputModel(teff, grav, vturb, model_atmo)
+    libsme.InputAbund(abund)
+    libsme.Ionization(0)
+    libsme.SetVWscale(vw_scale)
+    libsme.SetH2broad()
+    libsme.InputWaveRange(wfirst, wlast)
+    libsme.Opacity()
+
+    threshold = 1e-4
+    almax, line_range = libsme.ALMAXRange(accrt=threshold)
+    strong = np.asarray(almax) >= threshold
+    libsme.InputLinePrecomputedInfo(
+        line_range[:, 0], line_range[:, 1], strong
+    )
+    libsme.SetLineInfoMode(2)
+    fixed_wave = np.linspace(wfirst, wlast, 2001)
+
+    try:
+        # The first transfer consumes the one-shot LINEOP/Voigt state left by
+        # ALMAXRange.  The second transfer recomputes it normally.  Equality
+        # therefore checks the reuse path against the established path while
+        # the interval-index setting is changed at the same time.
+        monkeypatch.setenv("SME_INTERVAL_INDEX", "0")
+        nw_full, wave_full, synth_full, cont_full = libsme.Transf(
+            mu, wave=fixed_wave, accrt=threshold, accwi=3e-3
+        )
+
+        monkeypatch.setenv("SME_INTERVAL_INDEX", "1")
+        nw_indexed, wave_indexed, synth_indexed, cont_indexed = libsme.Transf(
+            mu, wave=fixed_wave, accrt=threshold, accwi=3e-3
+        )
+
+        # Any line-opacity dependency must invalidate the hand-off, even when
+        # the numerical value happens to be unchanged.
+        almax, line_range = libsme.ALMAXRange(accrt=threshold)
+        strong = np.asarray(almax) >= threshold
+        libsme.InputLinePrecomputedInfo(
+            line_range[:, 0], line_range[:, 1], strong
+        )
+        libsme.SetVWscale(vw_scale)
+        nw_invalidated, wave_invalidated, synth_invalidated, cont_invalidated = (
+            libsme.Transf(mu, wave=fixed_wave, accrt=threshold, accwi=3e-3)
+        )
+    finally:
+        libsme.SetLineInfoMode(0)
+
+    assert nw_indexed == nw_full
+    assert np.array_equal(wave_indexed, wave_full)
+    assert np.array_equal(synth_indexed, synth_full)
+    assert np.array_equal(cont_indexed, cont_full)
+    assert nw_invalidated == nw_full
+    assert np.array_equal(wave_invalidated, wave_full)
+    assert np.array_equal(synth_invalidated, synth_full)
+    assert np.array_equal(cont_invalidated, cont_full)
+
+
+@pytest.mark.parametrize("spherical", [False, True])
+def test_adaptive_grid_is_invariant_to_mu_order(
+    spherical,
+    libsme,
+    linelist,
+    teff,
+    grav,
+    vturb,
+    atmo,
+    abund,
+    vw_scale,
+    wfirst,
+    wlast,
+):
+    """The adaptive-grid reference ray is the largest mu, not array index 0."""
+    model_atmo = atmo
+    if spherical:
+        model_atmo = deepcopy(atmo)
+        model_atmo.geom = "SPH"
+        model_atmo.radius = 10.0
+        model_atmo.height = np.linspace(4e7, 0.0, len(model_atmo.rhox))
+
+    libsme.SetLibraryPath()
+    libsme.InputLineList(linelist)
+    libsme.InputModel(teff, grav, vturb, model_atmo)
+    libsme.InputAbund(abund)
+    libsme.Ionization(0)
+    libsme.SetVWscale(vw_scale)
+    libsme.SetH2broad()
+    libsme.InputWaveRange(wfirst, wlast)
+    libsme.Opacity()
+
+    mu_forward = np.array([0.2, 0.6, 1.0])
+    mu_reverse = mu_forward[::-1].copy()
+    args = {"accrt": 1e-6, "accwi": 1e-4}
+
+    nw_forward, wave_forward, synth_forward, cont_forward = libsme.Transf(
+        mu_forward, **args
+    )
+    nw_reverse, wave_reverse, synth_reverse, cont_reverse = libsme.Transf(
+        mu_reverse, **args
+    )
+
+    assert nw_reverse == nw_forward
+    assert np.array_equal(wave_reverse, wave_forward)
+    # Spherical intensities have a separate pre-existing ray-order dependence;
+    # this regression scopes the spherical assertion to grid construction.
+    if not spherical:
+        assert np.array_equal(synth_reverse[::-1], synth_forward)
+        assert np.array_equal(cont_reverse[::-1], cont_forward)
 
 
 def test_continuum_scattering_source_mode_changes_spherical(
