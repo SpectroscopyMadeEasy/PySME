@@ -365,6 +365,14 @@ class SME_Structure(Parameters):
         self.line_select_almax_threshold = None
         self.line_select_almax_use_bins = False
         self.line_select_almax_bin_width = 0.2
+        # Continuum opacity is sampled on a nominal 1 A grid and refined
+        # automatically around physical edges and high-curvature intervals.
+        # Use "exact" for reference calculations, or a positive number for a
+        # fixed edge-aware diagnostic spacing in Angstrom.
+        self.continuum_grid = "adaptive"
+        self.continuum_grid_base_step = 1.0
+        self.continuum_grid_rtol = 1e-3
+        self.continuum_grid_min_step = 1e-3
         self.tdnlte_H = False
         # self.tdnlte_H_new = False
         if isinstance(profile_nlte, dict):

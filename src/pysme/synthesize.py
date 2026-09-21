@@ -150,11 +150,25 @@ __DLL_DICT__ = {}
 __DLL_IDS__ = {}
 
 
+def _configure_continuum_opacity_grid(dll, sme):
+    """Apply the user-facing continuum-grid settings to one SMElib state."""
+    if not hasattr(dll, "SetContinuumOpacityGrid"):
+        return
+    mode = getattr(sme, "continuum_grid", "adaptive")
+    base_step = float(getattr(sme, "continuum_grid_base_step", 1.0))
+    rtol = float(getattr(sme, "continuum_grid_rtol", 1e-3))
+    min_step = float(getattr(sme, "continuum_grid_min_step", 1e-3))
+    dll.SetContinuumOpacityGrid(
+        mode, base_step=base_step, rtol=rtol, min_step=min_step
+    )
+
+
 def _compute_almax_lineinfo_for_sme(sub_sme):
     """Worker for ALMAX/range preselection on a sub-linelist."""
     synth = Synthesizer()
     dll = synth.get_dll()
     dll.SetLibraryPath()
+    _configure_continuum_opacity_grid(dll, sub_sme)
     line_ion_mask = dll.InputLineList(sub_sme.linelist)
     sub_sme.line_ion_mask = line_ion_mask
 
@@ -1628,6 +1642,7 @@ class Synthesizer:
 
         # Input Model data to C library
         dll.SetLibraryPath()
+        _configure_continuum_opacity_grid(dll, sme)
         dll.SetContinuumScatteringSourceMode(
             int(sme.continuum_scattering_source)
         )

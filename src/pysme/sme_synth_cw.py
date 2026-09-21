@@ -238,6 +238,24 @@ class SME_DLL:
             int(bool(mode)), type="int", state=self.state
         )
 
+    def SetContinuumOpacityGrid(
+        self, mode="exact", base_step=1.0, rtol=1e-3, min_step=1e-3
+    ):
+        """Configure exact, adaptive, or fixed continuum-opacity evaluation."""
+        if isinstance(mode, (int, float)) and not isinstance(mode, bool):
+            base_step = float(mode)
+            mode_id = 2
+        else:
+            modes = {"exact": 0, "adaptive": 1, "fixed": 2}
+            try:
+                mode_id = modes[str(mode).lower()]
+            except KeyError as exc:
+                raise ValueError("invalid continuum opacity grid mode") from exc
+        self.lib.SetContinuumOpacityGrid(
+            int(mode_id), float(base_step), float(rtol), float(min_step),
+            type=("int", "double", "double", "double"), state=self.state
+        )
+
     def SetEosWarmStartMode(self, mode):
         """Enable exact EOS history reuse for the current fit lifecycle."""
         self.lib.SetEosWarmStartMode(int(bool(mode)), type="int", state=self.state)

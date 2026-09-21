@@ -257,6 +257,43 @@ class SME_DLL:
         """Enable or disable the continuum scattering source for plane-parallel and spherical transfer."""
         _smelib.SetContinuumScatteringSourceMode(int(bool(mode)))
 
+    def SetContinuumOpacityGrid(
+        self, mode="exact", base_step=1.0, rtol=1e-3, min_step=1e-3
+    ):
+        """Configure exact, adaptive, or fixed continuum-opacity evaluation.
+
+        A positive numeric ``mode`` selects a fixed edge-aware grid with that
+        spacing in Angstrom.
+        """
+        if isinstance(mode, (int, float)) and not isinstance(mode, bool):
+            base_step = float(mode)
+            mode_id = 2
+        else:
+            modes = {"exact": 0, "adaptive": 1, "fixed": 2}
+            try:
+                mode_id = modes[str(mode).lower()]
+            except KeyError as exc:
+                raise ValueError(
+                    "continuum opacity grid mode must be 'exact', 'adaptive', "
+                    "'fixed', or a positive spacing"
+                ) from exc
+        _smelib.SetContinuumOpacityGrid(
+            int(mode_id), float(base_step), float(rtol), float(min_step)
+        )
+
+    def GetContinuumOpacityGridStats(self):
+        """Return counters for the current continuum-opacity grid."""
+        queries, exact_calls, nodes, refined, max_error = (
+            _smelib.GetContinuumOpacityGridStats()
+        )
+        return {
+            "queries": int(queries),
+            "exact_calls": int(exact_calls),
+            "nodes": int(nodes),
+            "refined_intervals": int(refined),
+            "max_test_error": float(max_error),
+        }
+
     def SetEosWarmStartMode(self, mode):
         """Enable exact EOS history reuse for the current fit lifecycle."""
         setter = getattr(_smelib, "SetEosWarmStartMode", None)

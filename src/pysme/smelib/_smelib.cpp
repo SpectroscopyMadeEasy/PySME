@@ -325,6 +325,56 @@ static PyObject *smelib_SetContinuumScatteringSourceMode(PyObject *self, PyObjec
     Py_RETURN_NONE;
 }
 
+static char smelib_SetContinuumOpacityGrid_docstring[] =
+    "Configure exact, adaptive, or fixed continuum-opacity interpolation";
+static PyObject *smelib_SetContinuumOpacityGrid(PyObject *self, PyObject *args)
+{
+    const int n = 4;
+    const char *result = NULL;
+    void *args_c[n];
+    int mode = 0;
+    double base_step = 1.0, rtol = 1.e-3, min_step = 1.e-3;
+
+    if (!PyArg_ParseTuple(args, "iddd", &mode, &base_step, &rtol, &min_step))
+        return NULL;
+    args_c[0] = &mode;
+    args_c[1] = &base_step;
+    args_c[2] = &rtol;
+    args_c[3] = &min_step;
+    result = SetContinuumOpacityGrid(n, args_c);
+    if (result != NULL && result[0] != OK_response)
+    {
+        PyErr_SetString(PyExc_RuntimeError, result);
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+static char smelib_GetContinuumOpacityGridStats_docstring[] =
+    "Return continuum-opacity grid query and refinement counters";
+static PyObject *smelib_GetContinuumOpacityGridStats(PyObject *self, PyObject *args)
+{
+    const int n = 5;
+    const char *result = NULL;
+    void *args_c[n];
+    unsigned long long queries = 0, exact_calls = 0, nodes = 0, refined = 0;
+    double max_test_error = 0.0;
+
+    args_c[0] = &queries;
+    args_c[1] = &exact_calls;
+    args_c[2] = &nodes;
+    args_c[3] = &refined;
+    args_c[4] = &max_test_error;
+    result = GetContinuumOpacityGridStats(n, args_c);
+    if (result != NULL && result[0] != OK_response)
+    {
+        PyErr_SetString(PyExc_RuntimeError, result);
+        return NULL;
+    }
+    return Py_BuildValue("(KKKKd)", queries, exact_calls, nodes, refined,
+                         max_test_error);
+}
+
 static char smelib_SetEosWarmStartMode_docstring[] = "Scope exact EOS history reuse to a fit lifecycle";
 static PyObject *smelib_SetEosWarmStartMode(PyObject *self, PyObject *args)
 {
@@ -1889,6 +1939,8 @@ static PyMethodDef module_methods[] = {
     {"SetLineInfoMode", smelib_SetLineInfoMode, METH_VARARGS, smelib_SetLineInfoMode_docstring},
     {"SelectStrongLinesByBins", smelib_SelectStrongLinesByBins, METH_VARARGS, smelib_SelectStrongLinesByBins_docstring},
     {"SetContinuumScatteringSourceMode", smelib_SetContinuumScatteringSourceMode, METH_VARARGS, smelib_SetContinuumScatteringSourceMode_docstring},
+    {"SetContinuumOpacityGrid", smelib_SetContinuumOpacityGrid, METH_VARARGS, smelib_SetContinuumOpacityGrid_docstring},
+    {"GetContinuumOpacityGridStats", smelib_GetContinuumOpacityGridStats, METH_NOARGS, smelib_GetContinuumOpacityGridStats_docstring},
     {"SetEosWarmStartMode", smelib_SetEosWarmStartMode, METH_VARARGS, smelib_SetEosWarmStartMode_docstring},
     {"InputLinePrecomputedInfo", smelib_InputLinePrecomputedInfo, METH_VARARGS, smelib_InputLinePrecomputedInfo_docstring},
     {"InputLineList", smelib_InputLineList, METH_VARARGS, smelib_InputLineList_docstring},

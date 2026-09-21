@@ -4,6 +4,14 @@
 
 ### Changed
 
+- Made the adaptive continuum-opacity grid the default for line-info
+  precomputation and synthesis. It uses a nominal 1 A grid, physical
+  H I/Mg I/Si I knots, exact edge guard bands, and recursive curvature
+  refinement. `sme.continuum_grid = "exact"` retains the reference path.
+- Fixed internal fixed-grid transfer so `GetLineRange` returns opacity-based
+  validity ranges instead of the `wlcent +/- 150 A` placeholders initialized
+  by `InputLineList`. This makes CDR range metadata usable by interval-based
+  line selection.
 - Made ALMAX-based line selection the default. A missing or stale ALMAX result
   in the non-parallel, full-line-list workflow is now calculated in the main
   SMElib instance so the first transfer reuses its line-opacity and Voigt

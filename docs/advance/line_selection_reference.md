@@ -35,6 +35,11 @@ so this changes lookup cost rather than opacity summation or numerical line
 selection. In automatic mode the sweep is skipped when the ranges are too
 broad to save at least roughly 20% of the full scan.
 
+For internally generated fixed-grid metadata, SMElib scans each valid line's
+wings until its local line-to-continuum opacity ratio falls below `accrt`.
+`GetLineRange` therefore returns physical validity ranges rather than the
+temporary `wlcent +/- 150 A` bounds installed when a line list is loaded.
+
 For diagnostic A/B runs, set `SME_INTERVAL_INDEX=0` to disable the sweep or
 `SME_INTERVAL_INDEX=1` to force it. Leaving the variable unset (or setting it
 to `auto`) uses the automatic cost check.
@@ -51,6 +56,32 @@ stale ALMAX calculation inside the main synthesis DLL, after preparing the
 first segment's continuum opacity. Its first `Transf` therefore consumes this
 one-shot state. Parallel, cache-backed, and dynamic-subsetting workflows use a
 separate precompute state and do not receive this first-call reuse.
+
+## Continuum-opacity grid
+
+Continuous opacity is shared by line-info precomputation and final transfer.
+By default, PySME evaluates it on an adaptive linear grid with a nominal 1 A
+spacing. SMElib inserts known H I thresholds and Mg I/Si I PEACH table knots,
+uses an exact 0.02 A guard band around each physical edge, and recursively
+splits intervals whose interpolation probes exceed the requested tolerance.
+All 13 opacity-source components are cached, so true absorption, coherent
+scattering, total extinction, and the scattering source remain consistent.
+
+The user-facing controls are:
+
+- `sme.continuum_grid = "adaptive"` (default): adaptive edge-aware grid
+- `sme.continuum_grid = "exact"`: legacy exact `CONTOP` evaluation at every query
+- `sme.continuum_grid = 0.5`: fixed edge-aware 0.5 A diagnostic grid
+- `sme.continuum_grid_base_step = 1.0`: nominal spacing in A
+- `sme.continuum_grid_rtol = 1e-3`: refinement tolerance, measured relative
+  to total continuum extinction
+- `sme.continuum_grid_min_step = 1e-3`: minimum recursive interval width in A
+
+The refinement test checks true absorption, coherent scattering, and total
+extinction, each scaled by total extinction with a small floor. This avoids
+refining physically irrelevant components merely because their own value is
+close to zero. `"exact"` is intended for reference calculations and numerical
+regression tests; normal synthesis does not require choosing a fixed spacing.
 
 ## Shared parameters
 

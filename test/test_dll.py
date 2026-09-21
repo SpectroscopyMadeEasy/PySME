@@ -111,6 +111,25 @@ def test_eos_warm_start_mode_api(libsme):
     assert libsme.SetEosWarmStartMode(False)
 
 
+def test_continuum_opacity_grid_api(libsme):
+    libsme.SetContinuumOpacityGrid("exact")
+    libsme.SetContinuumOpacityGrid("adaptive", rtol=1e-3)
+    libsme.SetContinuumOpacityGrid(0.5)
+    stats = libsme.GetContinuumOpacityGridStats()
+    assert stats == {
+        "queries": 0,
+        "exact_calls": 0,
+        "nodes": 0,
+        "refined_intervals": 0,
+        "max_test_error": 0.0,
+    }
+    with pytest.raises(ValueError, match="continuum opacity grid mode"):
+        libsme.SetContinuumOpacityGrid("unknown")
+    with pytest.raises(RuntimeError, match="base_step"):
+        libsme.SetContinuumOpacityGrid(-1.0)
+    libsme.SetContinuumOpacityGrid("exact")
+
+
 def test_eos_warm_start_mode_tolerates_older_extension(libsme, monkeypatch):
     import pysme.sme_synth as sme_synth
 
@@ -276,6 +295,30 @@ def test_transf(
     assert np.allclose(sigma, scr, rtol=2e-14, atol=0)
     assert np.allclose(chi, cop, rtol=2e-14, atol=0)
 
+    # The adaptive cache must preserve all continuum components, including in
+    # the narrow post-edge shoulder that motivated the explicit guard band.
+    probe_wavelengths = (5502.37, 3756.609, 3647.06, 8205.88)
+    libsme.SetContinuumOpacityGrid("exact")
+    exact_components = [
+        libsme.GetContinuumOpacityComponents(item) for item in probe_wavelengths
+    ]
+    libsme.SetContinuumOpacityGrid("adaptive", rtol=1e-3)
+    for wavelength, exact_component in zip(probe_wavelengths, exact_components):
+        adaptive_component = libsme.GetContinuumOpacityComponents(wavelength)
+        for adaptive, exact in zip(adaptive_component, exact_component):
+            scale = np.maximum(np.abs(exact), np.max(np.abs(exact)) * 1e-12)
+            assert np.max(np.abs(adaptive - exact) / scale) < 1e-3
+        assert np.allclose(
+            adaptive_component[0] + adaptive_component[1],
+            adaptive_component[2],
+            rtol=2e-14,
+            atol=0,
+        )
+    assert libsme.GetContinuumOpacityGridStats()["queries"] == len(
+        probe_wavelengths
+    )
+    libsme.SetContinuumOpacityGrid("exact")
+
     conwl5 = np.exp(50.7649141 - 5 * np.log(linelist.wlcent[0]))
     hnuk = 1.43868e8 / linelist.wlcent[0]
     planck = conwl5 / (np.exp(hnuk / atmo.temp) - 1)
@@ -407,6 +450,48 @@ def test_fixed_grid_interval_index_preserves_exact_output(
     assert np.array_equal(wave_invalidated, wave_full)
     assert np.array_equal(synth_invalidated, synth_full)
     assert np.array_equal(cont_invalidated, cont_full)
+
+
+def test_fixed_grid_computes_physical_line_ranges(
+    libsme,
+    linelist,
+    teff,
+    grav,
+    vturb,
+    atmo,
+    abund,
+    vw_scale,
+    wfirst,
+    wlast,
+    mu,
+):
+    """Fixed-grid transfer must not return InputLineList's +/-150 A placeholders."""
+
+    def transfer_ranges(accrt):
+        libsme.SetLineInfoMode(0)
+        libsme.SetLibraryPath()
+        libsme.InputLineList(linelist)
+        libsme.InputModel(teff, grav, vturb, atmo)
+        libsme.InputAbund(abund)
+        libsme.Ionization(0)
+        libsme.SetVWscale(vw_scale)
+        libsme.SetH2broad()
+        libsme.InputWaveRange(wfirst, wlast)
+        libsme.Opacity()
+        libsme.Transf(mu, wave=np.linspace(wfirst, wlast, 101), accrt=accrt)
+        return np.asarray(libsme.GetLineRange())
+
+    ranges_1e4 = transfer_ranges(1e-4)
+    ranges_1e5 = transfer_ranges(1e-5)
+    placeholder = np.column_stack(
+        (np.asarray(linelist.wlcent) - 150.0, np.asarray(linelist.wlcent) + 150.0)
+    )
+
+    assert not np.array_equal(ranges_1e4, placeholder)
+    width_1e4 = np.diff(ranges_1e4, axis=1)[:, 0]
+    width_1e5 = np.diff(ranges_1e5, axis=1)[:, 0]
+    assert np.all(width_1e5 >= width_1e4)
+    assert np.any(width_1e5 > width_1e4)
 
 
 @pytest.mark.parametrize("spherical", [False, True])
