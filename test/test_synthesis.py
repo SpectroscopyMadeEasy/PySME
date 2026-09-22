@@ -86,6 +86,35 @@ def test_default_almax_first_transfer_matches_cached_recompute(sme_2segments):
     )
 
 
+@skipif_smelib
+def test_abundance_only_prepared_state_matches_full_reinput(sme_2segments):
+    synth = Synthesizer()
+    sme_2segments.line_select_recompute = "if_stale"
+    synth.synthesize_spectrum(sme_2segments)
+
+    sme_2segments.abund.A["Fe"] += 0.05
+    prepared = synth.synthesize_spectrum(
+        sme_2segments,
+        updateStructure=False,
+        reuse_wavelength_grid=True,
+        passLineList=False,
+        passAtmosphere=False,
+        passAbund=True,
+    )
+    reference = synth.synthesize_spectrum(
+        sme_2segments,
+        updateStructure=False,
+        reuse_wavelength_grid=True,
+        passLineList=True,
+        passAtmosphere=True,
+    )
+
+    assert all(
+        np.array_equal(np.asarray(candidate), np.asarray(expected))
+        for candidate, expected in zip(prepared[1], reference[1])
+    )
+
+
 class _DummyDLL:
     def __init__(self, transf_wave=None, discard_mask=None, nlte_flags=None):
         self.last_wave = "unset"
@@ -105,12 +134,15 @@ class _DummyDLL:
         return None
 
     def InputModel(self, *_):
+        self.events.append("InputModel")
         return None
 
     def InputAbund(self, *_):
+        self.events.append("InputAbund")
         return None
 
     def Ionization(self, *_):
+        self.events.append("Ionization")
         return None
 
     def SetVWscale(self, *_):
@@ -302,6 +334,24 @@ def test_reused_linelist_maps_incremental_updates_to_smelib_indices():
     assert atomic.shape[0] == 3
     assert np.array_equal(species, ["Fe 1", "Li 1", "Ti 1"])
     assert np.array_equal(indices, [1, 2])
+
+
+def test_pass_abund_updates_eos_without_reinputting_model():
+    dll = _DummyDLL()
+    synth = Synthesizer(dll=dll)
+    sme = _minimal_sme()
+
+    synth.synthesize_spectrum(
+        sme,
+        passAtmosphere=False,
+        passAbund=True,
+        passNLTE=False,
+        updateStructure=False,
+    )
+
+    assert "InputModel" not in dll.events
+    assert dll.events.count("InputAbund") == 1
+    assert dll.events.count("Ionization") == 1
 
 
 def test_dynamic_synthesis_maps_selected_and_discarded_lines(monkeypatch):

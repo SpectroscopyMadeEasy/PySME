@@ -1307,6 +1307,7 @@ class Synthesizer:
         segments="all",
         passLineList=True,
         passAtmosphere=True,
+        passAbund=False,
         passNLTE=True,
         updateStructure=True,
         updateLineList=False,
@@ -1341,6 +1342,10 @@ class Synthesizer:
             wether to pass the linelist to the c library (default: True)
         passAtmosphere : bool, optional
             wether to pass the atmosphere to the c library (default: True)
+        passAbund : bool, optional
+            update abundances and rerun the EOS while reusing the atmosphere
+            already resident in SMElib. This is implicit when
+            ``passAtmosphere=True`` (default: False)
         passNLTE : bool, optional
             wether to pass NLTE departure coefficients to the c library (default: True)
         reuse_wavelength_grid : bool, optional
@@ -1789,12 +1794,14 @@ class Synthesizer:
         if passAtmosphere:
             sme = self.get_atmosphere(sme)
             dll.InputModel(sme.teff, sme.logg, sme.vmic, sme.atmo)
+        if passAtmosphere or passAbund:
             dll.InputAbund(sme.abund)
             with warnings.catch_warnings(record=True) as caught_warnings:
                 warnings.simplefilter("always")
                 dll.Ionization(0)
             for caught in caught_warnings:
                 logger.warning("%s", caught.message)
+        if passAtmosphere:
             dll.SetVWscale(sme.gam6)
             dll.SetH2broad(sme.h2broad)
         if passNLTE:

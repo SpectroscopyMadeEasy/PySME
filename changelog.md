@@ -4,6 +4,10 @@
 
 ### Changed
 
+- Reused the resident SMElib line list and atmosphere/model during
+  abundance-only `solve(...)` iterations. Abundances, EOS, opacity, and
+  transfer are still recomputed for every trial; mixed-parameter fits and
+  workflows requiring line-selection recomputation retain the full setup path.
 - Made the adaptive continuum-opacity grid the default for line-info
   precomputation and synthesis. It uses a nominal 1 A grid, physical
   H I/Mg I/Si I knots, exact edge guard bands, and recursive curvature
