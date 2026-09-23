@@ -26,6 +26,13 @@
   `SelectStrongLinesByBins`. CDR and optional binned-ALMAX selection now share
   this native implementation while Python dynamic line-list pruning remains
   available.
+- Resampled every limb-angle line and continuum intensity onto the common
+  regular log-wavelength grid before disk integration and broadening. This
+  removes neighbour-dependent flux changes when SMElib supplies an irregular
+  adaptive transfer grid.
+- Integrated diagnostic contribution functions directly over projected
+  limb-angle areas, avoiding spectral spline/rebin operations on their
+  atmospheric-depth axis.
 
 ## v1.1.0 - 2026-09-15
 

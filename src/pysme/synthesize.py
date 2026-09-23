@@ -597,6 +597,64 @@ class Synthesizer:
         return x_seg, vstep
 
     @staticmethod
+    def _resample_mu_intensities(wave_in, intensities, wave_out):
+        """Resample every mu intensity onto one shared wavelength grid.
+
+        ``integrate_flux`` performs its broadening and pixel integration in
+        array-index space, so its input must have a regular wavelength (or
+        velocity) spacing.  SMElib's adaptive transfer grid does not satisfy
+        that requirement.
+        """
+        wave_in = np.asarray(wave_in, dtype=float)
+        wave_out = np.asarray(wave_out, dtype=float)
+        intensities = np.asarray(intensities, dtype=float)
+        if wave_in.ndim != 1 or wave_out.ndim != 1:
+            raise ValueError("wavelength grids must be one-dimensional")
+        if intensities.ndim != 2 or intensities.shape[1] != wave_in.size:
+            raise ValueError(
+                "intensities must have shape (nmu, len(wave_in))"
+            )
+        return np.asarray(
+            [np.interp(wave_out, wave_in, profile) for profile in intensities]
+        )
+
+    @staticmethod
+    def _integrate_mu_areas(mu, intensities):
+        """Integrate mu-resolved values without spectral resampling.
+
+        This is used for diagnostic quantities such as contribution functions,
+        whose final axis is atmospheric depth rather than a regular spectral
+        coordinate. Sending such arrays through ``integrate_flux`` would
+        incorrectly spline and rebin that depth axis.
+        """
+        mu = np.asarray(mu, dtype=float)
+        intensities = np.asarray(intensities, dtype=float)
+        if mu.ndim != 1:
+            raise ValueError("mu must be one-dimensional")
+        if intensities.ndim != 2 or intensities.shape[0] != mu.size:
+            raise ValueError(
+                "intensities must have shape (len(mu), npoints)"
+            )
+
+        projected_radius = np.sqrt(1.0 - mu * mu)
+        order = np.argsort(projected_radius)
+        projected_radius = projected_radius[order]
+        intensities = intensities[order]
+        if mu.size > 1:
+            boundaries = np.sqrt(
+                0.5
+                * (
+                    projected_radius[:-1] ** 2
+                    + projected_radius[1:] ** 2
+                )
+            )
+            boundaries = np.concatenate(([0.0], boundaries, [1.0]))
+            weights = boundaries[1:] ** 2 - boundaries[:-1] ** 2
+        else:
+            weights = np.ones(1, dtype=float)
+        return np.pi * np.sum(weights[:, None] * intensities, axis=0)
+
+    @staticmethod
     def check_segments(sme, segments):
         if isinstance(segments, str) and segments == "all":
             segments = range(sme.nseg)
@@ -2185,15 +2243,16 @@ class Synthesizer:
             wgrid, vstep = self.new_wavelength_grid(wint)
 
             logger.debug("Integrate specific intensities")
-            # Radiative Transfer Integration
-            # Continuum
-            cint = self.integrate_flux(sme.mu, cint, 1, 0, 0)
-            cint = np.interp(wgrid, wint, cint)
+            # ``integrate_flux`` assumes that adjacent array indices have a
+            # constant velocity spacing.  Resample both continuum and line
+            # intensities before disk integration; applying it directly to an
+            # irregular SMElib grid makes a common wavelength depend on the
+            # placement of its neighbouring transfer nodes.
+            cint_regular = self._resample_mu_intensities(wint, cint, wgrid)
+            cint = self.integrate_flux(sme.mu, cint_regular, vstep, 0, 0)
 
             # Broaden Spectrum
-            y_integrated = np.empty((sme.nmu, len(wgrid)))
-            for imu in range(sme.nmu):
-                y_integrated[imu] = np.interp(wgrid, wint, sint[imu])
+            y_integrated = self._resample_mu_intensities(wint, sint, wgrid)
 
             # Turbulence broadening
             # Apply macroturbulent and rotational broadening while integrating intensities
@@ -2237,7 +2296,9 @@ class Synthesizer:
             #            to avoid impractical numbers
             cf[..., 0] = cf[..., 1]
             if not sme.specific_intensities_only:
-                cf = np.array([self.integrate_flux(sme.mu, cf_mu, 1, 0, 0) for cf_mu in cf])
+                cf = np.asarray(
+                    [self._integrate_mu_areas(sme.mu, cf_mu) for cf_mu in cf]
+                )
             sme.contribution_function[segment] = cf
 
         sme.first_segment = False
@@ -2983,12 +3044,16 @@ class Synthesizer:
             cint_single = cont_3dnlte_H[:, mask]
             wgrid, vstep = self.new_wavelength_grid(wint_single)
 
-            cint_flux = self.integrate_flux(mu_3d, cint_single, 1, 0, 0, wt=wt_3d)
-            cint_flux = np.interp(wgrid, wint_single, cint_flux)
+            cint_regular = self._resample_mu_intensities(
+                wint_single, cint_single, wgrid
+            )
+            cint_flux = self.integrate_flux(
+                mu_3d, cint_regular, vstep, 0, 0, wt=wt_3d
+            )
 
-            y_integrated = np.empty((len(mu_3d), len(wgrid)))
-            for imu in range(len(mu_3d)):
-                y_integrated[imu] = np.interp(wgrid, wint_single, sint_single[imu])
+            y_integrated = self._resample_mu_intensities(
+                wint_single, sint_single, wgrid
+            )
             sint_flux = self.integrate_flux(
                 mu_3d, y_integrated, vstep, sme.vsini, sme.vmac, wt=wt_3d
             )

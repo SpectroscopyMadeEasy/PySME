@@ -448,6 +448,80 @@ def test_synthesize_segment_populates_cache_when_no_wint_available():
     assert np.allclose(synth.wint[0], np.linspace(5000.0, 5001.0, 5))
 
 
+def test_synthesize_segment_resamples_line_and_continuum_before_flux_integration(
+    monkeypatch,
+):
+    irregular = np.array([5000.0, 5000.08, 5000.31, 5000.57, 5001.0])
+    dll = _DummyDLL(transf_wave=irregular)
+    synth = Synthesizer(dll=dll)
+    sme = _minimal_sme()
+    sme.specific_intensities_only = False
+
+    sint_raw = np.vstack(
+        [
+            1.0 + (imu + 1) * (irregular - irregular[0]) ** 2
+            for imu in range(sme.nmu)
+        ]
+    )
+    cint_raw = np.vstack(
+        [2.0 + (imu + 1) * (irregular - irregular[0]) for imu in range(sme.nmu)]
+    )
+
+    def transf(mu, accrt, accwi, keep_lineop, wave=None):
+        wint = irregular if wave is None else np.asarray(wave, dtype=float)
+        assert np.array_equal(wint, irregular)
+        return len(wint), wint, sint_raw.copy(), cint_raw.copy()
+
+    monkeypatch.setattr(dll, "Transf", transf)
+    integrated = []
+
+    def record_integrate(mu, intensities, deltav, vsini, vrt, **kwargs):
+        integrated.append(np.asarray(intensities).copy())
+        return np.mean(intensities, axis=0)
+
+    monkeypatch.setattr(synth, "integrate_flux", record_integrate)
+    wgrid, _ = synth.new_wavelength_grid(irregular)
+
+    synth.synthesize_segment(sme, 0, reuse_wavelength_grid=False)
+
+    assert len(integrated) == 2
+    expected_continuum = synth._resample_mu_intensities(
+        irregular, cint_raw, wgrid
+    )
+    expected_line = synth._resample_mu_intensities(irregular, sint_raw, wgrid)
+    assert np.array_equal(integrated[0], expected_continuum)
+    assert np.array_equal(integrated[1], expected_line)
+    assert integrated[0].shape[1] == wgrid.size
+
+
+def test_contribution_function_uses_mu_area_integration_without_depth_resampling():
+    mu = np.array([0.2, 0.7, 1.0])
+    contribution = np.array(
+        [
+            [1.0, 2.0, 4.0, 8.0],
+            [3.0, 5.0, 7.0, 9.0],
+            [2.0, 6.0, 10.0, 14.0],
+        ]
+    )
+
+    result = Synthesizer._integrate_mu_areas(mu, contribution)
+
+    projected_radius = np.sqrt(1.0 - mu * mu)
+    order = np.argsort(projected_radius)
+    projected_radius = projected_radius[order]
+    boundaries = np.sqrt(
+        0.5 * (projected_radius[:-1] ** 2 + projected_radius[1:] ** 2)
+    )
+    boundaries = np.concatenate(([0.0], boundaries, [1.0]))
+    weights = boundaries[1:] ** 2 - boundaries[:-1] ** 2
+    expected = np.pi * np.sum(
+        weights[:, None] * contribution[order], axis=0
+    )
+
+    assert np.array_equal(result, expected)
+    assert result.shape == (contribution.shape[1],)
+
+
 def test_brackett_mode_is_explicit_and_environment_is_restored(monkeypatch):
     dll = _DummyDLL()
     synth = Synthesizer(dll=dll)
