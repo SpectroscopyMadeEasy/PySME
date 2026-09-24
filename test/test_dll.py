@@ -378,7 +378,9 @@ def test_transf(
         libsme.GetOpacity(switch)
 
 
+@pytest.mark.parametrize("spherical", [False, True])
 def test_batched_adaptive_transfer_keeps_precomputed_line_state_immutable(
+    spherical,
     libsme,
     linelist,
     teff,
@@ -392,10 +394,21 @@ def test_batched_adaptive_transfer_keeps_precomputed_line_state_immutable(
     mu,
 ):
     """Batched RKINTS uses the ALMAX mask/ranges without second pruning."""
+    model_atmo = atmo
+    transfer_mu = mu
+    if spherical:
+        model_atmo = deepcopy(atmo)
+        model_atmo.geom = "SPH"
+        model_atmo.radius = 10.0
+        model_atmo.height = np.linspace(4e7, 0.0, len(model_atmo.rhox))
+        # Include grazing, intermediate, and disk-centre rays. The fixed-grid
+        # common-node reference below validates every native ray intensity.
+        transfer_mu = np.array([0.01, 0.1, 0.5, 1.0])
+
     libsme.SetLibraryPath()
     libsme.SetContinuumOpacityGrid("exact")
     libsme.InputLineList(linelist)
-    libsme.InputModel(teff, grav, vturb, atmo)
+    libsme.InputModel(teff, grav, vturb, model_atmo)
     libsme.InputAbund(abund)
     libsme.Ionization(0)
     libsme.SetVWscale(vw_scale)
@@ -417,7 +430,7 @@ def test_batched_adaptive_transfer_keeps_precomputed_line_state_immutable(
 
     try:
         nw, wave, synth, cont = libsme.Transf(
-            mu, accrt=threshold, accwi=0.5, long_continuum=True
+            transfer_mu, accrt=threshold, accwi=0.5, long_continuum=True
         )
         range_after = np.asarray(libsme.GetLineRange())
 
@@ -426,7 +439,7 @@ def test_batched_adaptive_transfer_keeps_precomputed_line_state_immutable(
         # precomputed immutable line information.
         libsme.InputWaveRange(wfirst, wlast)
         _, wave_reused, synth_reused, cont_reused = libsme.Transf(
-            mu,
+            transfer_mu,
             accrt=threshold,
             accwi=0.5,
             keep_lineop=True,
@@ -441,7 +454,7 @@ def test_batched_adaptive_transfer_keeps_precomputed_line_state_immutable(
             line_range[:, 0], line_range[:, 1], strong
         )
         nw_ref, wave_ref, synth_ref, cont_ref = libsme.Transf(
-            mu,
+            transfer_mu,
             wave=wave,
             accrt=threshold,
             accwi=0.5,
@@ -456,6 +469,156 @@ def test_batched_adaptive_transfer_keeps_precomputed_line_state_immutable(
     assert np.array_equal(wave_reused, wave)
     assert np.array_equal(synth_reused, synth)
     assert np.array_equal(cont_reused, cont)
+    assert nw_ref == nw
+    assert np.array_equal(wave_ref, wave)
+    assert np.array_equal(synth_ref, synth)
+    assert np.array_equal(cont_ref, cont)
+
+
+def test_spherical_batched_dispatch_and_explicit_legacy_fallback(
+    libsme,
+    linelist,
+    teff,
+    grav,
+    vturb,
+    atmo,
+    abund,
+    vw_scale,
+    wfirst,
+    wlast,
+):
+    """Spherical production dispatches batched and retains legacy fallback."""
+    spherical_atmo = deepcopy(atmo)
+    spherical_atmo.geom = "SPH"
+    spherical_atmo.radius = 10.0
+    spherical_atmo.height = np.linspace(4e7, 0.0, len(spherical_atmo.rhox))
+
+    libsme.SetLibraryPath()
+    libsme.SetContinuumOpacityGrid("exact")
+    libsme.InputLineList(linelist)
+    libsme.InputModel(teff, grav, vturb, spherical_atmo)
+    libsme.InputAbund(abund)
+    libsme.Ionization(0)
+    libsme.SetVWscale(vw_scale)
+    libsme.SetH2broad()
+    libsme.InputWaveRange(wfirst, wlast)
+    libsme.Opacity()
+
+    threshold = 0.5
+    libsme.ALMAXRange(accrt=threshold)
+    deliberately_wide_ranges = np.tile(
+        [wfirst, wlast], (len(linelist), 1)
+    )
+    strong = np.ones(len(linelist), dtype=np.uint8)
+    libsme.InputLinePrecomputedInfo(
+        deliberately_wide_ranges[:, 0], deliberately_wide_ranges[:, 1], strong
+    )
+    libsme.SetLineInfoMode(2)
+
+    try:
+        libsme.SetAdaptiveTransferGridMode("batched")
+        libsme.Transf(
+            np.array([0.01, 0.1, 0.5, 1.0]),
+            accrt=threshold,
+            accwi=0.5,
+            long_continuum=True,
+        )
+        range_after_batch = np.asarray(libsme.GetLineRange())
+
+        # Reinstall the same deliberately broad precomputed state.  Explicit
+        # legacy mode must still reach historical RKINTS_sph, whose sampled
+        # ALMAX test is allowed to shorten these ranges.
+        libsme.InputWaveRange(wfirst, wlast)
+        libsme.InputLinePrecomputedInfo(
+            deliberately_wide_ranges[:, 0],
+            deliberately_wide_ranges[:, 1],
+            strong,
+        )
+        libsme.SetAdaptiveTransferGridMode("legacy")
+        libsme.Transf(
+            np.array([0.01, 0.1, 0.5, 1.0]),
+            accrt=threshold,
+            accwi=0.5,
+            long_continuum=True,
+        )
+        range_after = np.asarray(libsme.GetLineRange())
+    finally:
+        libsme.SetLineInfoMode(0)
+        libsme.SetAdaptiveTransferGridMode("batched")
+
+    assert np.array_equal(range_after_batch, deliberately_wide_ranges)
+    assert not np.array_equal(range_after, deliberately_wide_ranges)
+
+
+def test_spherical_batched_nlte_matches_fixed_grid_reference(
+    libsme,
+    linelist,
+    teff,
+    grav,
+    vturb,
+    atmo,
+    abund,
+    vw_scale,
+    wfirst,
+    wlast,
+):
+    """Departure-coefficient opacity/source uses the same spherical evaluator."""
+    spherical_atmo = deepcopy(atmo)
+    spherical_atmo.geom = "SPH"
+    spherical_atmo.radius = 10.0
+    spherical_atmo.height = np.linspace(4e7, 0.0, len(spherical_atmo.rhox))
+    transfer_mu = np.array([0.01, 0.1, 0.5, 1.0])
+
+    libsme.SetLibraryPath()
+    libsme.SetContinuumOpacityGrid("exact")
+    libsme.InputLineList(linelist)
+    libsme.InputModel(teff, grav, vturb, spherical_atmo)
+    ndepth = len(spherical_atmo.rhox)
+    departure = np.column_stack(
+        (
+            np.linspace(0.9, 1.1, ndepth),
+            np.linspace(1.05, 0.95, ndepth),
+        )
+    )
+    libsme.InputDepartureCoefficients(departure, 0)
+    libsme.InputAbund(abund)
+    libsme.Ionization(0)
+    libsme.SetVWscale(vw_scale)
+    libsme.SetH2broad()
+    libsme.InputWaveRange(wfirst, wlast)
+    libsme.Opacity()
+
+    threshold = 1e-6
+    _, line_range = libsme.ALMAXRange(accrt=threshold)
+    strong = np.ones(len(line_range), dtype=np.uint8)
+    libsme.InputLinePrecomputedInfo(
+        line_range[:, 0], line_range[:, 1], strong
+    )
+    libsme.SetLineInfoMode(2)
+    libsme.SetAdaptiveTransferGridMode("batched")
+
+    try:
+        nw, wave, synth, cont = libsme.Transf(
+            transfer_mu,
+            accrt=threshold,
+            accwi=3e-3,
+            long_continuum=True,
+        )
+        libsme.InputLinePrecomputedInfo(
+            line_range[:, 0], line_range[:, 1], strong
+        )
+        nw_ref, wave_ref, synth_ref, cont_ref = libsme.Transf(
+            transfer_mu,
+            wave=wave,
+            accrt=threshold,
+            accwi=3e-3,
+            long_continuum=True,
+        )
+    finally:
+        libsme.ResetDepartureCoefficients()
+        libsme.SetLineInfoMode(0)
+        libsme.SetAdaptiveTransferGridMode("batched")
+
     assert nw_ref == nw
     assert np.array_equal(wave_ref, wave)
     assert np.array_equal(synth_ref, synth)
