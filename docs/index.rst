@@ -3,14 +3,24 @@ PySME documentation
 
 Version: |release|
 
-.. warning::
+.. admonition:: PySME v1.2: substantially faster spectral synthesis
 
-   **NLTE correctness notice:** PySME versions from v0.4.151 through v1.1.0
-   can assign NLTE departure coefficients to the wrong spectral transitions
-   when SMElib discards transitions with unsupported ionization stages. These
-   releases are no longer recommended for scientific NLTE synthesis. Upgrade
-   to PySME v1.1.1 or later and rerun affected NLTE calculations. LTE synthesis
-   is not affected by this specific issue. See :doc:`concepts/nlte` for details.
+   PySME v1.2 delivers a broad performance overhaul of spectral synthesis,
+   with synthesis speed-ups of roughly 20–40× for representative workflows.
+   Existing synthesis scripts generally require no changes, and the release
+   also includes several numerical-correctness improvements. See
+   :doc:`getting_started/whats_new_v120` for an overview of what the release
+   means for users.
+
+.. admonition:: NLTE correctness notice: v0.4.151–v1.1.0
+   :class: warning
+
+   PySME versions from v0.4.151 through v1.1.0 can assign NLTE departure
+   coefficients to the wrong spectral transitions when SMElib discards
+   transitions with unsupported ionization stages. These releases are no
+   longer recommended for scientific NLTE synthesis. Upgrade to PySME v1.1.1
+   or later and rerun affected NLTE calculations. LTE synthesis is not affected
+   by this specific issue. See :doc:`concepts/nlte` for details.
 
 More than two decades ago `Valenti & Piskunov (1996) <https://ui.adsabs.harvard.edu/abs/1996A&AS..118..595V>`_ developed SME - Spectroscopy Made Easy, a high-precision stellar-spectra synthesis/analysis engine that has powered hundreds of studies.
 PySME is its modern Python front-end: a wrapper around the original C++/Fortran core that lets you (1) compute accurate, high-resolution synthetic spectra from a linelist + model atmosphere, (2) invert observed spectra to derive stellar parameters, and (3) explore NLTE corrections — all from an interactive notebook or scripted pipeline. The same capabilities make PySME invaluable for exoplanet work, where characterising the host star is essential for understanding its planets.
@@ -18,6 +28,7 @@ PySME is its modern Python front-end: a wrapper around the original C++/Fortran 
 .. admonition:: Key features
 
    * Plane-parallel and spherical radiative-transfer engine  
+   * High-performance adaptive synthesis for wide and line-rich spectra
    * LTE & 1-D NLTE line formation with pre-computed grids  
    * Automatic :math:`\chi^2` fitting for :math:`T_\mathrm{eff}`, :math:`\log{g}`, :math:`v_\mathrm{mic}`, [X/Fe] …  
    * Seamless use of ATLAS and MARCS model atmospheres and VALD line lists

@@ -300,7 +300,7 @@ guidance, see [](line_selection_reference.md).
 
 Current PySME exposes a unified interface for external line selection:
 
-- `sme.line_select_method`: `internal | cdr | almax`
+- `sme.line_select_method`: `almax | internal | cdr` (`almax` is the default)
 - `sme.line_select_policy`: `auto | strict`
 - `sme.line_select_parallel`: enable/disable parallel metadata update
 - `sme.line_select_n_jobs`: worker count for parallel updates
@@ -311,6 +311,10 @@ Current PySME exposes a unified interface for external line selection:
 missing or stale. `line_select_reuse` is deprecated; non-default values only
 trigger a limited internal reuse path and should not be treated as a stable
 public caching policy.
+
+ALMAX metadata is abundance-dependent. With `if_stale`, changing any effective
+elemental abundance automatically recomputes ALMAX ratios and line ranges after
+the new abundance and ionization state have been installed in SMElib.
 
 ALMAX mode supports two strong-line rules:
 
@@ -325,6 +329,10 @@ Both ALMAX rules use the same threshold parameter:
 
 If `sme.line_select_almax_threshold` is `None`, it falls back to `sme.accrt`
 to preserve legacy behavior.
+
+Both values are local line-to-continuum opacity-ratio thresholds, not bounds
+on the final normalized-flux error. Set `sme.line_select_method = "internal"`
+when the legacy SMElib line-selection behavior is required.
 
 CDR currently uses the bin-based strong-line helper directly, so there is no
 separate `cdr_use_bins` switch.

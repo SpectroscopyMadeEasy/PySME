@@ -13,6 +13,23 @@ Detailed per-release changes are maintained on GitHub Releases:
 - Use the Git tags list for older historical versions.
 - Keep this page concise, focused on major milestones and migration notes.
 
+## v1.2.0
+
+- Reworked adaptive synthesis with continuum-opacity caching and
+  generation-batched, interval-indexed transfer for plane-parallel and
+  spherical atmospheres.
+- Reduced memory use for large line lists through float line-state caches and
+  incremental parsing of supported large VALD files.
+- Corrected historical weak-line pruning, mutable line-range state,
+  irregular-grid flux integration, spherical ray ordering, and fixed
+  adaptive-transfer capacity behavior.
+- Complete synthesis was approximately 19--40x faster in the canonical 10 A
+  validation matrix; gains depend on the workload.
+
+Existing scripts generally require no changes. See [](../getting_started/whats_new_v120.md)
+for the user overview and [](../advance/synthesis_performance.md) for
+optimized-path conditions, numerical differences, and compatibility controls.
+
 ## v1.1.1
 
 - Fixed a critical NLTE line-indexing error when SMElib discards transitions

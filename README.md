@@ -20,6 +20,9 @@ suite of IDL routines that call a dynamically linked library, which is
 compiled from C++ and fortran. This classic IDL version of SME is available
 for [download](http://www.stsci.edu/~valenti/sme.html).
 
+PySME includes high-performance adaptive synthesis for wide and line-rich
+spectra in both plane-parallel and spherical atmospheres.
+
 In 2018, we began began reimplmenting the IDL part of SME in python 3,
 adopting an object oriented paradigm and continuous itegration practices
 (code repository, build automation, self-testing, frequent builds).

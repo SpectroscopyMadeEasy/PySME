@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from pysme.atmosphere.atmosphere import Atmosphere
+from pysme.atmosphere.atmosphere import Atmosphere, AtmosphereGrid
 from pysme.atmosphere.interpolation import AtmosphereInterpolator, R_sun, logg_sun
 from pysme.atmosphere.savfile import SavFile
 
@@ -61,6 +61,22 @@ def test_grid_point(atmosphere_name, atmosphere_grid, lfs_atmo, interpolator):
     assert np.allclose(atmo_interp.rho, atmo_grid.rho[1:])
     assert np.allclose(atmo_interp.xna, atmo_grid.xna[1:])
     assert np.allclose(atmo_interp.xne, atmo_grid.xne[1:])
+
+
+def test_grid_get_single_atmosphere():
+    grid = AtmosphereGrid(1, 3, source="test-grid", citation_info="test citation")
+    grid.teff = 5770
+    grid.logg = 4.44
+    grid.monh = 0
+    grid.abund[0] = Atmosphere().abund.get_pattern(type="sme", raw=True)
+    grid.temp[0] = [5000, 5500, 6000]
+
+    atmosphere = grid.get(5770, grid.logg[0], 0)
+
+    assert isinstance(atmosphere, Atmosphere)
+    assert np.array_equal(atmosphere.temp, grid.temp[0])
+    assert atmosphere.source == grid.source
+    assert atmosphere.citation_info == grid.citation_info
 
 
 def _make_spherical_test_atmo(temp_offset=0.0, height_shift=0.0):

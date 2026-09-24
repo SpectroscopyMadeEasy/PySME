@@ -9,7 +9,7 @@ This is the page mainly for developers of PySME and the note on its function, wh
 
 Since SME is the C++/Fortran library for the spectral synthesis part, PySME is divided into a few components to make the code work.
 1. python package. This is the main interface which the users interact with.
-2. `SMR_DLL` class in `sme_synth.py`. This class perform some necessary manipulation for the input and pass it to the functions inside `_smelib`
+2. `SME_DLL` class in `sme_synth.py`. This class performs the necessary input manipulation and passes data to functions inside `_smelib`.
 3. `_smelib` compiled in `src/pysme/smelib`. This is the C-extension which attach the python side data and C++ side data.
 4. SMElib core shared library (`sme_synth.*`) which performs the actual synthesis with C++/Fortran.
 
@@ -190,12 +190,17 @@ Some extra test is needed to clear the situation.
 
 ## SME
 
-### `Trasf` function
+### `Transf` function
 
-1. `AutoIonization`
-2. Calculate Line center opacity using `LINEOPAC`.
-3. Calculate Line contribution limits using `OPMTRX`.
-    - Step 2 and 3 go through all the input lines
+The transfer setup depends on the selected line-information and wavelength-grid
+paths. Internal selection can calculate line-centre opacity and physical ranges
+inside `Transf`; precomputed ALMAX/CDR workflows instead install an immutable
+mask and ranges before transfer. Adaptive generation batching and fixed-grid
+interval indexing then avoid visiting lines whose physical support does not
+overlap the current wavelength.
+
+See [](../dev/synthesis_engine.md) for the current v1.2 synthesis lifecycle,
+gating, memory model, and concurrency rules.
 
 ## IDLSME
 

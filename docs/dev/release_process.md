@@ -28,13 +28,23 @@ This means:
    - Build wheels
    - Publish to PyPI
    - Create GitHub Release
+   - Wait for the matching Read the Docs tag and `stable` builds, then trigger a
+     fresh `latest` build
 5. Verify published package:
    - `pip install pysme-astro==<version>`
    - `python -c "import pysme; print(pysme.__version__)"`
+
+The final documentation job requires a repository Actions secret named
+`READTHEDOCS_API_TOKEN`. It must contain a Read the Docs user API token with
+permission to build the `pysme-astro` project. Waiting for the tag and `stable`
+builds before rebuilding `latest` ensures that version discovery sees the new
+release tag instead of describing the release commit relative to the previous
+tag.
 
 ## Repository settings to keep aligned
 
 - In branch protection/rulesets, keep required checks aligned with current job names.
 - For PR merging, require test jobs and docs build as appropriate.
-- Do not require release-only jobs (`Build source distribution`, wheel build, `Publish to PyPI`, `Create GitHub Release`) for PRs.
-
+- Do not require release-only jobs (`Build source distribution`, wheel build,
+  `Publish to PyPI`, `Create GitHub Release`, `Refresh Read the Docs latest`)
+  for PRs.

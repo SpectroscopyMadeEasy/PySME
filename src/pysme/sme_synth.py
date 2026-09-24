@@ -3,9 +3,12 @@
 
 import logging
 import os, sys
+from contextlib import contextmanager
 from ctypes import cdll
+from functools import wraps
 from importlib import import_module
 from os.path import normpath
+from threading import RLock
 from .smelib import libtools
 import numpy as np
 
@@ -15,6 +18,25 @@ logger = logging.getLogger(__name__)
 
 _smelib = None
 CURRENT_LIB = None
+_SMELIB_PROCESS_LOCK = RLock()
+
+
+@contextmanager
+def smelib_session():
+    """Serialize one complete SMElib stateful workflow within this process."""
+    with _SMELIB_PROCESS_LOCK:
+        yield
+
+
+def serialized_smelib_session(function):
+    """Run a complete high-level workflow under the process-wide SMElib lock."""
+
+    @wraps(function)
+    def locked(*args, **kwargs):
+        with smelib_session():
+            return function(*args, **kwargs)
+
+    return locked
 
 
 def ensure_smelib_ready(libfile=None):
@@ -70,13 +92,20 @@ class SME_DLL:
     """Object Oriented interface for the SME C library"""
 
     def __init__(self, libfile=None, datadir=None):
-        self.libfile = libfile
-        reload_lib(libfile)
+        with smelib_session():
+            self.libfile = libfile
+            reload_lib(libfile)
 
-        if hasattr(_smelib, "SetHlinopWarningMode"):
-            _smelib.SetHlinopWarningMode(1)
-        self.SetLibraryPath(datadir)
-        self.check_data_files_exist()
+            if hasattr(_smelib, "SetHlinopWarningMode"):
+                _smelib.SetHlinopWarningMode(1)
+            self.SetLibraryPath(datadir)
+            self.check_data_files_exist()
+
+    @contextmanager
+    def session(self):
+        """Protect a multi-call low-level SMElib transaction from other threads."""
+        with smelib_session():
+            yield self
 
     @property
     def datadir(self):
@@ -190,9 +219,100 @@ class SME_DLL:
         """Set handling mode for precomputed line info (0=internal, 1=use_if_valid, 2=trust)."""
         _smelib.SetLineInfoMode(int(mode))
 
+    def SetAdaptiveTransferGridMode(self, mode):
+        """Select native adaptive transfer: ``batched`` or ``legacy``."""
+        modes = {"legacy": 0, "batched": 1}
+        if isinstance(mode, str):
+            try:
+                mode = modes[mode.lower()]
+            except KeyError as exc:
+                raise ValueError(
+                    "adaptive transfer-grid mode must be 'batched' or 'legacy'"
+                ) from exc
+        _smelib.SetAdaptiveTransferGridMode(int(mode))
+
+    @staticmethod
+    def SelectStrongLinesByBins(
+        wavelength, metric, bin_width=0.2, threshold=0.001, valid_mask=None
+    ):
+        """Select lines by cumulative metric within wavelength bins.
+
+        The weakest lines in each bin are discarded while their cumulative
+        metric remains at or below ``threshold``. The returned mask is aligned
+        with the input arrays and uses ``True`` for retained lines.
+        """
+        wavelength = np.ascontiguousarray(wavelength, dtype=np.float64)
+        metric = np.ascontiguousarray(metric, dtype=np.float64)
+        if wavelength.ndim != 1 or metric.ndim != 1:
+            raise ValueError("wavelength and metric must be one-dimensional")
+        if wavelength.shape != metric.shape:
+            raise ValueError("wavelength and metric must have the same shape")
+        if valid_mask is None:
+            valid = np.ones(wavelength.shape, dtype=np.uint8)
+        else:
+            valid = np.ascontiguousarray(valid_mask, dtype=np.uint8)
+            if valid.ndim != 1 or valid.shape != wavelength.shape:
+                raise ValueError("valid_mask must have the same shape as wavelength")
+
+        with smelib_session():
+            ensure_smelib_ready()
+            strong = _smelib.SelectStrongLinesByBins(
+                wavelength,
+                metric,
+                valid,
+                float(bin_width),
+                float(threshold),
+            )
+        return np.asarray(strong, dtype=bool)
+
     def SetContinuumScatteringSourceMode(self, mode):
         """Enable or disable the continuum scattering source for plane-parallel and spherical transfer."""
         _smelib.SetContinuumScatteringSourceMode(int(bool(mode)))
+
+    def SetContinuumOpacityGrid(
+        self, mode="exact", base_step=1.0, rtol=1e-3, min_step=1e-3
+    ):
+        """Configure exact, adaptive, or fixed continuum-opacity evaluation.
+
+        A positive numeric ``mode`` selects a fixed edge-aware grid with that
+        spacing in Angstrom.
+        """
+        if isinstance(mode, (int, float)) and not isinstance(mode, bool):
+            base_step = float(mode)
+            mode_id = 2
+        else:
+            modes = {"exact": 0, "adaptive": 1, "fixed": 2}
+            try:
+                mode_id = modes[str(mode).lower()]
+            except KeyError as exc:
+                raise ValueError(
+                    "continuum opacity grid mode must be 'exact', 'adaptive', "
+                    "'fixed', or a positive spacing"
+                ) from exc
+        _smelib.SetContinuumOpacityGrid(
+            int(mode_id), float(base_step), float(rtol), float(min_step)
+        )
+
+    def GetContinuumOpacityGridStats(self):
+        """Return counters for the current continuum-opacity grid."""
+        queries, exact_calls, nodes, refined, max_error = (
+            _smelib.GetContinuumOpacityGridStats()
+        )
+        return {
+            "queries": int(queries),
+            "exact_calls": int(exact_calls),
+            "nodes": int(nodes),
+            "refined_intervals": int(refined),
+            "max_test_error": float(max_error),
+        }
+
+    def SetEosWarmStartMode(self, mode):
+        """Enable exact EOS history reuse for the current fit lifecycle."""
+        setter = getattr(_smelib, "SetEosWarmStartMode", None)
+        if setter is None:
+            return False
+        setter(int(bool(mode)))
+        return True
 
     def InputLinePrecomputedInfo(self, line_range_s, line_range_e, strong_mask, central_depth=None):
         """Input precomputed line ranges and strong mask to SMElib."""
@@ -566,9 +686,15 @@ class SME_DLL:
         mu : array of shape (nmu,)
             mu angles (1 - cos(phi)) of different limb points along the stellar surface
         accrt : float
-            accuracy of the radiative transfer integration
+            Local line-to-continuum opacity-ratio threshold used when SMElib
+            constructs line-validity ranges. It is not a bound on the final
+            spectrum error. With a fixed ``wave`` grid and legacy internal
+            line selection, it does not refine the wavelength sampling.
         accwi : float
-            accuracy of the interpolation on the wavelength grid
+            Adaptive wavelength-grid refinement threshold. It controls a
+            midpoint linear-interpolation heuristic on the disk-center
+            (largest ``mu``) ray and is ignored when ``wave`` supplies a fixed
+            grid. It is not a global interpolation-error bound.
         keep_lineop : bool, optional
             if True do not recompute the line opacities (default: False)
         long_continuum : bool, optional
@@ -577,7 +703,10 @@ class SME_DLL:
             maximum number of wavelength points if wavelength grid is not set with wave (default: 400000)
         wave : array, optional
             wavelength grid to use for the calculation,
-            if not set will use an adaptive wavelength grid with no constant step size (default: None)
+            if not set, use a nonuniform adaptive grid. Plane-parallel runs
+            with precomputed ALMAX/CDR line information evaluate refinement
+            generations through the indexed fixed-grid path while keeping the
+            active line mask fixed (default: None)
 
         Returns
         -------
@@ -621,7 +750,8 @@ class SME_DLL:
         mu : array of size (nmu,)
             mu values along the stellar disk to calculate
         accrt : float
-            precision of the radiative transfer calculation
+            Retained for API compatibility; the current SMElib
+            ``CentralDepth`` implementation does not use this value.
 
         Returns
         -------
@@ -635,6 +765,11 @@ class SME_DLL:
 
     def ALMAXRange(self, accrt=1e-4):
         """Compute first-stage ALMAX and line ranges from SMElib preselection logic.
+
+        On the same DLL state, the next ``Transf`` call can reuse the line
+        opacity and Voigt arrays computed here when it receives valid
+        precomputed ranges/masks at the same ``accrt``. Any intervening
+        physical-state update invalidates this one-shot reuse.
 
         Parameters
         ----------

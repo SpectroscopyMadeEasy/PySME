@@ -71,11 +71,16 @@ def test_solve_line_select_methods_run(method, required_cols):
 def test_solve_line_select_methods_match_internal_flux():
     _, wave_ref, flux_ref = _run_solve("internal")
 
-    for method in ("almax", "cdr"):
+    # CDR retains the exact historical result for this fixture. ALMAX uses the
+    # generation-batched adaptive grid with an immutable active mask; the small
+    # difference is the intentional removal of RKINTS range-state mutation,
+    # and remains below the configured line-selection accuracy scale.
+    tolerances = {"almax": 5e-5, "cdr": 1e-10}
+    for method, tolerance in tolerances.items():
         _, wave, flux = _run_solve(method)
         flux_interp = np.interp(wave_ref, wave, flux)
         diff = flux_interp - flux_ref
-        assert np.max(np.abs(diff)) < 1e-10
+        assert np.max(np.abs(diff)) < tolerance
 
 
 @skipif_smelib
@@ -252,7 +257,12 @@ def test_almax_update_uses_resolved_line_select_config(monkeypatch):
     synth.update_cdr_switch = False
 
     with pytest.raises(_StopLineSelect):
-        synth.synthesize_spectrum(sme, linelist_mode="all")
+        synth.synthesize_spectrum(
+            sme,
+            linelist_mode="all",
+            passLineList=False,
+            passAtmosphere=False,
+        )
 
     assert captured["chunk_size"] == 19
     assert captured["parallel"] is False

@@ -25,6 +25,7 @@ from .atmosphere.savfile import SavFile
 from .large_file_storage import setup_lfs
 from .nlte import DirectAccessFile
 from .sme import MASK_VALUES
+from .sme_synth import serialized_smelib_session
 from .synthesize import Synthesizer, _normalize_line_precompute_database_arg
 from . import util
 from .util import print_to_log
@@ -161,6 +162,8 @@ class SME_Solver:
         self.parameter_names = []
         self.update_linelist = False
         self.derived_param = None
+        self._prepare_abundance_synthesis = False
+        self._smelib_state_prepared = False
         self._latest_residual = None
         self._latest_jacobian = None
         self.restore = restore
@@ -298,14 +301,22 @@ class SME_Solver:
             "jacobian" if isJacobian else "residual",
             ", ".join(synth_values),
         )
-        # run spectral synthesis
+        reuse_prepared_state = (
+            self._prepare_abundance_synthesis and self._smelib_state_prepared
+        )
+
+        # Run spectral synthesis. For an abundance-only fit, the first call
+        # installs the complete line-list/model state and later calls update
+        # only abundances and the EOS before recomputing opacity and transfer.
         try:
             result = self.synthesizer.synthesize_spectrum(
                 sme,
                 updateStructure=update,
                 reuse_wavelength_grid=reuse_wavelength_grid,
                 segments=segments,
-                passLineList=True,
+                passLineList=not reuse_prepared_state,
+                passAtmosphere=not reuse_prepared_state,
+                passAbund=reuse_prepared_state,
                 updateLineList=self.update_linelist,
                 radial_velocity_mode=radial_velocity_mode,
                 linelist_mode=linelist_mode,
@@ -317,10 +328,17 @@ class SME_Solver:
                 vbroad_expend_ratio=vbroad_expend_ratio,
             )
         except AtmosphereError as ae:
+            self._smelib_state_prepared = False
             # Something went wrong (left the grid? Don't go there)
             # If returned value is not finite, the fit algorithm will not go there
             logger.debug(ae)
             return np.full(spec.size, np.inf)
+        except Exception:
+            self._smelib_state_prepared = False
+            raise
+        else:
+            if self._prepare_abundance_synthesis:
+                self._smelib_state_prepared = True
 
         segments = Synthesizer.check_segments(sme, segments)
 
@@ -746,6 +764,28 @@ class SME_Solver:
                 )
         return param_names
 
+    def _can_prepare_abundance_synthesis(
+        self, sme, *, linelist_mode, cdr_create
+    ):
+        """Return whether repeated calls may retain line-list/model state."""
+        variable_names = list(self.parameter_names)
+        if self.derived_param is not None:
+            variable_names.extend(self.derived_param.keys())
+
+        return (
+            bool(variable_names)
+            and all(_is_abund_parameter(name) for name in variable_names)
+            and not self.update_linelist
+            and linelist_mode == "all"
+            and not cdr_create
+            and str(getattr(sme, "line_select_method", "almax")).lower()
+            in ("almax", "internal")
+            and str(getattr(sme, "line_select_recompute", "if_stale")).lower()
+            != "always"
+            and str(getattr(sme.atmo, "method", "")).lower()
+            in ("grid", "embedded")
+        )
+
     @staticmethod
     def _validate_field_against_wave(sme, field_name):
         """Ensure a segmented field has same nseg and per-segment lengths as wave."""
@@ -782,6 +822,7 @@ class SME_Solver:
                     f"expected length {nw}, got {nf}."
                 )
 
+    @serialized_smelib_session
     def solve(
         self,
         sme,
@@ -891,6 +932,18 @@ class SME_Solver:
                 self.update_linelist += [idx]
         if self.update_linelist:
             self.update_linelist = np.unique(self.update_linelist)
+
+        self._smelib_state_prepared = False
+        self._prepare_abundance_synthesis = self._can_prepare_abundance_synthesis(
+            sme,
+            linelist_mode=linelist_mode,
+            cdr_create=cdr_create,
+        )
+        if self._prepare_abundance_synthesis:
+            logger.info(
+                "Reusing prepared SMElib line-list and atmosphere state for "
+                "abundance-only iterations"
+            )
 
         # Create appropiate bounds
         if bounds is None:
@@ -1044,6 +1097,7 @@ class SME_Solver:
         return sme
 
 
+@serialized_smelib_session
 def solve(
     sme,
     param_names=None,
@@ -1062,11 +1116,30 @@ def solve(
         )
         kwargs["cdr_database"] = None
     solver = SME_Solver(filename=filename, restore=restore)
-    return solver.solve(
-        sme,
-        param_names,
-        segments,
-        derived_param=derived_param,
-        dynamic_param=dynamic_param,
-        **kwargs,
+    synthesizer = getattr(solver, "synthesizer", None)
+    get_dll = getattr(synthesizer, "get_dll", None)
+    dll = get_dll() if get_dll is not None else getattr(synthesizer, "dll", None)
+    warm_control = getattr(dll, "SetEosWarmStartMode", None)
+    requested_parameters = param_names
+    if requested_parameters is None:
+        requested_parameters = getattr(sme, "fitparameters", ())
+    if requested_parameters is None:
+        requested_parameters = ()
+    use_eos_history = any(
+        str(name).strip().lower().startswith("abund")
+        for name in requested_parameters
     )
+    if warm_control is not None and use_eos_history:
+        warm_control(True)
+    try:
+        return solver.solve(
+            sme,
+            param_names,
+            segments,
+            derived_param=derived_param,
+            dynamic_param=dynamic_param,
+            **kwargs,
+        )
+    finally:
+        if warm_control is not None and use_eos_history:
+            warm_control(False)
