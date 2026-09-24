@@ -113,8 +113,8 @@ affected.
 - Float line-state storage, with double-precision arithmetic, changed tested
   normalized flux by at most about `1.6e-8` and changed no selected-line masks
   or physical ranges.
-- The release-candidate source suite passed 187 tests with one expected failure
-  in the recorded validation environment.
+- The release source suite passed 188 tests with one expected failure in the
+  recorded validation environment.
 
 ## Memory
 
