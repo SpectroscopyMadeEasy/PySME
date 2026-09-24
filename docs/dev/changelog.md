@@ -13,7 +13,7 @@ Detailed per-release changes are maintained on GitHub Releases:
 - Use the Git tags list for older historical versions.
 - Keep this page concise, focused on major milestones and migration notes.
 
-## v1.2.0 (release candidate)
+## v1.2.0
 
 - Reworked adaptive synthesis with continuum-opacity caching and
   generation-batched, interval-indexed transfer for plane-parallel and
