@@ -631,11 +631,8 @@ def test_adaptive_grid_is_invariant_to_mu_order(
 
     assert nw_reverse == nw_forward
     assert np.array_equal(wave_reverse, wave_forward)
-    # Spherical intensities have a separate pre-existing ray-order dependence;
-    # this regression scopes the spherical assertion to grid construction.
-    if not spherical:
-        assert np.array_equal(synth_reverse[::-1], synth_forward)
-        assert np.array_equal(cont_reverse[::-1], cont_forward)
+    assert np.array_equal(synth_reverse[::-1], synth_forward)
+    assert np.array_equal(cont_reverse[::-1], cont_forward)
 
 
 def test_continuum_scattering_source_mode_changes_spherical(
