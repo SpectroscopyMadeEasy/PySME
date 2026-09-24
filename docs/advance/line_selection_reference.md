@@ -26,6 +26,28 @@ In practice:
 - `line_select_method` decides how line metadata is generated/interpreted
 - `line_select_policy` decides how strictly that metadata is enforced
 
+## Line selection, line support, and transfer sampling
+
+These are separate stages:
+
+```text
+line_select_method / ALMAX / CDR -> retained-line membership
+line_range_s/e + accrt           -> physical wavelength support
+accwi                            -> adaptive transfer-grid refinement
+```
+
+With the default ALMAX configuration,
+`line_select_almax_threshold = None` makes ALMAX use `sme.accrt` for its
+precomputation. An explicit ALMAX threshold is passed to `ALMAXRange`, so it
+affects both membership and the physical ranges produced by that call; it is
+not currently a membership-only override.
+
+In the optimized adaptive path, both the selected-line mask and the physical
+`line_range_*` values are immutable during transfer. The historical sequential
+`MARK=2` rejection based on the blended disk-centre intensity is not applied.
+The `internal` method remains a separate established path and retains its own
+selection semantics.
+
 ## Fixed-grid interval lookup
 
 When valid `line_range_*` metadata is available, SMElib's fixed-grid transfer
@@ -256,12 +278,12 @@ unified name.
 ## Adaptive transfer-grid semantics
 
 When no `sme.wint` is supplied, plane-parallel and spherical synthesis with
-precomputed ALMAX or CDR line information constructs the transfer grid in
-refinement generations inside native SMElib. Each generation is evaluated
-through the indexed fixed-grid opacity path and the geometry-specific
-radiative-transfer integrator. The initial endpoints, line-centre seeds,
-0.3 km/s minimum spacing, and the `accwi` midpoint interpolation criterion
-retain the RKINTS definitions.
+valid ALMAX or CDR line information constructs the transfer grid in refinement
+generations inside native SMElib. Missing or stale metadata is normally
+recomputed before this point. Each generation is evaluated through the indexed
+fixed-grid opacity path and the geometry-specific radiative-transfer
+integrator. The initial endpoints, line-centre seeds, 0.3 km/s minimum spacing,
+and the `accwi` midpoint interpolation criterion retain the RKINTS definitions.
 
 The active line mask is fixed for the complete transfer calculation. `ALMAX`
 or CDR decides whether a line participates, `accrt` defines its wavelength
@@ -273,6 +295,10 @@ Supplying `sme.wint` continues to use that fixed grid directly.
 `sme.line_select_method = "internal"` retains legacy RKINTS because it does
 not provide the immutable active mask and physical ranges required by the
 indexed evaluator.
+
+Supplying only `sme.wave` does not select fixed-grid transfer. `sme.wave` is
+the requested output or observation grid; the internal adaptive grid is still
+used unless `sme.wint` is set.
 
 `sme.transfer_grid_method = "batched"` is the default. Set it to `"legacy"`
 for compatibility or reference calculations. The setting affects only

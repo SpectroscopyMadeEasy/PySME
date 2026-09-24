@@ -11,6 +11,7 @@ fitting, line-filtering strategies for performance, and developer-oriented notes
    profile_nlte.md
    line_filtering.md
    line_selection_reference.md
+   synthesis_performance.md
    how-to.md
    fordev.md
    faq.md

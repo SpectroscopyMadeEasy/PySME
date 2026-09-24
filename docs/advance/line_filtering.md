@@ -29,6 +29,19 @@ When `linelist_mode="dynamic"`:
 
 This can significantly reduce runtime for long or segmented spectra.
 
+Dynamic filtering is not the same as transfer-grid refinement. The complete
+model is:
+
+```text
+line_select_method / ALMAX / CDR -> retained lines
+line_range_s/e + accrt           -> physical wavelength support
+accwi                            -> adaptive wavelength refinement
+```
+
+In the optimized adaptive path, retained-line membership and physical ranges
+remain fixed throughout transfer. `accwi` samples the spectrum; it does not
+perform a second sequential weak-line rejection.
+
 For a complete parameter-by-parameter reference, including deprecated aliases
 and recommended replacements, see [](line_selection_reference.md).
 
@@ -86,7 +99,9 @@ first synthesis; regenerate it or disable `line_precompute_database`.
 
 `line_select_almax_threshold` is the single ALMAX threshold parameter for both
 rules. If it is `None`, it falls back to `sme.accrt` (legacy-compatible
-behavior).
+behavior). The value is passed to `ALMAXRange`, so an explicit override also
+affects the physical ranges produced by that precomputation; it is not a
+membership-only control.
 
 `accrt` and `line_select_almax_threshold` are local line-to-continuum opacity
 ratio cutoffs, not bounds on the final normalized-flux error. The default is

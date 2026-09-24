@@ -2,55 +2,47 @@
 
 ## Unreleased
 
-### Changed
+### Performance
 
-- Streamed counted long-format VALD `extract stellar` files in bounded chunks
-  instead of retaining multiple complete text copies during parsing. Other
-  VALD formats retain the established parser.
-- Extended generation-batched adaptive transfer for precomputed ALMAX/CDR line
-  masks to spherical atmospheres. Plane-parallel and spherical transfer now
-  share the seed/refinement scheduler and sorted-generation interval index,
-  while retaining their geometry-specific radiative-transfer integration.
-  The active line mask and physical ranges remain immutable; fixed wavelength
-  grids, explicit legacy mode, and legacy internal line selection are unchanged.
-- Sized internally generated transfer-grid storage from the wavelength span and
-  number of line centres when the historical 400,000-point allocation is not
-  sufficient. This allows line-rich 800 A single-segment synthesis to complete
-  without increasing the allocation for ordinary narrow segments.
-- Reused the resident SMElib line list and atmosphere/model during
-  abundance-only `solve(...)` iterations. Abundances, EOS, opacity, ALMAX line
-  selection/ranges, and transfer are still recomputed for every changed trial;
-  mixed-parameter and CDR-selection fits retain the full setup path.
-- Invalidated ALMAX metadata whenever the effective elemental abundance vector
-  changes. Recalculation occurs after the new abundances and ionization state
-  reach SMElib, and the following transfer reuses the resulting line-opacity
-  state. This prevents abundance fits from retaining a stale strong-line mask
-  or validity range.
-- Made the adaptive continuum-opacity grid the default for line-info
-  precomputation and synthesis. It uses a nominal 1 A grid, physical
-  H I/Mg I/Si I knots, exact edge guard bands, and recursive curvature
-  refinement. `sme.continuum_grid = "exact"` retains the reference path.
-- Fixed internal fixed-grid transfer so `GetLineRange` returns opacity-based
-  validity ranges instead of the `wlcent +/- 150 A` placeholders initialized
-  by `InputLineList`. This makes CDR range metadata usable by interval-based
-  line selection.
-- Made ALMAX-based line selection the default. A missing or stale ALMAX result
-  in the non-parallel, full-line-list workflow is now calculated in the main
-  SMElib instance so the first transfer reuses its line-opacity and Voigt
-  state. Set `sme.line_select_method = "internal"` for the legacy behavior.
-- Clarified that `accrt` is a local line-to-continuum opacity-ratio threshold,
-  not a bound on the final synthesized-spectrum error.
-- Moved cumulative wavelength-bin line selection into SMElib as
-  `SelectStrongLinesByBins`. CDR and optional binned-ALMAX selection now share
-  this native implementation while Python dynamic line-list pruning remains
-  available.
-- Resampled every limb-angle line and continuum intensity onto the common
-  regular log-wavelength grid before disk integration and broadening. This
-  removes neighbour-dependent flux changes when SMElib supplies an irregular
-  adaptive transfer grid.
-- Integrated diagnostic contribution functions directly over projected
-  limb-angle areas, avoiding spectral spline/rebin operations on their
-  atmospheric-depth axis.
+- Reworked adaptive synthesis with edge-aware continuum-opacity caching and
+  generation-batched, interval-indexed transfer for plane-parallel and
+  spherical atmospheres. Complete synthesis was approximately 19--40x faster
+  in the canonical 10 A validation matrix; gains vary with line density and
+  wavelength coverage.
+- Made ALMAX-based line selection the default and reused its immediately
+  prepared line-opacity state for the following transfer when safe.
+- Reused the resident line list and atmosphere/model during abundance-only
+  `solve(...)` iterations while still recomputing abundance-dependent EOS,
+  opacity, ALMAX state, and transfer.
+- Reduced large-line-list memory through float line-state cache storage with
+  double-precision arithmetic and incremental parsing of counted long-format
+  VALD `extract stellar` files.
+
+### Correctness
+
+- Removed historical order-dependent second weak-line pruning from the
+  optimized path and kept precomputed selected-line masks and physical ranges
+  immutable during transfer.
+- Corrected fixed-grid physical line ranges, irregular-grid flux integration,
+  spherical grazing-ray evaluation order, and contribution-function disk
+  integration.
+- Invalidated ALMAX metadata on effective abundance changes and recalculated it
+  only after the new abundances and ionization state reached SMElib.
+- Replaced the historical fixed 400,000-point adaptive-transfer ceiling with
+  dynamic capacity sizing for unusually wide, line-rich segments.
+
+### Compatibility
+
+- `sme.transfer_grid_method = "legacy"` retains sequential adaptive transfer
+  for compatibility/reference calculations, and
+  `sme.line_select_method = "internal"` retains established internal selection.
+  User-supplied fixed transfer grids retain the sorted indexed path.
+- `sme.continuum_grid = "exact"` retains exact continuum evaluation.
+- CDR and optional binned-ALMAX selection now share SMElib's cumulative-bin
+  selector, while Python dynamic line-list filtering remains available.
+- Clarified that `accrt` is a local line-opacity/support threshold and `accwi`
+  is a local adaptive-grid refinement criterion; neither is a global bound on
+  final synthesized-spectrum error.
 
 ## v1.1.0 - 2026-09-15
 

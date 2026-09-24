@@ -46,6 +46,20 @@ If you plan to run NLTE, you should use **VALD long format**.
 In PySME, NLTE relies on the extra level information available in long format;
 short format does not provide enough information for that workflow.
 
+### Large VALD files and memory
+
+PySME v1.2 parses counted VALD `long + extract stellar` files incrementally,
+reducing temporary parser memory while preserving the returned line-list
+content. In the 1.26-million-line validation case, parser peak RSS decreased by
+about 56%. Other VALD variants retain the established parser.
+
+Very wide, line-rich, single-segment synthesis can still require several GiB
+of memory because the parsed pandas line list and native line-by-depth state
+scale with line count and atmosphere depth. This is not a typical requirement
+for narrow or moderately sized line lists. When running several independent
+syntheses in processes, choose the worker count with per-process memory in
+mind.
+
 ## Line parameters
 
 The short format fields are

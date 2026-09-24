@@ -33,6 +33,32 @@ specific intensities or disk-integrated flux:
 This is useful when you want the radiative-transfer output itself (as a function
 of angle), rather than only the final integrated spectrum.
 
+## Internal transfer wavelength grid
+
+`sme.wint` is the native radiative-transfer wavelength grid. When adaptive
+synthesis is used, it is generally non-uniform and may be substantially finer
+than the user or observation grid in `sme.wave`. Supplying only `sme.wave`
+therefore still allows the optimized adaptive transfer path. Supplying
+`sme.wint` explicitly instead requests fixed-grid native transfer.
+
+With `specific_intensities_only = True`, PySME stores the native, trimmed
+transfer output directly:
+
+- `sme.wint[segment]`: native transfer wavelengths;
+- `sme.sint[segment]`: line-plus-continuum intensities with shape
+  `(nmu, nwint)`;
+- `sme.cint[segment]`: continuum intensities with shape `(nmu, nwint)`.
+
+No disk integration, rotational/macroturbulent broadening, instrumental
+broadening, or interpolation to `sme.wave` is applied in this mode.
+
+For ordinary flux synthesis, the native `wint` can be irregular. PySME first
+resamples every angle-dependent line and continuum intensity to one common
+regular log-wavelength (constant-velocity) grid. Disk integration and
+velocity-space broadening then operate on that common grid before the result
+is interpolated to `sme.wave`. A native irregular `wint` is therefore not an
+observation grid.
+
 ## Spherical atmosphere flux radius
 
 For spherical atmospheres, the raw radiative-transfer output corresponds to the

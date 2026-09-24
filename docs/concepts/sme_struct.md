@@ -74,14 +74,21 @@ from IDL SME. It is recommend however to use the new variables.
     specify the exact wavelength grid of the synthetic
     observation. Note that this is not an Illiffe vector.
 :wint:
-    Optional wavelength grid passed to SMElib `Transf` as adaptive grid for each segment.
+    Optional fixed wavelength grid passed directly to SMElib `Transf` for each segment.
     Accepts the same segment-aware input styles as `wave`:
     `numpy.ndarray` (single segment), `list` of arrays (multi-segment),
     or `Iliffe_vector`.
     If provided, `sme.wint[segment]` is used directly for synthesis.
-    If not provided, PySME can reuse an internal cached adaptive grid
+    If not provided, PySME can reuse an internally cached adaptive grid
     when `reuse_wavelength_grid=True`; otherwise SMElib computes a new
     adaptive grid.
+    Supplying `wave` alone does not set this fixed transfer grid.
+:sint:
+    Line-plus-continuum specific intensities on `wint`, stored per segment
+    when `specific_intensities_only=True`.
+:cint:
+    Continuum specific intensities on `wint`, stored per segment when
+    `specific_intensities_only=True`.
 :continuum_scattering_source:
     Boolean flag controlling whether coherent continuum scattering is included in the continuum source function during synthesis.
     The default is `False`, which keeps the historical PySME behavior.
@@ -173,13 +180,12 @@ For more information see [system_info](../concepts/system_info.md).
 
     See the [SMElib v6.13.18 Brackett documentation](https://github.com/SpectroscopyMadeEasy/SMElib/blob/v6.13.18/docs/brackett_stark_convolution.md) for its scope and validation.
 :accrt:
-    Local line-to-continuum opacity-ratio threshold used by SMElib to reject
-    weak lines and determine finite line-validity ranges on its adaptive grid.
+    Default local line-to-continuum opacity-ratio threshold used to determine
+    finite physical line-validity ranges.
     ALMAX line selection also uses this value unless
-    `line_select_almax_threshold` is set explicitly. It is not a bound on the
-    error of the final synthesized spectrum. With the legacy `internal` line
-    selection and a fixed `sme.wint`, it does not control wavelength-grid
-    accuracy.
+    `line_select_almax_threshold` is set explicitly; that override is passed to
+    the ALMAX/range precomputation. It is not a bound on the error of the final
+    synthesized spectrum and does not control wavelength-grid accuracy.
 :accwi:
     Threshold for SMElib's adaptive wavelength-grid heuristic. The heuristic
     compares a newly synthesized midpoint intensity with a linear midpoint
@@ -190,10 +196,22 @@ For more information see [system_info](../concepts/system_info.md).
     It is ignored when a fixed `sme.wint` is supplied and is not a global
     interpolation-error guarantee.
 :transfer_grid_method:
-    Selects the plane-parallel adaptive transfer implementation. `batched`
+    Selects the plane-parallel or spherical adaptive transfer implementation. `batched`
     (default) evaluates complete refinement generations with immutable
     precomputed ALMAX/CDR masks and physical ranges. `legacy` retains the
     sequential RKINTS implementation for compatibility and reference tests.
+    It has no effect when a fixed `sme.wint` is supplied.
+:continuum_grid:
+    Continuum-opacity evaluation mode. `adaptive` (default) uses the
+    edge-aware adaptive cache; `exact` evaluates the continuum exactly at
+    every query; a positive number selects a fixed edge-aware spacing in A.
+:continuum_grid_base_step:
+    Nominal adaptive continuum-grid spacing in A (default `1.0`).
+:continuum_grid_rtol:
+    Local adaptive continuum interpolation tolerance relative to total
+    extinction (default `1e-3`). It is not a global flux-error bound.
+:continuum_grid_min_step:
+    Minimum recursive continuum-grid interval width in A (default `1e-3`).
 :version: The version of sme used to create this structure and spectrum
 :id:
     The date and time when this structure or the
