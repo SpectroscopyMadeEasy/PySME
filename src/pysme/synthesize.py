@@ -55,6 +55,47 @@ logger = logging.getLogger(__name__)
 
 clight = speed_of_light * 1e-3  # km/s
 
+_DEFAULT_ADAPTIVE_TRANSFER_CAPACITY = 400_000
+_ADAPTIVE_TRANSFER_MIN_VELOCITY_KMS = 0.3
+
+
+def _adaptive_transfer_capacity(linelist, wavelength_start, wavelength_end):
+    """Conservative storage bound for an internally generated transfer grid.
+
+    RKINTS can seed two nodes per line centre and can subsequently bisect down
+    to its 0.3 km/s spacing floor.  The historical fixed 400k allocation is
+    ample for ordinary segments but can be exceeded by a single line-rich
+    several-hundred-Angstrom segment.
+    """
+    lower = float(wavelength_start)
+    upper = float(wavelength_end)
+    if (
+        not np.isfinite(lower)
+        or not np.isfinite(upper)
+        or lower <= 0
+        or upper <= lower
+    ):
+        return _DEFAULT_ADAPTIVE_TRANSFER_CAPACITY
+
+    try:
+        centres = np.asarray(linelist.wlcent, dtype=float)
+    except (AttributeError, TypeError, ValueError):
+        centres = np.empty(0, dtype=float)
+    centres_in_segment = np.count_nonzero(
+        np.isfinite(centres) & (centres > lower) & (centres < upper)
+    )
+    minimum_spacing_intervals = int(
+        np.ceil(
+            np.log(upper / lower)
+            * clight
+            / _ADAPTIVE_TRANSFER_MIN_VELOCITY_KMS
+        )
+    )
+    conservative_bound = (
+        2 * int(centres_in_segment) + 2 * minimum_spacing_intervals + 16
+    )
+    return max(_DEFAULT_ADAPTIVE_TRANSFER_CAPACITY, conservative_bound)
+
 
 def _build_smelib_line_index_map(discard_mask):
     """Map an imported Python line-list view onto SMElib's compact indices."""
@@ -93,6 +134,23 @@ def _brackett_convolution_mode(sme):
         mode = os.environ.get("PYSME_H_STARK_CONVOLUTION", "legacy")
         return "convolution" if mode == "convolution" else "legacy"
     return "convolution" if str(mode).lower() == "convolution" else "legacy"
+
+
+def _lineinfo_abundance_state(sme):
+    """Return the effective abundance vector used by SMElib."""
+    return np.asarray(sme.abund(type="H=12", raw=True), dtype=np.float64)
+
+
+def _lineinfo_abundances_match(stored, sme):
+    """Return whether stored line information used the current abundances."""
+    if stored is None:
+        return False
+
+    stored = np.asarray(stored, dtype=np.float64)
+    current = _lineinfo_abundance_state(sme)
+    return stored.shape == current.shape and np.array_equal(
+        stored, current, equal_nan=True
+    )
 
 
 @dataclass(frozen=True)
@@ -1364,6 +1422,7 @@ class Synthesizer:
         )
         sme.linelist.almax_paras_thres = getattr(sme, "line_select_stale_thres", {}).copy()
         sme.linelist.almax_paras_h_stark_convolution = _brackett_convolution_mode(sme)
+        sme.linelist.almax_abund = _lineinfo_abundance_state(sme).copy()
         return sme
     
     # @profile
@@ -1620,6 +1679,14 @@ class Synthesizer:
             accrt_th = float(stale.get("accrt", 0.0))
 
             almax_paras = getattr(sme.linelist, "almax_paras", None)
+            stored_almax_abund = getattr(sme.linelist, "almax_abund", None)
+            almax_abundance_changed = (
+                stored_almax_abund is not None
+                and not _lineinfo_abundances_match(stored_almax_abund, sme)
+            )
+            almax_abundance_stale = (
+                stored_almax_abund is None or almax_abundance_changed
+            )
             almax_mode = getattr(sme.linelist, "almax_paras_h_stark_convolution", None)
             current_brackett_mode = _brackett_convolution_mode(sme)
             has_cols = {"almax_ratio", "line_range_s", "line_range_e", "strong"}.issubset(
@@ -1629,6 +1696,8 @@ class Synthesizer:
             if almax_mode is not None and str(almax_mode).lower() != current_brackett_mode:
                 stale_model = True
             if almax_paras is None:
+                stale_model = True
+            if almax_abundance_stale:
                 stale_model = True
             if almax_paras is not None:
                 almax_paras = np.asarray(almax_paras, dtype=float).ravel()
@@ -1669,18 +1738,31 @@ class Synthesizer:
                 # ALMAX after that DLL's model/opacity setup.  The immediately
                 # following Transf can then consume the one-shot LINEOPAC/Voigt
                 # state instead of calculating it a second time.  Dynamic
-                # filtering needs the ranges before InputLineList, while cache
-                # and parallel workflows intentionally keep their existing
-                # precompute paths.
+                # filtering needs the ranges before InputLineList, while
+                # parallel workflows retain their separate precompute path.
+                # An atmosphere-only cache is bypassed after an observed
+                # abundance change because its key cannot prove a match.
                 defer_almax_to_main_dll = bool(
                     allow_compute
-                    and passLineList
+                    and (passLineList or passAtmosphere or passAbund)
                     and linelist_mode == "all"
                     and not ls_cfg["parallel"]
-                    and line_precompute_database is None
+                    and (
+                        line_precompute_database is None
+                        or almax_abundance_changed
+                    )
                     and len(segments) > 0
                 )
                 if not defer_almax_to_main_dll:
+                    # Cached ALMAX entries are not keyed by the full
+                    # element-by-element abundance vector.  Once abundance
+                    # changes, calculate fresh information instead of loading
+                    # an otherwise matching but physically stale cache entry.
+                    almax_database = (
+                        False
+                        if almax_abundance_changed
+                        else line_precompute_database
+                    )
                     try:
                         sme = self.update_almax(
                             sme,
@@ -1691,8 +1773,10 @@ class Synthesizer:
                             parallel=ls_cfg["parallel"],
                             n_jobs=ls_cfg["n_jobs"],
                             worker_output=ls_cfg["worker_output"],
-                            line_precompute_database=line_precompute_database,
-                            cdr_database=cdr_database,
+                            line_precompute_database=almax_database,
+                            cdr_database=(
+                                False if almax_abundance_changed else cdr_database
+                            ),
                             cdr_create=cdr_create,
                             show_progress_bars=util.show_progress_bars,
                             allow_compute=allow_compute,
@@ -2210,6 +2294,12 @@ class Synthesizer:
         else:
             wint_seg = None
 
+        nwmax = None
+        if wint_seg is None:
+            nwmax = _adaptive_transfer_capacity(
+                sme.linelist, wbeg - 2.0, wend + 2.0
+            )
+
         with _temporary_brackett_convolution_env(sme):
             if not opacity_is_prepared:
                 dll.InputWaveRange(wbeg-2, wend+2)
@@ -2223,6 +2313,7 @@ class Synthesizer:
                 accwi=sme.accwi,
                 keep_lineop=keep_line_opacity and not sme.first_segment,
                 wave=wint_seg,
+                **({"nwmax": nwmax} if nwmax is not None else {}),
             )
 
         # Insert the new 3DNLTE correction

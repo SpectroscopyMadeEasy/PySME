@@ -131,6 +131,64 @@ def test_continuum_opacity_grid_api(libsme):
     libsme.SetContinuumOpacityGrid("exact")
 
 
+def test_continuum_opacity_grid_invalidation(
+    libsme, linelist, teff, grav, vturb, atmo, abund
+):
+    """Cached continuum components follow every state that can affect them."""
+
+    def populate():
+        libsme.GetContinuumOpacityComponents(float(linelist.wlcent[0]))
+        stats = libsme.GetContinuumOpacityGridStats()
+        assert stats["queries"] == 1
+        assert stats["nodes"] > 0
+
+    def assert_cleared():
+        assert libsme.GetContinuumOpacityGridStats() == {
+            "queries": 0,
+            "exact_calls": 0,
+            "nodes": 0,
+            "refined_intervals": 0,
+            "max_test_error": 0.0,
+        }
+
+    libsme.SetLibraryPath()
+    libsme.InputLineList(linelist)
+    libsme.InputModel(teff, grav, vturb, atmo)
+    libsme.InputAbund(abund)
+    libsme.Ionization(0)
+    libsme.SetContinuumOpacityGrid("adaptive", rtol=1e-3)
+
+    populate()
+    # Atomic/molecular line data do not enter CONTOP.  The cache therefore
+    # remains valid across a line-list-only update; the usual following EOS
+    # update still clears it because the species/electron state may change.
+    libsme.InputLineList(linelist)
+    assert libsme.GetContinuumOpacityGridStats()["nodes"] > 0
+    libsme.Ionization(0)
+    assert_cleared()
+
+    populate()
+    libsme.InputModel(teff, grav, vturb, atmo)
+    assert_cleared()
+
+    # Re-establish a complete thermodynamic state after InputModel.
+    libsme.InputAbund(abund)
+    libsme.Ionization(0)
+    populate()
+    libsme.InputAbund(abund)
+    assert_cleared()
+
+    libsme.Ionization(0)
+    populate()
+    libsme.Ionization(0)
+    assert_cleared()
+
+    populate()
+    libsme.SetContinuumOpacityGrid("adaptive", rtol=3e-4)
+    assert_cleared()
+    libsme.SetContinuumOpacityGrid("exact")
+
+
 def test_eos_warm_start_mode_tolerates_older_extension(libsme, monkeypatch):
     import pysme.sme_synth as sme_synth
 

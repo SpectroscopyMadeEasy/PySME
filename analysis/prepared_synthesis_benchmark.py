@@ -3,11 +3,14 @@
 This is a bounded prototype for a possible ``PreparedSynthesis`` lifecycle.
 It compares the current repeated-synthesis path, which re-inputs the line list
 and model on every call, with a prepared path that keeps those unchanged inputs
-resident in SMElib.  Both paths still run InputAbund, Ionization, Opacity, and
-Transf for every abundance point and both use the exact EOS warm-start mode.
+resident in SMElib.  Both paths still run InputAbund, Ionization, Opacity,
+ALMAX/range selection, and Transf after every abundance change, and both use
+the exact EOS warm-start mode.
 
-The initial atmosphere interpolation and ALMAX/range preparation are excluded
-from timed evaluations in both paths.  No public API is changed by this script.
+The initial atmosphere interpolation and initial ALMAX/range preparation are
+excluded from timed evaluations in both paths.  Abundance-triggered ALMAX
+recomputations remain inside the timed evaluations.  No public API is changed
+by this script.
 """
 
 from __future__ import annotations

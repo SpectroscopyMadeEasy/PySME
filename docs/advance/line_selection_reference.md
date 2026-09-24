@@ -83,6 +83,13 @@ refining physically irrelevant components merely because their own value is
 close to zero. `"exact"` is intended for reference calculations and numerical
 regression tests; normal synthesis does not require choosing a fixed spacing.
 
+The cache is discarded when the atmosphere (including geometry and opacity
+flags), abundance vector, ionization/EOS state, or grid configuration changes.
+A line-list-only update does not invalidate it because atomic and molecular
+line data do not enter the continuous-opacity calculation; the normal
+line-list workflow subsequently runs `Ionization`, which does invalidate the
+cache when the species or electron state may have changed.
+
 ## Shared parameters
 
 ### `linelist_mode`
@@ -145,6 +152,10 @@ Dictionary of stale thresholds, typically including:
 - `accrt`
 
 Used to decide whether previously computed metadata is still valid.
+
+For ALMAX, effective elemental abundances are checked separately and exactly;
+they do not use these tolerances. Any abundance change makes the stored ALMAX
+ratio, strong-line mask, and validity ranges stale.
 
 ### `sme.line_precompute_database`
 
@@ -244,10 +255,11 @@ unified name.
 
 ## Adaptive transfer-grid semantics
 
-When no `sme.wint` is supplied, plane-parallel synthesis with precomputed
-ALMAX or CDR line information constructs the transfer grid in refinement
-generations inside native SMElib. Each generation is evaluated through the
-indexed fixed-grid opacity path. The initial endpoints, line-centre seeds,
+When no `sme.wint` is supplied, plane-parallel and spherical synthesis with
+precomputed ALMAX or CDR line information constructs the transfer grid in
+refinement generations inside native SMElib. Each generation is evaluated
+through the indexed fixed-grid opacity path and the geometry-specific
+radiative-transfer integrator. The initial endpoints, line-centre seeds,
 0.3 km/s minimum spacing, and the `accwi` midpoint interpolation criterion
 retain the RKINTS definitions.
 
@@ -257,9 +269,10 @@ support, and `accwi` controls wavelength sampling only. In particular,
 `accwi` no longer permanently removes a line based on the blended disk-centre
 depth at its centre.
 
-Supplying `sme.wint` continues to use that fixed grid directly. Spherical
-models and `sme.line_select_method = "internal"` retain legacy RKINTS while
-the batched path is validated for those configurations.
+Supplying `sme.wint` continues to use that fixed grid directly.
+`sme.line_select_method = "internal"` retains legacy RKINTS because it does
+not provide the immutable active mask and physical ranges required by the
+indexed evaluator.
 
 `sme.transfer_grid_method = "batched"` is the default. Set it to `"legacy"`
 for compatibility or reference calculations. The setting affects only

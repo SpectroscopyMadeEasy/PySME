@@ -778,6 +778,8 @@ class SME_Solver:
             and not self.update_linelist
             and linelist_mode == "all"
             and not cdr_create
+            and str(getattr(sme, "line_select_method", "almax")).lower()
+            in ("almax", "internal")
             and str(getattr(sme, "line_select_recompute", "if_stale")).lower()
             != "always"
             and str(getattr(sme.atmo, "method", "")).lower()

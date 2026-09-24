@@ -56,6 +56,12 @@ and recommended replacements, see [](line_selection_reference.md).
 so one folder can safely store multiple linelists and both methods together.
 Legacy `cdr_database` is still accepted as a deprecated alias.
 
+The current on-disk cache key does not encode a custom element-by-element
+abundance pattern. After ALMAX metadata has been associated with an in-memory
+line list, PySME detects an abundance change and bypasses that cache. A cache
+built under a different custom abundance pattern should not be supplied on the
+first synthesis; regenerate it or disable `line_precompute_database`.
+
 ### Recompute vs. reuse
 
 - `line_select_recompute` controls whether line metadata is recomputed when it
@@ -63,6 +69,10 @@ Legacy `cdr_database` is still accepted as a deprecated alias.
   - `if_stale`: recompute only when needed
   - `always`: always recompute
   - `never`: require existing metadata or cache entries
+- ALMAX staleness includes an exact comparison of the effective elemental
+  abundance vector. Changing any abundance therefore triggers new ALMAX ratios,
+  strong-line flags, and validity ranges. This abundance check is independent
+  of the approximate atmosphere thresholds in `line_select_stale_thres`.
 - `line_select_reuse` is deprecated. Non-default values still enable a limited
   internal reuse path by keeping line opacity around, but this is not a fully
   developed cache policy and should not be treated as a stable public API.
@@ -86,6 +96,12 @@ For a missing or stale ALMAX result in non-parallel `"all"` mode, PySME runs
 `ALMAXRange` in the synthesis DLL and immediately reuses its line-opacity and
 Voigt state in the first transfer calculation. Cached, parallel, and
 `"dynamic"` workflows retain their separate precompute path.
+
+During an abundance-only solve, PySME may retain the resident line list and
+atmosphere, but it does not retain abundance-dependent ALMAX results. The new
+abundances and ionization state are installed first, then `ALMAXRange` is
+rerun. Prepared-state reuse is not enabled for CDR selection because CDR cache
+metadata is not currently abundance-aware.
 
 CDR does not have a separate `use_bins` switch because its current strong-line
 selection already uses the bin-based helper internally.

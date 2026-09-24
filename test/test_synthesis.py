@@ -101,6 +101,7 @@ def test_abundance_only_prepared_state_matches_full_reinput(sme_2segments):
         passAtmosphere=False,
         passAbund=True,
     )
+    sme_2segments.line_select_recompute = "always"
     reference = synth.synthesize_spectrum(
         sme_2segments,
         updateStructure=False,
@@ -118,6 +119,7 @@ def test_abundance_only_prepared_state_matches_full_reinput(sme_2segments):
 class _DummyDLL:
     def __init__(self, transf_wave=None, discard_mask=None, nlte_flags=None):
         self.last_wave = "unset"
+        self.last_nwmax = None
         self.transf_wave = transf_wave
         self.discard_mask = discard_mask
         self.nlte_flags = nlte_flags
@@ -186,9 +188,10 @@ class _DummyDLL:
             )
         )
 
-    def Transf(self, mu, accrt, accwi, keep_lineop, wave=None):
+    def Transf(self, mu, accrt, accwi, keep_lineop, wave=None, nwmax=None):
         self.events.append("Transf")
         self.last_wave = wave
+        self.last_nwmax = nwmax
         self.brackett_mode = os.environ.get("PYSME_H_STARK_CONVOLUTION")
         if wave is None:
             if self.transf_wave is None:
@@ -448,6 +451,21 @@ def test_synthesize_segment_populates_cache_when_no_wint_available():
     assert np.allclose(synth.wint[0], np.linspace(5000.0, 5001.0, 5))
 
 
+def test_synthesize_segment_sizes_line_rich_adaptive_transfer_storage():
+    dll = _DummyDLL()
+    synth = Synthesizer(dll=dll)
+    sme = _minimal_sme()
+    sme.wran = [[4800.0, 5600.0]]
+    sme.linelist._lines = pd.DataFrame(
+        {"wlcent": np.linspace(4800.0, 5600.0, 300_000)}
+    )
+
+    synth.synthesize_segment(sme, 0, reuse_wavelength_grid=False)
+
+    assert dll.last_wave is None
+    assert dll.last_nwmax > 600_000
+
+
 def test_synthesize_segment_resamples_line_and_continuum_before_flux_integration(
     monkeypatch,
 ):
@@ -467,7 +485,7 @@ def test_synthesize_segment_resamples_line_and_continuum_before_flux_integration
         [2.0 + (imu + 1) * (irregular - irregular[0]) for imu in range(sme.nmu)]
     )
 
-    def transf(mu, accrt, accwi, keep_lineop, wave=None):
+    def transf(mu, accrt, accwi, keep_lineop, wave=None, nwmax=None):
         wint = irregular if wave is None else np.asarray(wave, dtype=float)
         assert np.array_equal(wint, irregular)
         return len(wint), wint, sint_raw.copy(), cint_raw.copy()
@@ -674,6 +692,70 @@ def test_default_almax_uses_main_dll_immediately_before_first_transf():
     assert relevant == ["Opacity", "ALMAXRange", "InputLinePrecomputedInfo", "Transf"]
     assert np.isfinite(sme.linelist["almax_ratio"][0])
     assert np.isnan(sme.linelist["almax_ratio"][1])
+
+
+def test_abundance_change_recomputes_almax_after_input_abund():
+    dll = _DummyDLL()
+    synth = Synthesizer(dll=dll)
+    sme = _minimal_sme()
+
+    synth.synthesize_spectrum(
+        sme,
+        passAtmosphere=False,
+        passNLTE=False,
+        updateStructure=False,
+    )
+    previous_abund = np.asarray(sme.linelist.almax_abund).copy()
+
+    dll.events.clear()
+    synth.synthesize_spectrum(
+        sme,
+        passLineList=False,
+        passAtmosphere=False,
+        passAbund=True,
+        passNLTE=False,
+        updateStructure=False,
+    )
+    assert "ALMAXRange" not in dll.events
+
+    sme.abund.A["Fe"] += 0.2
+    dll.events.clear()
+    synth.synthesize_spectrum(
+        sme,
+        passLineList=False,
+        passAtmosphere=False,
+        passAbund=True,
+        passNLTE=False,
+        updateStructure=False,
+    )
+
+    relevant = [
+        event
+        for event in dll.events
+        if event
+        in {
+            "InputAbund",
+            "Ionization",
+            "Opacity",
+            "ALMAXRange",
+            "InputLinePrecomputedInfo",
+            "Transf",
+        }
+    ]
+    assert relevant == [
+        "InputAbund",
+        "Ionization",
+        "Opacity",
+        "ALMAXRange",
+        "InputLinePrecomputedInfo",
+        "Transf",
+    ]
+    assert not np.array_equal(previous_abund, sme.linelist.almax_abund)
+    assert np.array_equal(
+        np.asarray(sme.linelist.almax_abund),
+        np.asarray(sme.abund(type="H=12", raw=True)),
+        equal_nan=True,
+    )
 
 
 def test_specific_intensities_only_updates_sme_and_trims_to_wran():

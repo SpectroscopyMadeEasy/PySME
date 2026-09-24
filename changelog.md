@@ -10,10 +10,19 @@
   while retaining their geometry-specific radiative-transfer integration.
   The active line mask and physical ranges remain immutable; fixed wavelength
   grids, explicit legacy mode, and legacy internal line selection are unchanged.
+- Sized internally generated transfer-grid storage from the wavelength span and
+  number of line centres when the historical 400,000-point allocation is not
+  sufficient. This allows line-rich 800 A single-segment synthesis to complete
+  without increasing the allocation for ordinary narrow segments.
 - Reused the resident SMElib line list and atmosphere/model during
-  abundance-only `solve(...)` iterations. Abundances, EOS, opacity, and
-  transfer are still recomputed for every trial; mixed-parameter fits and
-  workflows requiring line-selection recomputation retain the full setup path.
+  abundance-only `solve(...)` iterations. Abundances, EOS, opacity, ALMAX line
+  selection/ranges, and transfer are still recomputed for every changed trial;
+  mixed-parameter and CDR-selection fits retain the full setup path.
+- Invalidated ALMAX metadata whenever the effective elemental abundance vector
+  changes. Recalculation occurs after the new abundances and ionization state
+  reach SMElib, and the following transfer reuses the resulting line-opacity
+  state. This prevents abundance fits from retaining a stale strong-line mask
+  or validity range.
 - Made the adaptive continuum-opacity grid the default for line-info
   precomputation and synthesis. It uses a nominal 1 A grid, physical
   H I/Mg I/Si I knots, exact edge guard bands, and recursive curvature

@@ -312,6 +312,10 @@ missing or stale. `line_select_reuse` is deprecated; non-default values only
 trigger a limited internal reuse path and should not be treated as a stable
 public caching policy.
 
+ALMAX metadata is abundance-dependent. With `if_stale`, changing any effective
+elemental abundance automatically recomputes ALMAX ratios and line ranges after
+the new abundance and ionization state have been installed in SMElib.
+
 ALMAX mode supports two strong-line rules:
 
 - `sme.line_select_almax_use_bins = False`:

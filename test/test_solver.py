@@ -178,6 +178,12 @@ def test_prepared_synthesis_is_limited_to_stable_abundance_only_state():
         sme, linelist_mode="all", cdr_create=False
     )
 
+    sme.line_select_method = "cdr"
+    assert not solver._can_prepare_abundance_synthesis(
+        sme, linelist_mode="all", cdr_create=False
+    )
+    sme.line_select_method = "almax"
+
     solver.parameter_names = ["Abund Ti", "teff"]
     assert not solver._can_prepare_abundance_synthesis(
         sme, linelist_mode="all", cdr_create=False

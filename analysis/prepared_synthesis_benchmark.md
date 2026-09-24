@@ -10,18 +10,21 @@ lifecycles; no public `PreparedSynthesis` object is added.
 The reference path repeats the current sequence on every evaluation:
 
 ```text
-InputLineList -> InputModel -> InputAbund -> Ionization -> Opacity -> Transf
+InputLineList -> InputModel -> InputAbund -> Ionization -> Opacity
+              -> ALMAXRange -> InputLinePrecomputedInfo -> Transf
 ```
 
 The prepared path performs the full sequence once, then repeats only:
 
 ```text
-InputAbund -> Ionization -> Opacity -> Transf
+InputAbund -> Ionization -> Opacity
+           -> ALMAXRange -> InputLinePrecomputedInfo -> Transf
 ```
 
 Both paths enable the existing exact EOS warm start.  The prepared path does
-not reuse EOS output, continuum opacity, or line opacity across abundance
-changes.
+not reuse ALMAX/range metadata, EOS output, continuum opacity, or line opacity
+across abundance changes.  `Transf` can consume the opacity/Voigt state from
+the immediately preceding `ALMAXRange`, avoiding a duplicate `LINEOPAC` pass.
 
 ## Inputs
 
@@ -42,32 +45,28 @@ ratio of the sums of all six wall times.
 
 | model | window | current | prepared | median speedup | total speedup | max abs flux delta |
 |---|---:|---:|---:|---:|---:|---:|
-| solar dwarf | 10 A | 0.561 s | 0.373 s | 1.50x | 1.52x | 0 |
-| solar dwarf | 200 A | 0.956 s | 0.684 s | 1.40x | 1.38x | 0 |
-| cool metal-rich dwarf | 10 A | 2.018 s | 1.833 s | 1.10x | 1.09x | 0 |
-| cool metal-rich dwarf | 200 A | 4.425 s | 4.144 s | 1.07x | 1.07x | 0 |
+| solar dwarf | 10 A | 2.046 s | 2.094 s | 0.98x | 1.00x | 0 |
+| solar dwarf | 200 A | 3.132 s | 2.903 s | 1.08x | 1.12x | 0 |
+| cool metal-rich dwarf | 10 A | 2.854 s | 2.595 s | 1.10x | 1.09x | 0 |
+| cool metal-rich dwarf | 200 A | 5.680 s | 5.404 s | 1.05x | 1.08x | 0 |
 
 ## Interpretation
 
-State reuse removes a roughly 0.19--0.28 s fixed cost per evaluation in these
-cases.  That is significant for the solar model, where it reduces repeated
-synthesis wall time by about 29--34%.  It is only a 6--9% reduction for the
-cool metal-rich model because line opacity and transfer dominate its runtime.
+Once ALMAX is correctly invalidated by abundance changes, state reuse is a
+small setup optimization: 0--12% over these complete six-evaluation workloads.
+At 10 A the solar difference is within run-to-run noise; at 200 A it saves
+about 8--12%.  The cool model saves about 5--10% because line opacity and
+transfer dominate its runtime.
 
 The spectra were bit-for-bit identical to the current repeated-input path for
-all 24 A/B comparisons.  This is expected: the prototype changes lifecycle and
-invalidation only, not physics.  It reuses the same ALMAX information that the
-current `line_select_recompute="if_stale"` path already reuses for abundance
-changes; it is therefore an equivalence test against current behaviour, not an
-independent validation of ALMAX staleness for arbitrarily large abundance
-changes.
+all 24 A/B comparisons.  This is expected: the optimization changes lifecycle,
+not physics, and both arms recompute abundance-dependent ALMAX information.
 
-The result supports the implemented, narrowly scoped solver optimization for
-abundance-only iterations.  It does not support treating `PreparedSynthesis`
-as a large general-purpose state API for cool, line-rich spectra.  PySME keeps
-the full setup path for mixed atmosphere/abundance fits, dynamic line-list
-selection, forced line-info recomputation, callable atmospheres, and line-list
-parameter fits.
+The result supports keeping the implemented, narrowly scoped solver
+optimization, but it is not a major speed feature after correct ALMAX
+invalidation.  PySME keeps the full setup path for CDR selection, mixed
+atmosphere/abundance fits, dynamic line-list selection, forced line-info
+recomputation, callable atmospheres, and line-list parameter fits.
 
 ## Artifacts
 
