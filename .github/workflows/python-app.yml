@@ -497,3 +497,79 @@ jobs:
           fi
         env:
           GH_TOKEN: ${{ github.token }}
+
+  refresh_rtd_latest:
+    name: Refresh Read the Docs latest
+    needs: [tag_gate, publish, release]
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    if: needs.tag_gate.outputs.allow == 'true' && github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    env:
+      READTHEDOCS_API_TOKEN: ${{ secrets.READTHEDOCS_API_TOKEN }}
+      RTD_API_ROOT: https://app.readthedocs.org/api/v3/projects/pysme-astro
+
+    steps:
+      - name: Wait for release and stable documentation
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ -z "${READTHEDOCS_API_TOKEN}" ]]; then
+            echo "::error::The READTHEDOCS_API_TOKEN Actions secret is not configured."
+            exit 1
+          fi
+
+          tag="${GITHUB_REF_NAME}"
+          release_commit="${GITHUB_SHA}"
+          tag_ready=false
+          stable_ready=false
+
+          for attempt in $(seq 1 40); do
+            for version in "$tag" stable; do
+              response="$({
+                curl --silent --show-error --fail \
+                  --connect-timeout 10 --max-time 30 \
+                  --header "Authorization: Token ${READTHEDOCS_API_TOKEN}" \
+                  "${RTD_API_ROOT}/versions/${version}/builds/?limit=1"
+              } || true)"
+
+              commit="$(jq -r '.results[0].commit // empty' <<<"$response")"
+              state="$(jq -r '.results[0].state.code // empty' <<<"$response")"
+              success="$(jq -r '.results[0].success // empty' <<<"$response")"
+
+              if [[ "$commit" == "$release_commit" && "$state" == "finished" ]]; then
+                if [[ "$success" != "true" ]]; then
+                  echo "::error::Read the Docs ${version} build failed for ${release_commit}."
+                  exit 1
+                fi
+                if [[ "$version" == "$tag" ]]; then
+                  tag_ready=true
+                else
+                  stable_ready=true
+                fi
+              fi
+            done
+
+            if [[ "$tag_ready" == "true" && "$stable_ready" == "true" ]]; then
+              echo "Read the Docs ${tag} and stable builds succeeded for ${release_commit}."
+              break
+            fi
+
+            if [[ "$attempt" == "40" ]]; then
+              echo "::error::Timed out waiting for Read the Docs ${tag} and stable builds."
+              exit 1
+            fi
+
+            echo "Waiting for Read the Docs release builds (${attempt}/40): tag=${tag_ready}, stable=${stable_ready}"
+            sleep 30
+          done
+
+      - name: Trigger latest documentation build
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --silent --show-error --fail-with-body \
+            --connect-timeout 10 --max-time 30 \
+            --request POST \
+            --header "Authorization: Token ${READTHEDOCS_API_TOKEN}" \
+            "${RTD_API_ROOT}/versions/latest/builds/"
