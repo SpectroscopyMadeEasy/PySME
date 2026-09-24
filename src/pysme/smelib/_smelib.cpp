@@ -228,6 +228,104 @@ static PyObject *smelib_SetLineInfoMode(PyObject *self, PyObject *args)
     Py_RETURN_NONE;
 }
 
+static char smelib_SetAdaptiveTransferGridMode_docstring[] =
+    "Select batched or legacy adaptive transfer";
+static PyObject *smelib_SetAdaptiveTransferGridMode(PyObject *self, PyObject *args)
+{
+    const int n = 1;
+    const char *result = NULL;
+    void *args_c[n];
+    int mode = 0;
+
+    if (!PyArg_ParseTuple(args, "i", &mode))
+        return NULL;
+
+    args_c[0] = &mode;
+    result = SetAdaptiveTransferGridMode(n, args_c);
+    if (result != NULL && result[0] != OK_response)
+    {
+        PyErr_SetString(PyExc_RuntimeError, result);
+        return NULL;
+    }
+
+    Py_RETURN_NONE;
+}
+
+static char smelib_SelectStrongLinesByBins_docstring[] =
+    "Select strong lines by cumulative metric within wavelength bins";
+static PyObject *smelib_SelectStrongLinesByBins(PyObject *self, PyObject *args)
+{
+    const char *result = NULL;
+    PyObject *wavelength_obj = NULL, *metric_obj = NULL, *valid_obj = NULL;
+    PyArrayObject *wavelength_arr = NULL, *metric_arr = NULL;
+    PyArrayObject *valid_arr = NULL, *strong_arr = NULL;
+    void *args_c[7];
+    npy_intp dims[1];
+    int nlines = 0;
+    double bin_width = 0.0, threshold = 0.0;
+
+    if (!PyArg_ParseTuple(args, "OOOdd", &wavelength_obj, &metric_obj, &valid_obj,
+                          &bin_width, &threshold))
+        return NULL;
+
+    wavelength_arr = (PyArrayObject *)PyArray_FROM_OTF(
+        wavelength_obj, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY);
+    metric_arr = (PyArrayObject *)PyArray_FROM_OTF(
+        metric_obj, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY);
+    valid_arr = (PyArrayObject *)PyArray_FROM_OTF(
+        valid_obj, NPY_UBYTE, NPY_ARRAY_IN_ARRAY);
+    if (wavelength_arr == NULL || metric_arr == NULL || valid_arr == NULL)
+        goto fail;
+
+    if (PyArray_NDIM(wavelength_arr) != 1 || PyArray_NDIM(metric_arr) != 1 ||
+        PyArray_NDIM(valid_arr) != 1)
+    {
+        PyErr_SetString(PyExc_ValueError,
+                        "Expected 1D arrays for wavelength, metric, and valid_mask");
+        goto fail;
+    }
+
+    nlines = (int)PyArray_DIM(wavelength_arr, 0);
+    if ((int)PyArray_DIM(metric_arr, 0) != nlines ||
+        (int)PyArray_DIM(valid_arr, 0) != nlines)
+    {
+        PyErr_SetString(PyExc_ValueError,
+                        "Expected wavelength, metric, and valid_mask to have same length");
+        goto fail;
+    }
+
+    dims[0] = nlines;
+    strong_arr = (PyArrayObject *)PyArray_ZEROS(1, dims, NPY_UBYTE, 0);
+    if (strong_arr == NULL)
+        goto fail;
+
+    args_c[0] = &nlines;
+    args_c[1] = PyArray_DATA(wavelength_arr);
+    args_c[2] = PyArray_DATA(metric_arr);
+    args_c[3] = PyArray_DATA(valid_arr);
+    args_c[4] = &bin_width;
+    args_c[5] = &threshold;
+    args_c[6] = PyArray_DATA(strong_arr);
+    result = SelectStrongLinesByBins(7, args_c);
+    if (result != NULL && result[0] != OK_response)
+    {
+        PyErr_SetString(PyExc_RuntimeError, result);
+        goto fail;
+    }
+
+    Py_DECREF(wavelength_arr);
+    Py_DECREF(metric_arr);
+    Py_DECREF(valid_arr);
+    return (PyObject *)strong_arr;
+
+fail:
+    Py_XDECREF(wavelength_arr);
+    Py_XDECREF(metric_arr);
+    Py_XDECREF(valid_arr);
+    Py_XDECREF(strong_arr);
+    return NULL;
+}
+
 static char smelib_SetContinuumScatteringSourceMode_docstring[] = "Enable continuum scattering source for plane-parallel and spherical transfer";
 static PyObject *smelib_SetContinuumScatteringSourceMode(PyObject *self, PyObject *args)
 {
@@ -248,6 +346,56 @@ static PyObject *smelib_SetContinuumScatteringSourceMode(PyObject *self, PyObjec
     }
 
     Py_RETURN_NONE;
+}
+
+static char smelib_SetContinuumOpacityGrid_docstring[] =
+    "Configure exact, adaptive, or fixed continuum-opacity interpolation";
+static PyObject *smelib_SetContinuumOpacityGrid(PyObject *self, PyObject *args)
+{
+    const int n = 4;
+    const char *result = NULL;
+    void *args_c[n];
+    int mode = 0;
+    double base_step = 1.0, rtol = 1.e-3, min_step = 1.e-3;
+
+    if (!PyArg_ParseTuple(args, "iddd", &mode, &base_step, &rtol, &min_step))
+        return NULL;
+    args_c[0] = &mode;
+    args_c[1] = &base_step;
+    args_c[2] = &rtol;
+    args_c[3] = &min_step;
+    result = SetContinuumOpacityGrid(n, args_c);
+    if (result != NULL && result[0] != OK_response)
+    {
+        PyErr_SetString(PyExc_RuntimeError, result);
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+static char smelib_GetContinuumOpacityGridStats_docstring[] =
+    "Return continuum-opacity grid query and refinement counters";
+static PyObject *smelib_GetContinuumOpacityGridStats(PyObject *self, PyObject *args)
+{
+    const int n = 5;
+    const char *result = NULL;
+    void *args_c[n];
+    unsigned long long queries = 0, exact_calls = 0, nodes = 0, refined = 0;
+    double max_test_error = 0.0;
+
+    args_c[0] = &queries;
+    args_c[1] = &exact_calls;
+    args_c[2] = &nodes;
+    args_c[3] = &refined;
+    args_c[4] = &max_test_error;
+    result = GetContinuumOpacityGridStats(n, args_c);
+    if (result != NULL && result[0] != OK_response)
+    {
+        PyErr_SetString(PyExc_RuntimeError, result);
+        return NULL;
+    }
+    return Py_BuildValue("(KKKKd)", queries, exact_calls, nodes, refined,
+                         max_test_error);
 }
 
 static char smelib_SetEosWarmStartMode_docstring[] = "Scope exact EOS history reuse to a fit lifecycle";
@@ -1812,7 +1960,11 @@ static PyMethodDef module_methods[] = {
     {"SetH2broad", smelib_SetH2broad, METH_NOARGS, smelib_SetH2broad_docstring},
     {"ClearH2broad", smelib_ClearH2broad, METH_NOARGS, smelib_ClearH2broad_docstring},
     {"SetLineInfoMode", smelib_SetLineInfoMode, METH_VARARGS, smelib_SetLineInfoMode_docstring},
+    {"SetAdaptiveTransferGridMode", smelib_SetAdaptiveTransferGridMode, METH_VARARGS, smelib_SetAdaptiveTransferGridMode_docstring},
+    {"SelectStrongLinesByBins", smelib_SelectStrongLinesByBins, METH_VARARGS, smelib_SelectStrongLinesByBins_docstring},
     {"SetContinuumScatteringSourceMode", smelib_SetContinuumScatteringSourceMode, METH_VARARGS, smelib_SetContinuumScatteringSourceMode_docstring},
+    {"SetContinuumOpacityGrid", smelib_SetContinuumOpacityGrid, METH_VARARGS, smelib_SetContinuumOpacityGrid_docstring},
+    {"GetContinuumOpacityGridStats", smelib_GetContinuumOpacityGridStats, METH_NOARGS, smelib_GetContinuumOpacityGridStats_docstring},
     {"SetEosWarmStartMode", smelib_SetEosWarmStartMode, METH_VARARGS, smelib_SetEosWarmStartMode_docstring},
     {"InputLinePrecomputedInfo", smelib_InputLinePrecomputedInfo, METH_VARARGS, smelib_InputLinePrecomputedInfo_docstring},
     {"InputLineList", smelib_InputLineList, METH_VARARGS, smelib_InputLineList_docstring},

@@ -15,7 +15,7 @@ Line selection in PySME is controlled in three layers:
 2. `line_select_method`
    - `internal`: no external CDR/ALMAX metadata path
    - `cdr`: use `central_depth` and `line_range_*`
-   - `almax`: use `almax_ratio` and `line_range_*`
+   - `almax` (default): use `almax_ratio` and `line_range_*`
 3. `line_select_policy`
    - `auto`: use method-dependent automatic line-info handling
    - `strict`: require explicit method-specific line-info handling
@@ -25,6 +25,92 @@ In practice:
 - `linelist_mode` decides whether dynamic filtering is used
 - `line_select_method` decides how line metadata is generated/interpreted
 - `line_select_policy` decides how strictly that metadata is enforced
+
+## Line selection, line support, and transfer sampling
+
+These are separate stages:
+
+```text
+line_select_method / ALMAX / CDR -> retained-line membership
+line_range_s/e + accrt           -> physical wavelength support
+accwi                            -> adaptive transfer-grid refinement
+```
+
+With the default ALMAX configuration,
+`line_select_almax_threshold = None` makes ALMAX use `sme.accrt` for its
+precomputation. An explicit ALMAX threshold is passed to `ALMAXRange`, so it
+affects both membership and the physical ranges produced by that call; it is
+not currently a membership-only override.
+
+In the optimized adaptive path, both the selected-line mask and the physical
+`line_range_*` values are immutable during transfer. The historical sequential
+`MARK=2` rejection based on the blended disk-centre intensity is not applied.
+The `internal` method remains a separate established path and retains its own
+selection semantics.
+
+## Fixed-grid interval lookup
+
+When valid `line_range_*` metadata is available, SMElib's fixed-grid transfer
+path uses a wavelength sweep to visit only the intervals containing the
+current wavelength. The candidate indices remain in original line-list order,
+so this changes lookup cost rather than opacity summation or numerical line
+selection. In automatic mode the sweep is skipped when the ranges are too
+broad to save at least roughly 20% of the full scan.
+
+For internally generated fixed-grid metadata, SMElib scans each valid line's
+wings until its local line-to-continuum opacity ratio falls below `accrt`.
+`GetLineRange` therefore returns physical validity ranges rather than the
+temporary `wlcent +/- 150 A` bounds installed when a line list is loaded.
+
+For diagnostic A/B runs, set `SME_INTERVAL_INDEX=0` to disable the sweep or
+`SME_INTERVAL_INDEX=1` to force it. Leaving the variable unset (or setting it
+to `auto`) uses the automatic cost check.
+
+`ALMAXRange` also leaves its computed line-opacity and Voigt arrays available
+for a one-shot hand-off to the next `Transf` call on the same DLL state. The
+hand-off requires valid precomputed ranges/masks at the same `accrt`. Updating
+the model, abundances, line list, NLTE coefficients, continuum opacity, or
+broadening settings invalidates it. This avoids repeating `LINEOPAC` during
+first-use precomputation while keeping cached line-info use conservative.
+
+The default non-parallel `linelist_mode="all"` workflow performs a missing or
+stale ALMAX calculation inside the main synthesis DLL, after preparing the
+first segment's continuum opacity. Its first `Transf` therefore consumes this
+one-shot state. Parallel, cache-backed, and dynamic-subsetting workflows use a
+separate precompute state and do not receive this first-call reuse.
+
+## Continuum-opacity grid
+
+Continuous opacity is shared by line-info precomputation and final transfer.
+By default, PySME evaluates it on an adaptive linear grid with a nominal 1 A
+spacing. SMElib inserts known H I thresholds and Mg I/Si I PEACH table knots,
+uses an exact 0.02 A guard band around each physical edge, and recursively
+splits intervals whose interpolation probes exceed the requested tolerance.
+All 13 opacity-source components are cached, so true absorption, coherent
+scattering, total extinction, and the scattering source remain consistent.
+
+The user-facing controls are:
+
+- `sme.continuum_grid = "adaptive"` (default): adaptive edge-aware grid
+- `sme.continuum_grid = "exact"`: legacy exact `CONTOP` evaluation at every query
+- `sme.continuum_grid = 0.5`: fixed edge-aware 0.5 A diagnostic grid
+- `sme.continuum_grid_base_step = 1.0`: nominal spacing in A
+- `sme.continuum_grid_rtol = 1e-3`: refinement tolerance, measured relative
+  to total continuum extinction
+- `sme.continuum_grid_min_step = 1e-3`: minimum recursive interval width in A
+
+The refinement test checks true absorption, coherent scattering, and total
+extinction, each scaled by total extinction with a small floor. This avoids
+refining physically irrelevant components merely because their own value is
+close to zero. `"exact"` is intended for reference calculations and numerical
+regression tests; normal synthesis does not require choosing a fixed spacing.
+
+The cache is discarded when the atmosphere (including geometry and opacity
+flags), abundance vector, ionization/EOS state, or grid configuration changes.
+A line-list-only update does not invalidate it because atomic and molecular
+line data do not enter the continuous-opacity calculation; the normal
+line-list workflow subsequently runs `Ionization`, which does invalidate the
+cache when the species or electron state may have changed.
 
 ## Shared parameters
 
@@ -38,9 +124,9 @@ Function argument in `solve(...)` and `synthesize_spectrum(...)`.
 
 ### `sme.line_select_method`
 
+- `almax` (default)
 - `internal`
 - `cdr`
-- `almax`
 
 Controls which metadata path is used for line preselection.
 
@@ -66,6 +152,9 @@ Worker count for parallel metadata updates.
 
 Chunk size used when splitting the line list for metadata updates.
 
+This does not affect the default non-parallel, full-line-list ALMAX fast path,
+which computes directly in the main synthesis DLL without chunk workers.
+
 ### `sme.line_select_recompute`
 
 - `if_stale`: recompute line metadata only when missing or stale
@@ -85,6 +174,10 @@ Dictionary of stale thresholds, typically including:
 - `accrt`
 
 Used to decide whether previously computed metadata is still valid.
+
+For ALMAX, effective elemental abundances are checked separately and exactly;
+they do not use these tolerances. Any abundance change makes the stored ALMAX
+ratio, strong-line mask, and validity ranges stale.
 
 ### `sme.line_precompute_database`
 
@@ -114,6 +207,11 @@ Threshold used by ALMAX-based selection.
 
 If `None`, it falls back to `sme.accrt`.
 
+This is a local line-to-continuum opacity-ratio cutoff, not a requested bound
+on the final normalized-flux error. Contributions from many individually weak
+line wings can accumulate, so the spectrum-level error must be validated for
+the intended stellar-parameter and wavelength domain.
+
 ### `sme.line_select_almax_use_bins`
 
 Boolean switch controlling which ALMAX strong-line rule is used:
@@ -124,6 +222,11 @@ Boolean switch controlling which ALMAX strong-line rule is used:
 ### `sme.line_select_almax_bin_width`
 
 Bin width used when `line_select_almax_use_bins=True`.
+
+The cumulative bin selector itself lives in SMElib under the CamelCase API
+name `SelectStrongLinesByBins`. The Python
+`Synthesizer.flag_strong_lines_by_bins` method is retained as a compatibility
+wrapper, and both the CDR and binned-ALMAX paths use the native implementation.
 
 ## Deprecated or legacy parameters
 
@@ -171,6 +274,35 @@ cache policy, and new code should leave it at the default `none`.
 Legacy-style function argument still used to force regeneration of cached line
 metadata products. It remains supported, but is not yet replaced by a clearer
 unified name.
+
+## Adaptive transfer-grid semantics
+
+When no `sme.wint` is supplied, plane-parallel and spherical synthesis with
+valid ALMAX or CDR line information constructs the transfer grid in refinement
+generations inside native SMElib. Missing or stale metadata is normally
+recomputed before this point. Each generation is evaluated through the indexed
+fixed-grid opacity path and the geometry-specific radiative-transfer
+integrator. The initial endpoints, line-centre seeds, 0.3 km/s minimum spacing,
+and the `accwi` midpoint interpolation criterion retain the RKINTS definitions.
+
+The active line mask is fixed for the complete transfer calculation. `ALMAX`
+or CDR decides whether a line participates, `accrt` defines its wavelength
+support, and `accwi` controls wavelength sampling only. In particular,
+`accwi` no longer permanently removes a line based on the blended disk-centre
+depth at its centre.
+
+Supplying `sme.wint` continues to use that fixed grid directly.
+`sme.line_select_method = "internal"` retains legacy RKINTS because it does
+not provide the immutable active mask and physical ranges required by the
+indexed evaluator.
+
+Supplying only `sme.wave` does not select fixed-grid transfer. `sme.wave` is
+the requested output or observation grid; the internal adaptive grid is still
+used unless `sme.wint` is set.
+
+`sme.transfer_grid_method = "batched"` is the default. Set it to `"legacy"`
+for compatibility or reference calculations. The setting affects only
+adaptive transfer; it does not change a supplied fixed `sme.wint` grid.
 
 ## Recommended usage
 

@@ -167,3 +167,69 @@ def test_solver_derived_abundance_uses_effective_scale_for_capitalized_key(monke
 
     assert captured["effective_ti"] == pytest.approx(4.25)
     assert captured["pattern_ti"] == pytest.approx(4.25 - sme.monh)
+
+
+def test_prepared_synthesis_is_limited_to_stable_abundance_only_state():
+    sme, _, _ = _make_free_abundance_sme()
+    solver = SME_Solver()
+    solver.parameter_names = ["Abund Ti"]
+
+    assert solver._can_prepare_abundance_synthesis(
+        sme, linelist_mode="all", cdr_create=False
+    )
+
+    sme.line_select_method = "cdr"
+    assert not solver._can_prepare_abundance_synthesis(
+        sme, linelist_mode="all", cdr_create=False
+    )
+    sme.line_select_method = "almax"
+
+    solver.parameter_names = ["Abund Ti", "teff"]
+    assert not solver._can_prepare_abundance_synthesis(
+        sme, linelist_mode="all", cdr_create=False
+    )
+
+    solver.parameter_names = ["Abund Ti"]
+    sme.line_select_recompute = "always"
+    assert not solver._can_prepare_abundance_synthesis(
+        sme, linelist_mode="all", cdr_create=False
+    )
+
+
+def test_abundance_residual_reuses_prepared_linelist_and_model(monkeypatch):
+    sme, pattern_ti, _ = _make_free_abundance_sme()
+    sme.wave = [np.array([5000.0])]
+    solver = SME_Solver()
+    solver.parameter_names = ["Abund Ti"]
+    solver.progressbar = _DummyProgressBar()
+    solver.progressbar_jacobian = _DummyProgressBar()
+    solver._prepare_abundance_synthesis = True
+    calls = []
+
+    def fake_synthesize_spectrum(_sme, **kwargs):
+        calls.append(kwargs)
+        values = np.array([[1.0]])
+        return values, values, values
+
+    monkeypatch.setattr(
+        solver.synthesizer, "synthesize_spectrum", fake_synthesize_spectrum
+    )
+
+    for _ in range(2):
+        residual = solver._residuals(
+            np.array([pattern_ti]),
+            sme,
+            spec=np.array([1.0]),
+            uncs=np.array([1.0]),
+            mask=np.array([True]),
+            segments=[0],
+            isJacobian=True,
+        )
+        assert np.array_equal(residual, [0.0])
+
+    assert calls[0]["passLineList"] is True
+    assert calls[0]["passAtmosphere"] is True
+    assert calls[0]["passAbund"] is False
+    assert calls[1]["passLineList"] is False
+    assert calls[1]["passAtmosphere"] is False
+    assert calls[1]["passAbund"] is True

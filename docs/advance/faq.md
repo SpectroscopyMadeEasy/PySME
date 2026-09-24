@@ -1,6 +1,24 @@
 # FAQ
 
 
+## Can I run multiple syntheses in parallel?
+
+Use process-based parallelism for independent targets when true concurrent
+synthesis is required. SMElib still keeps process-global state and is not
+instance-reentrant.
+
+High-level `synthesize_spectrum(...)` and `solve(...)` calls made from multiple
+threads are protected by a process-wide lock, so their native workflows are
+serialized for correctness rather than executed concurrently. Low-level
+multi-call SMElib transactions are an implementation/developer interface and
+must not be assumed thread-safe merely because separate `SME_DLL` objects were
+created.
+
+Each process has its own native and Python line-list state. Wide million-line
+workloads can consume substantial memory per process, so set the worker count
+according to available RAM as well as CPU count.
+
+
 ## How do I change the default log file?
 
 Call `util.start_logging(filename)`.

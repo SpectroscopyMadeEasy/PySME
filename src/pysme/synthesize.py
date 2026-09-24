@@ -26,7 +26,7 @@ from .continuum_and_radial_velocity import (
 from .iliffe_vector import Iliffe_vector
 from .large_file_storage import setup_lfs
 from .sme import MASK_VALUES
-from .sme_synth import SME_DLL
+from .sme_synth import SME_DLL, serialized_smelib_session
 from .util import (
     boundary_vertices,
     safe_interpolation,
@@ -54,6 +54,47 @@ pd.options.mode.chained_assignment = None  # None means no warning will be shown
 logger = logging.getLogger(__name__)
 
 clight = speed_of_light * 1e-3  # km/s
+
+_DEFAULT_ADAPTIVE_TRANSFER_CAPACITY = 400_000
+_ADAPTIVE_TRANSFER_MIN_VELOCITY_KMS = 0.3
+
+
+def _adaptive_transfer_capacity(linelist, wavelength_start, wavelength_end):
+    """Conservative storage bound for an internally generated transfer grid.
+
+    RKINTS can seed two nodes per line centre and can subsequently bisect down
+    to its 0.3 km/s spacing floor.  The historical fixed 400k allocation is
+    ample for ordinary segments but can be exceeded by a single line-rich
+    several-hundred-Angstrom segment.
+    """
+    lower = float(wavelength_start)
+    upper = float(wavelength_end)
+    if (
+        not np.isfinite(lower)
+        or not np.isfinite(upper)
+        or lower <= 0
+        or upper <= lower
+    ):
+        return _DEFAULT_ADAPTIVE_TRANSFER_CAPACITY
+
+    try:
+        centres = np.asarray(linelist.wlcent, dtype=float)
+    except (AttributeError, TypeError, ValueError):
+        centres = np.empty(0, dtype=float)
+    centres_in_segment = np.count_nonzero(
+        np.isfinite(centres) & (centres > lower) & (centres < upper)
+    )
+    minimum_spacing_intervals = int(
+        np.ceil(
+            np.log(upper / lower)
+            * clight
+            / _ADAPTIVE_TRANSFER_MIN_VELOCITY_KMS
+        )
+    )
+    conservative_bound = (
+        2 * int(centres_in_segment) + 2 * minimum_spacing_intervals + 16
+    )
+    return max(_DEFAULT_ADAPTIVE_TRANSFER_CAPACITY, conservative_bound)
 
 
 def _build_smelib_line_index_map(discard_mask):
@@ -93,6 +134,23 @@ def _brackett_convolution_mode(sme):
         mode = os.environ.get("PYSME_H_STARK_CONVOLUTION", "legacy")
         return "convolution" if mode == "convolution" else "legacy"
     return "convolution" if str(mode).lower() == "convolution" else "legacy"
+
+
+def _lineinfo_abundance_state(sme):
+    """Return the effective abundance vector used by SMElib."""
+    return np.asarray(sme.abund(type="H=12", raw=True), dtype=np.float64)
+
+
+def _lineinfo_abundances_match(stored, sme):
+    """Return whether stored line information used the current abundances."""
+    if stored is None:
+        return False
+
+    stored = np.asarray(stored, dtype=np.float64)
+    current = _lineinfo_abundance_state(sme)
+    return stored.shape == current.shape and np.array_equal(
+        stored, current, equal_nan=True
+    )
 
 
 @dataclass(frozen=True)
@@ -150,11 +208,34 @@ __DLL_DICT__ = {}
 __DLL_IDS__ = {}
 
 
+def _configure_continuum_opacity_grid(dll, sme):
+    """Apply the user-facing continuum-grid settings to one SMElib state."""
+    if not hasattr(dll, "SetContinuumOpacityGrid"):
+        return
+    mode = getattr(sme, "continuum_grid", "adaptive")
+    base_step = float(getattr(sme, "continuum_grid_base_step", 1.0))
+    rtol = float(getattr(sme, "continuum_grid_rtol", 1e-3))
+    min_step = float(getattr(sme, "continuum_grid_min_step", 1e-3))
+    dll.SetContinuumOpacityGrid(
+        mode, base_step=base_step, rtol=rtol, min_step=min_step
+    )
+
+
+def _configure_adaptive_transfer_grid(dll, sme):
+    """Apply the native adaptive-transfer implementation setting."""
+    if hasattr(dll, "SetAdaptiveTransferGridMode"):
+        dll.SetAdaptiveTransferGridMode(
+            getattr(sme, "transfer_grid_method", "batched")
+        )
+
+
 def _compute_almax_lineinfo_for_sme(sub_sme):
     """Worker for ALMAX/range preselection on a sub-linelist."""
     synth = Synthesizer()
     dll = synth.get_dll()
     dll.SetLibraryPath()
+    _configure_continuum_opacity_grid(dll, sub_sme)
+    _configure_adaptive_transfer_grid(dll, sub_sme)
     line_ion_mask = dll.InputLineList(sub_sme.linelist)
     sub_sme.line_ion_mask = line_ion_mask
 
@@ -583,6 +664,64 @@ class Synthesizer:
         return x_seg, vstep
 
     @staticmethod
+    def _resample_mu_intensities(wave_in, intensities, wave_out):
+        """Resample every mu intensity onto one shared wavelength grid.
+
+        ``integrate_flux`` performs its broadening and pixel integration in
+        array-index space, so its input must have a regular wavelength (or
+        velocity) spacing.  SMElib's adaptive transfer grid does not satisfy
+        that requirement.
+        """
+        wave_in = np.asarray(wave_in, dtype=float)
+        wave_out = np.asarray(wave_out, dtype=float)
+        intensities = np.asarray(intensities, dtype=float)
+        if wave_in.ndim != 1 or wave_out.ndim != 1:
+            raise ValueError("wavelength grids must be one-dimensional")
+        if intensities.ndim != 2 or intensities.shape[1] != wave_in.size:
+            raise ValueError(
+                "intensities must have shape (nmu, len(wave_in))"
+            )
+        return np.asarray(
+            [np.interp(wave_out, wave_in, profile) for profile in intensities]
+        )
+
+    @staticmethod
+    def _integrate_mu_areas(mu, intensities):
+        """Integrate mu-resolved values without spectral resampling.
+
+        This is used for diagnostic quantities such as contribution functions,
+        whose final axis is atmospheric depth rather than a regular spectral
+        coordinate. Sending such arrays through ``integrate_flux`` would
+        incorrectly spline and rebin that depth axis.
+        """
+        mu = np.asarray(mu, dtype=float)
+        intensities = np.asarray(intensities, dtype=float)
+        if mu.ndim != 1:
+            raise ValueError("mu must be one-dimensional")
+        if intensities.ndim != 2 or intensities.shape[0] != mu.size:
+            raise ValueError(
+                "intensities must have shape (len(mu), npoints)"
+            )
+
+        projected_radius = np.sqrt(1.0 - mu * mu)
+        order = np.argsort(projected_radius)
+        projected_radius = projected_radius[order]
+        intensities = intensities[order]
+        if mu.size > 1:
+            boundaries = np.sqrt(
+                0.5
+                * (
+                    projected_radius[:-1] ** 2
+                    + projected_radius[1:] ** 2
+                )
+            )
+            boundaries = np.concatenate(([0.0], boundaries, [1.0]))
+            weights = boundaries[1:] ** 2 - boundaries[:-1] ** 2
+        else:
+            weights = np.ones(1, dtype=float)
+        return np.pi * np.sum(weights[:, None] * intensities, axis=0)
+
+    @staticmethod
     def check_segments(sme, segments):
         if isinstance(segments, str) and segments == "all":
             segments = range(sme.nseg)
@@ -916,7 +1055,7 @@ class Synthesizer:
         line_precompute_database,
         cdr_database,
     ):
-        method = str(getattr(sme, "line_select_method", "internal")).lower()
+        method = str(getattr(sme, "line_select_method", "almax")).lower()
         policy = str(getattr(sme, "line_select_policy", "auto")).lower()
         recompute = str(getattr(sme, "line_select_recompute", "if_stale")).lower()
         reuse = str(getattr(sme, "line_select_reuse", "none")).lower()
@@ -1283,15 +1422,18 @@ class Synthesizer:
         )
         sme.linelist.almax_paras_thres = getattr(sme, "line_select_stale_thres", {}).copy()
         sme.linelist.almax_paras_h_stark_convolution = _brackett_convolution_mode(sme)
+        sme.linelist.almax_abund = _lineinfo_abundance_state(sme).copy()
         return sme
     
     # @profile
+    @serialized_smelib_session
     def synthesize_spectrum(
         self,
         sme,
         segments="all",
         passLineList=True,
         passAtmosphere=True,
+        passAbund=False,
         passNLTE=True,
         updateStructure=True,
         updateLineList=False,
@@ -1326,6 +1468,10 @@ class Synthesizer:
             wether to pass the linelist to the c library (default: True)
         passAtmosphere : bool, optional
             wether to pass the atmosphere to the c library (default: True)
+        passAbund : bool, optional
+            update abundances and rerun the EOS while reusing the atmosphere
+            already resident in SMElib. This is implicit when
+            ``passAtmosphere=True`` (default: False)
         passNLTE : bool, optional
             wether to pass NLTE departure coefficients to the c library (default: True)
         reuse_wavelength_grid : bool, optional
@@ -1413,6 +1559,8 @@ class Synthesizer:
         line_select_method = ls_cfg["method"]
         lineinfo_mode = ls_cfg["lineinfo_mode"]
         line_precompute_database = ls_cfg["line_precompute_database"]
+        defer_almax_to_main_dll = False
+        prepared_opacity_segment = None
 
         # Re-entrancy guard: update_cdr internally calls synthesize_spectrum on
         # chunked sub-SME objects to compute line information. Those internal
@@ -1531,6 +1679,14 @@ class Synthesizer:
             accrt_th = float(stale.get("accrt", 0.0))
 
             almax_paras = getattr(sme.linelist, "almax_paras", None)
+            stored_almax_abund = getattr(sme.linelist, "almax_abund", None)
+            almax_abundance_changed = (
+                stored_almax_abund is not None
+                and not _lineinfo_abundances_match(stored_almax_abund, sme)
+            )
+            almax_abundance_stale = (
+                stored_almax_abund is None or almax_abundance_changed
+            )
             almax_mode = getattr(sme.linelist, "almax_paras_h_stark_convolution", None)
             current_brackett_mode = _brackett_convolution_mode(sme)
             has_cols = {"almax_ratio", "line_range_s", "line_range_e", "strong"}.issubset(
@@ -1540,6 +1696,8 @@ class Synthesizer:
             if almax_mode is not None and str(almax_mode).lower() != current_brackett_mode:
                 stale_model = True
             if almax_paras is None:
+                stale_model = True
+            if almax_abundance_stale:
                 stale_model = True
             if almax_paras is not None:
                 almax_paras = np.asarray(almax_paras, dtype=float).ravel()
@@ -1576,39 +1734,72 @@ class Synthesizer:
             if need_update_almax:
                 logger.info("Updating linelist ALMAX and line range.")
                 allow_compute = ls_cfg["recompute"] != "never"
-                try:
-                    sme = self.update_almax(
-                        sme,
-                        threshold=ls_cfg["almax_threshold"],
-                        use_bins=ls_cfg["almax_use_bins"],
-                        bin_width=ls_cfg["almax_bin_width"],
-                        chunk_size=ls_cfg["chunk_size"],
-                        parallel=ls_cfg["parallel"],
-                        n_jobs=ls_cfg["n_jobs"],
-                        worker_output=ls_cfg["worker_output"],
-                        line_precompute_database=line_precompute_database,
-                        cdr_database=cdr_database,
-                        cdr_create=cdr_create,
-                        show_progress_bars=util.show_progress_bars,
-                        allow_compute=allow_compute,
+                # With the full line list resident in the main DLL, compute
+                # ALMAX after that DLL's model/opacity setup.  The immediately
+                # following Transf can then consume the one-shot LINEOPAC/Voigt
+                # state instead of calculating it a second time.  Dynamic
+                # filtering needs the ranges before InputLineList, while
+                # parallel workflows retain their separate precompute path.
+                # An atmosphere-only cache is bypassed after an observed
+                # abundance change because its key cannot prove a match.
+                defer_almax_to_main_dll = bool(
+                    allow_compute
+                    and (passLineList or passAtmosphere or passAbund)
+                    and linelist_mode == "all"
+                    and not ls_cfg["parallel"]
+                    and (
+                        line_precompute_database is None
+                        or almax_abundance_changed
                     )
-                except FileNotFoundError as exc:
-                    if line_precompute_database is None:
-                        msg = (
-                            "line_select_recompute='never' but ALMAX line-info is missing/stale "
-                            "and no line_precompute_database was provided."
+                    and len(segments) > 0
+                )
+                if not defer_almax_to_main_dll:
+                    # Cached ALMAX entries are not keyed by the full
+                    # element-by-element abundance vector.  Once abundance
+                    # changes, calculate fresh information instead of loading
+                    # an otherwise matching but physically stale cache entry.
+                    almax_database = (
+                        False
+                        if almax_abundance_changed
+                        else line_precompute_database
+                    )
+                    try:
+                        sme = self.update_almax(
+                            sme,
+                            threshold=ls_cfg["almax_threshold"],
+                            use_bins=ls_cfg["almax_use_bins"],
+                            bin_width=ls_cfg["almax_bin_width"],
+                            chunk_size=ls_cfg["chunk_size"],
+                            parallel=ls_cfg["parallel"],
+                            n_jobs=ls_cfg["n_jobs"],
+                            worker_output=ls_cfg["worker_output"],
+                            line_precompute_database=almax_database,
+                            cdr_database=(
+                                False if almax_abundance_changed else cdr_database
+                            ),
+                            cdr_create=cdr_create,
+                            show_progress_bars=util.show_progress_bars,
+                            allow_compute=allow_compute,
                         )
-                    else:
-                        msg = (
-                            "line_select_recompute='never' but ALMAX line-info is missing/stale "
-                            "and no matching entry was found in line_precompute_database."
-                        )
-                    raise ValueError(
-                        msg
-                    ) from exc
+                    except FileNotFoundError as exc:
+                        if line_precompute_database is None:
+                            msg = (
+                                "line_select_recompute='never' but ALMAX line-info is missing/stale "
+                                "and no line_precompute_database was provided."
+                            )
+                        else:
+                            msg = (
+                                "line_select_recompute='never' but ALMAX line-info is missing/stale "
+                                "and no matching entry was found in line_precompute_database."
+                            )
+                        raise ValueError(
+                            msg
+                        ) from exc
 
         # Input Model data to C library
         dll.SetLibraryPath()
+        _configure_continuum_opacity_grid(dll, sme)
+        _configure_adaptive_transfer_grid(dll, sme)
         dll.SetContinuumScatteringSourceMode(
             int(sme.continuum_scattering_source)
         )
@@ -1654,7 +1845,7 @@ class Synthesizer:
             full_line_ion_mask[discarded_rows] = True
             sme.line_ion_mask = full_line_ion_mask
 
-            if lineinfo_mode in (1, 2):
+            if lineinfo_mode in (1, 2) and not defer_almax_to_main_dll:
                 cols = set(linelist_for_smelib._lines.columns)
                 required_cols = {"line_range_s", "line_range_e"}
                 missing_cols = sorted(required_cols - cols)
@@ -1755,12 +1946,14 @@ class Synthesizer:
         if passAtmosphere:
             sme = self.get_atmosphere(sme)
             dll.InputModel(sme.teff, sme.logg, sme.vmic, sme.atmo)
+        if passAtmosphere or passAbund:
             dll.InputAbund(sme.abund)
             with warnings.catch_warnings(record=True) as caught_warnings:
                 warnings.simplefilter("always")
                 dll.Ionization(0)
             for caught in caught_warnings:
                 logger.warning("%s", caught.message)
+        if passAtmosphere:
             dll.SetVWscale(sme.gam6)
             dll.SetH2broad(sme.h2broad)
         if passNLTE:
@@ -1770,6 +1963,61 @@ class Synthesizer:
                 self.lfs_nlte,
                 line_index_map=line_index_map,
             )
+
+        if defer_almax_to_main_dll:
+            # Prepare the first requested segment exactly as synthesize_segment
+            # would, then keep that opacity state intact through ALMAXRange and
+            # the first Transf call.
+            first_segment = int(next(iter(segments)))
+            vrad_seg = (
+                sme.vrad[first_segment]
+                if sme.vrad[first_segment] is not None
+                else 0
+            )
+            wbeg, wend = self.get_wavelengthrange(
+                sme.wran[first_segment], vrad_seg, sme.vsini
+            )
+            with _temporary_brackett_convolution_env(sme):
+                dll.InputWaveRange(wbeg - 2, wend + 2)
+                dll.Opacity()
+                almax, ranges = dll.ALMAXRange(accrt=ls_cfg["almax_threshold"])
+
+            almax = np.asarray(almax, dtype=np.float64)
+            ranges = np.asarray(ranges, dtype=np.float64)
+            n_smelib_lines = int(np.count_nonzero(smelib_line_mask))
+            if almax.shape != (n_smelib_lines,) or ranges.shape != (
+                n_smelib_lines,
+                2,
+            ):
+                raise RuntimeError(
+                    "SMElib ALMAX output does not match the imported line-list mapping"
+                )
+
+            almax_all = np.full(len(sme.linelist), np.nan, dtype=np.float64)
+            range_s_all = np.full(len(sme.linelist), np.nan, dtype=np.float64)
+            range_e_all = np.full(len(sme.linelist), np.nan, dtype=np.float64)
+            almax_all[smelib_line_mask] = almax
+            range_s_all[smelib_line_mask] = ranges[:, 0]
+            range_e_all[smelib_line_mask] = ranges[:, 1]
+            sme.linelist._lines["almax_ratio"] = almax_all
+            sme.linelist._lines["line_range_s"] = range_s_all
+            sme.linelist._lines["line_range_e"] = range_e_all
+            self._finalize_almax_fields(
+                sme,
+                threshold=ls_cfg["almax_threshold"],
+                use_bins=ls_cfg["almax_use_bins"],
+                bin_width=ls_cfg["almax_bin_width"],
+                line_ion_mask=sme.line_ion_mask,
+            )
+
+            dll.InputLinePrecomputedInfo(
+                range_s_all[smelib_line_mask],
+                range_e_all[smelib_line_mask],
+                np.asarray(sme.linelist["strong"], dtype=np.uint8)[
+                    smelib_line_mask
+                ],
+            )
+            prepared_opacity_segment = first_segment
 
         # Loop over segments
         #   Input Wavelength range and Opacity
@@ -1791,6 +2039,7 @@ class Synthesizer:
                 keep_line_opacity=keep_line_opacity_eff,
                 contribution_function=contribution_function,
                 compute_lineinfo=compute_lineinfo,
+                opacity_is_prepared=(il == prepared_opacity_segment),
             )
         for il in segments:
             if "wave" not in sme or len(sme.wave[il]) == 0:
@@ -1947,6 +2196,7 @@ class Synthesizer:
         return result
 
     # @profile
+    @serialized_smelib_session
     def synthesize_segment(
         self,
         sme,
@@ -1957,6 +2207,7 @@ class Synthesizer:
         get_opacity=False,
         contribution_function=False,
         compute_lineinfo=True,
+        opacity_is_prepared=False,
     ):
         """Create the synthetic spectrum of a single segment
 
@@ -2043,9 +2294,16 @@ class Synthesizer:
         else:
             wint_seg = None
 
+        nwmax = None
+        if wint_seg is None:
+            nwmax = _adaptive_transfer_capacity(
+                sme.linelist, wbeg - 2.0, wend + 2.0
+            )
+
         with _temporary_brackett_convolution_env(sme):
-            dll.InputWaveRange(wbeg-2, wend+2)
-            dll.Opacity()
+            if not opacity_is_prepared:
+                dll.InputWaveRange(wbeg-2, wend+2)
+                dll.Opacity()
 
             # Only calculate line opacities in the first segment
             #   Calculate spectral synthesis for each
@@ -2055,6 +2313,7 @@ class Synthesizer:
                 accwi=sme.accwi,
                 keep_lineop=keep_line_opacity and not sme.first_segment,
                 wave=wint_seg,
+                **({"nwmax": nwmax} if nwmax is not None else {}),
             )
 
         # Insert the new 3DNLTE correction
@@ -2085,15 +2344,16 @@ class Synthesizer:
             wgrid, vstep = self.new_wavelength_grid(wint)
 
             logger.debug("Integrate specific intensities")
-            # Radiative Transfer Integration
-            # Continuum
-            cint = self.integrate_flux(sme.mu, cint, 1, 0, 0)
-            cint = np.interp(wgrid, wint, cint)
+            # ``integrate_flux`` assumes that adjacent array indices have a
+            # constant velocity spacing.  Resample both continuum and line
+            # intensities before disk integration; applying it directly to an
+            # irregular SMElib grid makes a common wavelength depend on the
+            # placement of its neighbouring transfer nodes.
+            cint_regular = self._resample_mu_intensities(wint, cint, wgrid)
+            cint = self.integrate_flux(sme.mu, cint_regular, vstep, 0, 0)
 
             # Broaden Spectrum
-            y_integrated = np.empty((sme.nmu, len(wgrid)))
-            for imu in range(sme.nmu):
-                y_integrated[imu] = np.interp(wgrid, wint, sint[imu])
+            y_integrated = self._resample_mu_intensities(wint, sint, wgrid)
 
             # Turbulence broadening
             # Apply macroturbulent and rotational broadening while integrating intensities
@@ -2137,7 +2397,9 @@ class Synthesizer:
             #            to avoid impractical numbers
             cf[..., 0] = cf[..., 1]
             if not sme.specific_intensities_only:
-                cf = np.array([self.integrate_flux(sme.mu, cf_mu, 1, 0, 0) for cf_mu in cf])
+                cf = np.asarray(
+                    [self._integrate_mu_areas(sme.mu, cf_mu) for cf_mu in cf]
+                )
             sme.contribution_function[segment] = cf
 
         sme.first_segment = False
@@ -2594,60 +2856,14 @@ class Synthesizer:
     def flag_strong_lines_by_bins(
         wl, depth, bin_width=0.2, threshold=0.001, valid_mask=None
     ):
-        wl = np.asarray(wl, dtype=float)
-        depth = np.asarray(depth, dtype=float)
-        if wl.shape != depth.shape:
-            raise ValueError("wl and depth must have the same shape")
-
-        if valid_mask is None:
-            valid_mask = np.ones(depth.shape, dtype=bool)
-        else:
-            valid_mask = np.asarray(valid_mask, dtype=bool)
-            if valid_mask.shape != depth.shape:
-                raise ValueError("valid_mask must have the same shape as wl/depth")
-
-        # Sanitize invalid/negative depths so they cannot poison cumulative sums.
-        invalid_depth = ~np.isfinite(depth)
-        depth_sanitized = np.where(invalid_depth, 0.0, depth)
-        depth_sanitized = np.where(depth_sanitized > 0, depth_sanitized, 0.0)
-
-        candidate = valid_mask
-
-        # 1) build bin indices
-        if not np.any(candidate):
-            return np.zeros(depth.shape, dtype=bool)
-        wl_min = np.min(wl, where=candidate, initial=np.inf)
-        wl_max = np.max(wl, where=candidate, initial=-np.inf)
-        edges = np.arange(wl_min, wl_max + bin_width, bin_width)
-
-        # 2) group sort by (bin, depth asc: weak -> strong)
-        candidate_idx = np.flatnonzero(candidate)
-        wl_candidate = wl[candidate_idx]
-        depth_candidate = depth_sanitized[candidate_idx]
-        bin_idx = np.searchsorted(edges, wl_candidate, side="right") - 1
-
-        order = np.lexsort((depth_candidate, bin_idx))
-        bin_sorted = bin_idx[order]
-        depth_sorted = depth_candidate[order]
-
-        # 3) slice boundaries per bin
-        starts = np.r_[0, np.flatnonzero(np.diff(bin_sorted)) + 1]
-        counts = np.diff(np.r_[starts, depth_sorted.size])
-
-        # 4) within each bin, drop weakest lines until cumulative depth > threshold
-        # Equivalent to per-bin searchsorted(cumsum, threshold, side="right"), but vectorized.
-        csum = np.cumsum(depth_sorted)
-        group_start = np.repeat(starts, counts)
-        local = csum.copy()
-        nz = group_start > 0
-        local[nz] -= csum[group_start[nz] - 1]
-        keep_sorted = local > threshold
-
-        # 5) map back to original order and force invalid-depth / invalid-mask lines to False
-        keep = np.zeros(depth.shape, dtype=bool)
-        keep[candidate_idx[order]] = keep_sorted
-        keep[invalid_depth] = False
-        return keep
+        """Compatibility wrapper for SMElib's cumulative bin selector."""
+        return SME_DLL.SelectStrongLinesByBins(
+            wl,
+            depth,
+            bin_width=bin_width,
+            threshold=threshold,
+            valid_mask=valid_mask,
+        )
 
     def flag_strong_lines_by_bins_old(self, df, bin_width=0.2, threshold=0.01, wl_col="wlcent", depth_col="central_depth", out_col="keep_mask", show_progress_bars=None):
         """
@@ -2929,12 +3145,16 @@ class Synthesizer:
             cint_single = cont_3dnlte_H[:, mask]
             wgrid, vstep = self.new_wavelength_grid(wint_single)
 
-            cint_flux = self.integrate_flux(mu_3d, cint_single, 1, 0, 0, wt=wt_3d)
-            cint_flux = np.interp(wgrid, wint_single, cint_flux)
+            cint_regular = self._resample_mu_intensities(
+                wint_single, cint_single, wgrid
+            )
+            cint_flux = self.integrate_flux(
+                mu_3d, cint_regular, vstep, 0, 0, wt=wt_3d
+            )
 
-            y_integrated = np.empty((len(mu_3d), len(wgrid)))
-            for imu in range(len(mu_3d)):
-                y_integrated[imu] = np.interp(wgrid, wint_single, sint_single[imu])
+            y_integrated = self._resample_mu_intensities(
+                wint_single, sint_single, wgrid
+            )
             sint_flux = self.integrate_flux(
                 mu_3d, y_integrated, vstep, sme.vsini, sme.vmac, wt=wt_3d
             )

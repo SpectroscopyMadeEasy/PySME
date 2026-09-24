@@ -1,5 +1,49 @@
 # Changelog
 
+## Unreleased
+
+### Performance
+
+- Reworked adaptive synthesis with edge-aware continuum-opacity caching and
+  generation-batched, interval-indexed transfer for plane-parallel and
+  spherical atmospheres. Complete synthesis was approximately 19--40x faster
+  in the canonical 10 A validation matrix; gains vary with line density and
+  wavelength coverage.
+- Made ALMAX-based line selection the default and reused its immediately
+  prepared line-opacity state for the following transfer when safe.
+- Reused the resident line list and atmosphere/model during abundance-only
+  `solve(...)` iterations while still recomputing abundance-dependent EOS,
+  opacity, ALMAX state, and transfer.
+- Reduced large-line-list memory through float line-state cache storage with
+  double-precision arithmetic and incremental parsing of counted long-format
+  VALD `extract stellar` files.
+
+### Correctness
+
+- Removed historical order-dependent second weak-line pruning from the
+  optimized path and kept precomputed selected-line masks and physical ranges
+  immutable during transfer.
+- Corrected fixed-grid physical line ranges, irregular-grid flux integration,
+  spherical grazing-ray evaluation order, and contribution-function disk
+  integration.
+- Invalidated ALMAX metadata on effective abundance changes and recalculated it
+  only after the new abundances and ionization state reached SMElib.
+- Replaced the historical fixed 400,000-point adaptive-transfer ceiling with
+  dynamic capacity sizing for unusually wide, line-rich segments.
+
+### Compatibility
+
+- `sme.transfer_grid_method = "legacy"` retains sequential adaptive transfer
+  for compatibility/reference calculations, and
+  `sme.line_select_method = "internal"` retains established internal selection.
+  User-supplied fixed transfer grids retain the sorted indexed path.
+- `sme.continuum_grid = "exact"` retains exact continuum evaluation.
+- CDR and optional binned-ALMAX selection now share SMElib's cumulative-bin
+  selector, while Python dynamic line-list filtering remains available.
+- Clarified that `accrt` is a local line-opacity/support threshold and `accwi`
+  is a local adaptive-grid refinement criterion; neither is a global bound on
+  final synthesized-spectrum error.
+
 ## v1.1.0 - 2026-09-15
 
 ### Added

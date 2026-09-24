@@ -12,7 +12,7 @@ from pysme.config import Config
 from pysme.large_file_storage import LargeFileStorage, _get_file_servers
 from pysme.linelist.vald import ValdFile
 from pysme.sme import SME_Structure
-from pysme.synthesize import synthesize_spectrum
+from pysme.synthesize import Synthesizer, synthesize_spectrum
 
 pytestmark = pytest.mark.filterwarnings(
     "ignore:Covariance of the parameters could not be estimated:scipy.optimize.OptimizeWarning"
@@ -55,6 +55,15 @@ CASES = {
         "vmac": 3.0,
         "vsini": 1.5,
         "nlte": True,
+    },
+    "metal_poor_lte": {
+        "teff": 6000,
+        "logg": 4.0,
+        "monh": -2.0,
+        "vmic": 1.2,
+        "vmac": 0.0,
+        "vsini": 0.0,
+        "nlte": False,
     },
 }
 
@@ -107,6 +116,7 @@ def _make_structure(case):
     sme.vrad_flag = "none"
     sme.cscale_flag = "none"
     sme.normalize_by_continuum = True
+    sme.transfer_grid_method = "batched"
     if params["nlte"]:
         sme.nlte.set_nlte("H", "nlte_H_pysme.grd")
     return sme
@@ -146,3 +156,63 @@ def test_halpha_regression(case):
     assert mean_abs < MEAN_ABS_LIMIT
     assert max_abs < MAX_ABS_LIMIT
     assert depth_diff < CORE_DEPTH_LIMIT
+
+
+@pytest.mark.parametrize(
+    "case", ["sun_lte", "arcturus_lte", "metal_poor_lte", "sun_nlte"]
+)
+def test_native_batched_transfer_matches_immutable_fixed_grid_reference(case):
+    """Cover solar, cool giant, metal-poor, and departure-coefficient states."""
+    if CASES[case]["nlte"] and not _has_local_h_nlte_grid():
+        pytest.skip("H NLTE grid not available in local cache")
+
+    sme = _make_structure(case)
+    synthesizer = Synthesizer()
+    try:
+        synthesizer.synthesize_spectrum(
+            sme,
+            updateStructure=False,
+            reuse_wavelength_grid=True,
+            radial_velocity_mode="fast",
+            linelist_mode="all",
+            smelib_lineinfo_mode=2,
+        )
+    except (FileNotFoundError, URLError) as exc:
+        pytest.skip(f"Halpha regression data unavailable: {exc}")
+
+    dll = synthesizer.get_dll()
+    supported = ~np.asarray(sme.line_ion_mask, dtype=bool)
+    range_s = np.asarray(sme.linelist["line_range_s"], dtype=float)[supported]
+    range_e = np.asarray(sme.linelist["line_range_e"], dtype=float)[supported]
+    strong = np.asarray(sme.linelist["strong"], dtype=np.uint8)[supported]
+
+    dll.SetLineInfoMode(2)
+    dll.SetAdaptiveTransferGridMode("batched")
+    dll.InputLinePrecomputedInfo(range_s, range_e, strong)
+    _, wave, sint, cint = dll.Transf(
+        sme.mu,
+        wave=None,
+        nwmax=400000,
+        accrt=sme.accrt,
+        accwi=sme.accwi,
+        keep_lineop=False,
+        long_continuum=True,
+    )
+    assert np.array_equal(np.asarray(dll.GetLineRange())[:, 0], range_s)
+    assert np.array_equal(np.asarray(dll.GetLineRange())[:, 1], range_e)
+
+    dll.InputLinePrecomputedInfo(range_s, range_e, strong)
+    _, wave_ref, sint_ref, cint_ref = dll.Transf(
+        sme.mu,
+        wave=wave,
+        nwmax=len(wave),
+        accrt=sme.accrt,
+        accwi=sme.accwi,
+        keep_lineop=False,
+        long_continuum=True,
+    )
+
+    assert np.array_equal(wave_ref, wave)
+    assert np.array_equal(sint_ref, sint)
+    assert np.array_equal(cint_ref, cint)
+    dll.SetLineInfoMode(0)

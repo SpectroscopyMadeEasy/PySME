@@ -2,6 +2,7 @@
 from os.path import dirname, join
 
 import numpy as np
+import pandas as pd
 import pytest
 
 from pysme.abund import Abund
@@ -135,6 +136,32 @@ def test_long_format():
 
     assert isinstance(linelist.abund, Abund)
     assert isinstance(linelist.atmo, str)
+
+
+def test_streaming_long_parser_matches_legacy_across_chunks():
+    path = join(dirname(__file__), "testcase3.lin")
+    legacy = ValdFile.__new__(ValdFile)
+    legacy.citation_info = ValdFile.citation_info
+    legacy_lines = legacy._loads_legacy(path)
+    streaming = ValdFile.__new__(ValdFile)
+    streaming.citation_info = ValdFile.citation_info
+    streaming_lines = streaming._loads_long_extract_stellar_stream(
+        path, chunk_size=3
+    )
+
+    pd.testing.assert_frame_equal(streaming_lines, legacy_lines)
+    assert streaming.header == legacy.header
+    assert streaming.valdtype == legacy.valdtype
+    assert streaming.lineformat == legacy.lineformat
+    assert streaming.medium == legacy.medium
+    assert streaming.unit == legacy.unit
+    assert streaming.energy_unit == legacy.energy_unit
+    assert streaming.atmo == legacy.atmo
+    assert streaming._ref_record == legacy._ref_record
+    assert streaming.citation_info == legacy.citation_info
+    assert streaming.abund.monh == legacy.abund.monh
+    assert streaming.abund.type == legacy.abund.type
+    assert np.array_equal(streaming.abund._pattern, legacy.abund._pattern)
 
 
 def test_save_reload_long_subset_updates_header(tmp_path):

@@ -11,9 +11,9 @@ Use `linelist_mode` and `line_select_method` together in synthesis or solve:
 - `"all"`: use all lines (default).
 - `"dynamic"`: filter lines by precomputed line properties (recommended for long spectra).
 - `"auto"`: legacy alias of `"dynamic"` (deprecated).
-- `line_select_method="internal"`: no external preselection metadata.
+- `line_select_method="almax"`: use `almax_ratio` + `line_range_*` (default).
+- `line_select_method="internal"`: use SMElib's legacy internal selection.
 - `line_select_method="cdr"`: use `central_depth` + `line_range_*`.
-- `line_select_method="almax"`: use `almax_ratio` + `line_range_*`.
 
 ## How Dynamic Filtering Works
 
@@ -28,6 +28,19 @@ When `linelist_mode="dynamic"`:
 3. Only this reduced line subset is sent to SMElib for that segment.
 
 This can significantly reduce runtime for long or segmented spectra.
+
+Dynamic filtering is not the same as transfer-grid refinement. The complete
+model is:
+
+```text
+line_select_method / ALMAX / CDR -> retained lines
+line_range_s/e + accrt           -> physical wavelength support
+accwi                            -> adaptive wavelength refinement
+```
+
+In the optimized adaptive path, retained-line membership and physical ranges
+remain fixed throughout transfer. `accwi` samples the spectrum; it does not
+perform a second sequential weak-line rejection.
 
 For a complete parameter-by-parameter reference, including deprecated aliases
 and recommended replacements, see [](line_selection_reference.md).
@@ -56,6 +69,12 @@ and recommended replacements, see [](line_selection_reference.md).
 so one folder can safely store multiple linelists and both methods together.
 Legacy `cdr_database` is still accepted as a deprecated alias.
 
+The current on-disk cache key does not encode a custom element-by-element
+abundance pattern. After ALMAX metadata has been associated with an in-memory
+line list, PySME detects an abundance change and bypasses that cache. A cache
+built under a different custom abundance pattern should not be supplied on the
+first synthesis; regenerate it or disable `line_precompute_database`.
+
 ### Recompute vs. reuse
 
 - `line_select_recompute` controls whether line metadata is recomputed when it
@@ -63,6 +82,10 @@ Legacy `cdr_database` is still accepted as a deprecated alias.
   - `if_stale`: recompute only when needed
   - `always`: always recompute
   - `never`: require existing metadata or cache entries
+- ALMAX staleness includes an exact comparison of the effective elemental
+  abundance vector. Changing any abundance therefore triggers new ALMAX ratios,
+  strong-line flags, and validity ranges. This abundance check is independent
+  of the approximate atmosphere thresholds in `line_select_stale_thres`.
 - `line_select_reuse` is deprecated. Non-default values still enable a limited
   internal reuse path by keeping line opacity around, but this is not a fully
   developed cache policy and should not be treated as a stable public API.
@@ -76,10 +99,35 @@ Legacy `cdr_database` is still accepted as a deprecated alias.
 
 `line_select_almax_threshold` is the single ALMAX threshold parameter for both
 rules. If it is `None`, it falls back to `sme.accrt` (legacy-compatible
-behavior).
+behavior). The value is passed to `ALMAXRange`, so an explicit override also
+affects the physical ranges produced by that precomputation; it is not a
+membership-only control.
+
+`accrt` and `line_select_almax_threshold` are local line-to-continuum opacity
+ratio cutoffs, not bounds on the final normalized-flux error. The default is
+`1e-4`; accumulated weak-line contributions can produce a larger flux change.
+
+For a missing or stale ALMAX result in non-parallel `"all"` mode, PySME runs
+`ALMAXRange` in the synthesis DLL and immediately reuses its line-opacity and
+Voigt state in the first transfer calculation. Cached, parallel, and
+`"dynamic"` workflows retain their separate precompute path.
+
+During an abundance-only solve, PySME may retain the resident line list and
+atmosphere, but it does not retain abundance-dependent ALMAX results. The new
+abundances and ionization state are installed first, then `ALMAXRange` is
+rerun. Prepared-state reuse is not enabled for CDR selection because CDR cache
+metadata is not currently abundance-aware.
 
 CDR does not have a separate `use_bins` switch because its current strong-line
 selection already uses the bin-based helper internally.
+
+The cumulative bin rule is implemented once in SMElib as
+`SelectStrongLinesByBins`. Both CDR and optional binned-ALMAX selection call
+that native implementation. With `linelist_mode="dynamic"`, Python still uses
+the returned mask and ranges to reduce the line list before passing it to the
+main synthesis DLL; parallel CDR calculation and cache handling are unchanged.
+This first-stage integration does not change the default individual ALMAX rule
+or solve its accumulated-weak-line limitation.
 
 ## Example 1: Dynamic Filtering in Synthesis (CDR)
 
@@ -127,8 +175,9 @@ sme = solve(
 
 ## Practical Guidance
 
-- Start with `line_select_method="cdr"` for continuity with existing CDR workflows.
-- For ALMAX, start with `line_select_almax_threshold = sme.accrt`.
+- The default is `line_select_method="almax"` with
+  `line_select_almax_threshold = None`, which uses `sme.accrt`.
+- Set `line_select_method="internal"` to reproduce the legacy selection path.
 - Enable `line_select_almax_use_bins=True` when you want bin-wise cumulative pruning.
 - Use `"all"` for short, narrow windows where filtering overhead may not help.
 - Use `"dynamic"` for wide ranges or many segments.

@@ -238,6 +238,24 @@ class SME_DLL:
             int(bool(mode)), type="int", state=self.state
         )
 
+    def SetContinuumOpacityGrid(
+        self, mode="exact", base_step=1.0, rtol=1e-3, min_step=1e-3
+    ):
+        """Configure exact, adaptive, or fixed continuum-opacity evaluation."""
+        if isinstance(mode, (int, float)) and not isinstance(mode, bool):
+            base_step = float(mode)
+            mode_id = 2
+        else:
+            modes = {"exact": 0, "adaptive": 1, "fixed": 2}
+            try:
+                mode_id = modes[str(mode).lower()]
+            except KeyError as exc:
+                raise ValueError("invalid continuum opacity grid mode") from exc
+        self.lib.SetContinuumOpacityGrid(
+            int(mode_id), float(base_step), float(rtol), float(min_step),
+            type=("int", "double", "double", "double"), state=self.state
+        )
+
     def SetEosWarmStartMode(self, mode):
         """Enable exact EOS history reuse for the current fit lifecycle."""
         self.lib.SetEosWarmStartMode(int(bool(mode)), type="int", state=self.state)
@@ -612,9 +630,12 @@ class SME_DLL:
         mu : array of shape (nmu,)
             mu angles (1 - cos(phi)) of different limb points along the stellar surface
         accrt : float
-            accuracy of the radiative transfer integration
+            Local line-to-continuum opacity-ratio threshold used for line
+            screening/ranges; not a global spectrum-error bound.
         accwi : float
-            accuracy of the interpolation on the wavelength grid
+            Adaptive wavelength-grid refinement threshold evaluated on the
+            largest-``mu`` ray; ignored for a fixed ``wave`` grid and not a
+            global interpolation-error bound.
         keep_lineop : bool, optional
             if True do not recompute the line opacities (default: False)
         long_continuum : bool, optional
@@ -706,7 +727,8 @@ class SME_DLL:
         mu : array of size (nmu,)
             mu values along the stellar disk to calculate
         accrt : float
-            precision of the radiative transfer calculation
+            Retained for API compatibility; the current SMElib
+            ``CentralDepth`` implementation does not use this value.
 
         Returns
         -------

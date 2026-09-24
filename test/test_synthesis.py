@@ -72,29 +72,79 @@ def test_synthesis_segment(sme_2segments):
     assert np.all(sme2.synth[0] == orig)
 
 
+@skipif_smelib
+def test_default_almax_first_transfer_matches_cached_recompute(sme_2segments):
+    sme_2segments.line_select_recompute = "if_stale"
+    first = synthesize_spectrum(sme_2segments)
+    first_profiles = [np.asarray(profile).copy() for profile in first.synth]
+
+    second = synthesize_spectrum(first)
+
+    assert all(
+        np.array_equal(reference, np.asarray(recomputed))
+        for reference, recomputed in zip(first_profiles, second.synth)
+    )
+
+
+@skipif_smelib
+def test_abundance_only_prepared_state_matches_full_reinput(sme_2segments):
+    synth = Synthesizer()
+    sme_2segments.line_select_recompute = "if_stale"
+    synth.synthesize_spectrum(sme_2segments)
+
+    sme_2segments.abund.A["Fe"] += 0.05
+    prepared = synth.synthesize_spectrum(
+        sme_2segments,
+        updateStructure=False,
+        reuse_wavelength_grid=True,
+        passLineList=False,
+        passAtmosphere=False,
+        passAbund=True,
+    )
+    sme_2segments.line_select_recompute = "always"
+    reference = synth.synthesize_spectrum(
+        sme_2segments,
+        updateStructure=False,
+        reuse_wavelength_grid=True,
+        passLineList=True,
+        passAtmosphere=True,
+    )
+
+    assert all(
+        np.array_equal(np.asarray(candidate), np.asarray(expected))
+        for candidate, expected in zip(prepared[1], reference[1])
+    )
+
+
 class _DummyDLL:
     def __init__(self, transf_wave=None, discard_mask=None, nlte_flags=None):
         self.last_wave = "unset"
+        self.last_nwmax = None
         self.transf_wave = transf_wave
         self.discard_mask = discard_mask
         self.nlte_flags = nlte_flags
         self._nlines = 0
         self.continuum_scattering_source_modes = []
         self.line_updates = []
+        self.events = []
 
     def SetLibraryPath(self):
         return None
 
     def InputWaveRange(self, *_):
+        self.events.append("InputWaveRange")
         return None
 
     def InputModel(self, *_):
+        self.events.append("InputModel")
         return None
 
     def InputAbund(self, *_):
+        self.events.append("InputAbund")
         return None
 
     def Ionization(self, *_):
+        self.events.append("Ionization")
         return None
 
     def SetVWscale(self, *_):
@@ -104,12 +154,15 @@ class _DummyDLL:
         return None
 
     def Opacity(self):
+        self.events.append("Opacity")
         return None
 
     def SetLineInfoMode(self, *_):
+        self.events.append("SetLineInfoMode")
         return None
 
     def InputLinePrecomputedInfo(self, *_):
+        self.events.append("InputLinePrecomputedInfo")
         return None
 
     def SetContinuumScatteringSourceMode(self, mode):
@@ -135,8 +188,10 @@ class _DummyDLL:
             )
         )
 
-    def Transf(self, mu, accrt, accwi, keep_lineop, wave=None):
+    def Transf(self, mu, accrt, accwi, keep_lineop, wave=None, nwmax=None):
+        self.events.append("Transf")
         self.last_wave = wave
+        self.last_nwmax = nwmax
         self.brackett_mode = os.environ.get("PYSME_H_STARK_CONVOLUTION")
         if wave is None:
             if self.transf_wave is None:
@@ -157,6 +212,7 @@ class _DummyDLL:
         return np.zeros((0, 2), dtype=float)
 
     def ALMAXRange(self, accrt):
+        self.events.append("ALMAXRange")
         self.almax_mode = os.environ.get("PYSME_H_STARK_CONVOLUTION")
         return np.zeros(self._nlines), np.zeros((self._nlines, 2))
 
@@ -283,6 +339,24 @@ def test_reused_linelist_maps_incremental_updates_to_smelib_indices():
     assert np.array_equal(indices, [1, 2])
 
 
+def test_pass_abund_updates_eos_without_reinputting_model():
+    dll = _DummyDLL()
+    synth = Synthesizer(dll=dll)
+    sme = _minimal_sme()
+
+    synth.synthesize_spectrum(
+        sme,
+        passAtmosphere=False,
+        passAbund=True,
+        passNLTE=False,
+        updateStructure=False,
+    )
+
+    assert "InputModel" not in dll.events
+    assert dll.events.count("InputAbund") == 1
+    assert dll.events.count("Ionization") == 1
+
+
 def test_dynamic_synthesis_maps_selected_and_discarded_lines(monkeypatch):
     dll = _DummyDLL(
         discard_mask=[True, False, False],
@@ -375,6 +449,95 @@ def test_synthesize_segment_populates_cache_when_no_wint_available():
     assert dll.last_wave is None
     assert 0 in synth.wint
     assert np.allclose(synth.wint[0], np.linspace(5000.0, 5001.0, 5))
+
+
+def test_synthesize_segment_sizes_line_rich_adaptive_transfer_storage():
+    dll = _DummyDLL()
+    synth = Synthesizer(dll=dll)
+    sme = _minimal_sme()
+    sme.wran = [[4800.0, 5600.0]]
+    sme.linelist._lines = pd.DataFrame(
+        {"wlcent": np.linspace(4800.0, 5600.0, 300_000)}
+    )
+
+    synth.synthesize_segment(sme, 0, reuse_wavelength_grid=False)
+
+    assert dll.last_wave is None
+    assert dll.last_nwmax > 600_000
+
+
+def test_synthesize_segment_resamples_line_and_continuum_before_flux_integration(
+    monkeypatch,
+):
+    irregular = np.array([5000.0, 5000.08, 5000.31, 5000.57, 5001.0])
+    dll = _DummyDLL(transf_wave=irregular)
+    synth = Synthesizer(dll=dll)
+    sme = _minimal_sme()
+    sme.specific_intensities_only = False
+
+    sint_raw = np.vstack(
+        [
+            1.0 + (imu + 1) * (irregular - irregular[0]) ** 2
+            for imu in range(sme.nmu)
+        ]
+    )
+    cint_raw = np.vstack(
+        [2.0 + (imu + 1) * (irregular - irregular[0]) for imu in range(sme.nmu)]
+    )
+
+    def transf(mu, accrt, accwi, keep_lineop, wave=None, nwmax=None):
+        wint = irregular if wave is None else np.asarray(wave, dtype=float)
+        assert np.array_equal(wint, irregular)
+        return len(wint), wint, sint_raw.copy(), cint_raw.copy()
+
+    monkeypatch.setattr(dll, "Transf", transf)
+    integrated = []
+
+    def record_integrate(mu, intensities, deltav, vsini, vrt, **kwargs):
+        integrated.append(np.asarray(intensities).copy())
+        return np.mean(intensities, axis=0)
+
+    monkeypatch.setattr(synth, "integrate_flux", record_integrate)
+    wgrid, _ = synth.new_wavelength_grid(irregular)
+
+    synth.synthesize_segment(sme, 0, reuse_wavelength_grid=False)
+
+    assert len(integrated) == 2
+    expected_continuum = synth._resample_mu_intensities(
+        irregular, cint_raw, wgrid
+    )
+    expected_line = synth._resample_mu_intensities(irregular, sint_raw, wgrid)
+    assert np.array_equal(integrated[0], expected_continuum)
+    assert np.array_equal(integrated[1], expected_line)
+    assert integrated[0].shape[1] == wgrid.size
+
+
+def test_contribution_function_uses_mu_area_integration_without_depth_resampling():
+    mu = np.array([0.2, 0.7, 1.0])
+    contribution = np.array(
+        [
+            [1.0, 2.0, 4.0, 8.0],
+            [3.0, 5.0, 7.0, 9.0],
+            [2.0, 6.0, 10.0, 14.0],
+        ]
+    )
+
+    result = Synthesizer._integrate_mu_areas(mu, contribution)
+
+    projected_radius = np.sqrt(1.0 - mu * mu)
+    order = np.argsort(projected_radius)
+    projected_radius = projected_radius[order]
+    boundaries = np.sqrt(
+        0.5 * (projected_radius[:-1] ** 2 + projected_radius[1:] ** 2)
+    )
+    boundaries = np.concatenate(([0.0], boundaries, [1.0]))
+    weights = boundaries[1:] ** 2 - boundaries[:-1] ** 2
+    expected = np.pi * np.sum(
+        weights[:, None] * contribution[order], axis=0
+    )
+
+    assert np.array_equal(result, expected)
+    assert result.shape == (contribution.shape[1],)
 
 
 def test_brackett_mode_is_explicit_and_environment_is_restored(monkeypatch):
@@ -499,11 +662,100 @@ def test_switching_brackett_mode_invalidates_lineinfo(monkeypatch, method, metri
     with pytest.raises(RuntimeError, match="mode switch"):
         synth.synthesize_spectrum(
             sme,
+            passLineList=False,
             passAtmosphere=False,
             passNLTE=False,
             updateStructure=False,
         )
     assert called["count"] == 1
+
+
+def test_default_almax_uses_main_dll_immediately_before_first_transf():
+    dll = _DummyDLL(discard_mask=[False, True])
+    synth = Synthesizer(dll=dll)
+    sme = _minimal_sme()
+    _set_minimal_species_linelist(sme, ["Fe 1", "Ni 7"])
+
+    assert sme.line_select_method == "almax"
+    synth.synthesize_spectrum(
+        sme,
+        passAtmosphere=False,
+        passNLTE=False,
+        updateStructure=False,
+    )
+
+    relevant = [
+        event
+        for event in dll.events
+        if event in {"Opacity", "ALMAXRange", "InputLinePrecomputedInfo", "Transf"}
+    ]
+    assert relevant == ["Opacity", "ALMAXRange", "InputLinePrecomputedInfo", "Transf"]
+    assert np.isfinite(sme.linelist["almax_ratio"][0])
+    assert np.isnan(sme.linelist["almax_ratio"][1])
+
+
+def test_abundance_change_recomputes_almax_after_input_abund():
+    dll = _DummyDLL()
+    synth = Synthesizer(dll=dll)
+    sme = _minimal_sme()
+
+    synth.synthesize_spectrum(
+        sme,
+        passAtmosphere=False,
+        passNLTE=False,
+        updateStructure=False,
+    )
+    previous_abund = np.asarray(sme.linelist.almax_abund).copy()
+
+    dll.events.clear()
+    synth.synthesize_spectrum(
+        sme,
+        passLineList=False,
+        passAtmosphere=False,
+        passAbund=True,
+        passNLTE=False,
+        updateStructure=False,
+    )
+    assert "ALMAXRange" not in dll.events
+
+    sme.abund.A["Fe"] += 0.2
+    dll.events.clear()
+    synth.synthesize_spectrum(
+        sme,
+        passLineList=False,
+        passAtmosphere=False,
+        passAbund=True,
+        passNLTE=False,
+        updateStructure=False,
+    )
+
+    relevant = [
+        event
+        for event in dll.events
+        if event
+        in {
+            "InputAbund",
+            "Ionization",
+            "Opacity",
+            "ALMAXRange",
+            "InputLinePrecomputedInfo",
+            "Transf",
+        }
+    ]
+    assert relevant == [
+        "InputAbund",
+        "Ionization",
+        "Opacity",
+        "ALMAXRange",
+        "InputLinePrecomputedInfo",
+        "Transf",
+    ]
+    assert not np.array_equal(previous_abund, sme.linelist.almax_abund)
+    assert np.array_equal(
+        np.asarray(sme.linelist.almax_abund),
+        np.asarray(sme.abund(type="H=12", raw=True)),
+        equal_nan=True,
+    )
 
 
 def test_specific_intensities_only_updates_sme_and_trims_to_wran():
@@ -735,17 +987,13 @@ def _flag_strong_lines_by_bins_reference(wl, depth, bin_width=0.2, threshold=0.0
     depth_sorted = depth_sanitized[order]
 
     starts = np.r_[0, np.flatnonzero(np.diff(bin_sorted)) + 1]
-    ends = np.r_[starts[1:], len(depth_sorted)]
-
-    keep_sorted = np.empty_like(depth_sorted, dtype=bool)
-    for s, e in zip(starts, ends):
-        if s == e:
-            continue
-        local = np.cumsum(depth_sorted[s:e])
-        cut = np.searchsorted(local, threshold, side="right")
-        keep_sorted[s:e] = True
-        if cut > 0:
-            keep_sorted[s : s + cut] = False
+    counts = np.diff(np.r_[starts, depth_sorted.size])
+    csum = np.cumsum(depth_sorted)
+    group_start = np.repeat(starts, counts)
+    local = csum.copy()
+    nonzero_start = group_start > 0
+    local[nonzero_start] -= csum[group_start[nonzero_start] - 1]
+    keep_sorted = local > threshold
 
     keep = np.empty_like(keep_sorted)
     keep[order] = keep_sorted
