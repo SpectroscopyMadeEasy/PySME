@@ -4,6 +4,9 @@
 
 ### Changed
 
+- Streamed counted long-format VALD `extract stellar` files in bounded chunks
+  instead of retaining multiple complete text copies during parsing. Other
+  VALD formats retain the established parser.
 - Extended generation-batched adaptive transfer for precomputed ALMAX/CDR line
   masks to spherical atmospheres. Plane-parallel and spherical transfer now
   share the seed/refinement scheduler and sorted-generation interval index,

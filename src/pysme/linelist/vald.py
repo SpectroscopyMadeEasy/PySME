@@ -195,6 +195,25 @@ class ValdFile(LineList):
     def loads(self, filename):
         logger.info("Loading VALD file %s", filename)
 
+        # Long extract-stellar files declare their record count in the first
+        # line.  They are by far the largest common VALD files, so avoid the
+        # legacy readlines -> slices -> giant joined string path for this
+        # unambiguous format.  Other variants retain the established parser.
+        with open(filename, "r") as file:
+            first = file.readline()
+            while first and first.lstrip().startswith("WARNING"):
+                first = file.readline()
+            second = file.readline()
+        if first and second:
+            valdtype, fmt = self.identify_valdtype([first, second])
+            if valdtype == "extract_stellar" and fmt == "long":
+                return self._loads_long_extract_stellar_stream(filename)
+
+        return self._loads_legacy(filename)
+
+    def _loads_legacy(self, filename):
+        """Read formats without a safe streaming fast path."""
+
         with open(filename, "r") as file:
             lines = file.readlines()
 
@@ -253,6 +272,76 @@ class ValdFile(LineList):
 
         self.citation_info += self.parse_references(refdata, fmt)
 
+        return linelist
+
+    def _loads_long_extract_stellar_stream(self, filename, chunk_size=20_000):
+        """Read a counted long extract-stellar file with bounded text memory."""
+
+        chunks = []
+        reference_keys = set()
+        with open(filename, "r") as file:
+            header = file.readline()
+            while header and header.lstrip().startswith("WARNING"):
+                logger.warning(f"VALD {header.lstrip()}")
+                header = file.readline()
+
+            n = self.parse_header(header)
+            self.header = header
+            self.valdtype = "extract_stellar"
+            file.readline()  # descriptive Lande-factor heading
+            column_header = file.readline()
+            self.parse_columns(column_header)
+            input_unit = self.unit
+
+            records = []
+            for index in range(n):
+                record = [file.readline() for _ in range(4)]
+                if any(line == "" for line in record):
+                    msg = (
+                        "Linelist file is shorter than it should be according "
+                        "to the number of lines. Is it incomplete?"
+                    )
+                    logger.error(msg)
+                    raise IOError(msg)
+                records.extend(record)
+
+                if len(records) == 4 * chunk_size or index == n - 1:
+                    reference_keys.update(
+                        self._extract_reference_keys(records[3::4], "long")
+                    )
+                    # parse_linedata records the output unit on self; restore
+                    # the input unit before parsing each independent chunk.
+                    self.unit = input_unit
+                    chunks.append(
+                        self.parse_linedata(
+                            records, fmt="long", valdtype="extract_stellar"
+                        )
+                    )
+                    records = []
+
+            atmodata = file.readline()
+            abunddata = []
+            for _ in range(18):
+                line = file.readline()
+                if line == "":
+                    break
+                abunddata.append(line)
+                if "'END'" in line:
+                    break
+            if atmodata == "" or not abunddata:
+                msg = (
+                    "Linelist file is shorter than it should be according "
+                    "to the number of lines. Is it incomplete?"
+                )
+                logger.error(msg)
+                raise IOError(msg)
+            self._ref_record = file.readlines()
+
+        linelist = pd.concat(chunks, ignore_index=True, copy=False)
+        self.atmo = self.parse_valdatmo(atmodata)
+        self.abund = self.parse_abund(abunddata)
+        linelist["nlte_flag"] = np.nan
+        self.citation_info += self._format_references(reference_keys)
         return linelist
 
     def parse_nlines(self, lines, fmt, valdtype):
@@ -543,6 +632,11 @@ class ValdFile(LineList):
         return Abund(monh, pattern, type="sme")
 
     def parse_references(self, lines, fmt):
+        references = self._extract_reference_keys(lines, fmt)
+        return self._format_references(references)
+
+    @staticmethod
+    def _extract_reference_keys(lines, fmt):
         # Search the linelist data for this pattern, e.g:
         # 1 gf:K14
         # 4 KCN'
@@ -560,7 +654,10 @@ class ValdFile(LineList):
         lines = "".join(lines)
         references = [match.group(2) for match in re.finditer(pattern, lines)]
         # We only need each reference ones
-        ref = set(references)
+        return set(references)
+
+    @staticmethod
+    def _format_references(ref):
         # Multiple references are seperated by '+'
         references = []
         for r in ref:
