@@ -57,8 +57,8 @@ msgid "Python versions:"
 msgstr "Python 版本："
 
 #: ../../getting_started/installation.md:10
-msgid "3.9–3.13."
-msgstr "3.9 到 3.13。"
+msgid "3.10–3.13."
+msgstr "3.10 到 3.13。"
 
 #: ../../getting_started/installation.md:13
 msgid "Set up virtual environment"
