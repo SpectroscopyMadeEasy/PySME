@@ -163,12 +163,21 @@ def _configure_continuum_opacity_grid(dll, sme):
     )
 
 
+def _configure_adaptive_transfer_grid(dll, sme):
+    """Apply the native adaptive-transfer implementation setting."""
+    if hasattr(dll, "SetAdaptiveTransferGridMode"):
+        dll.SetAdaptiveTransferGridMode(
+            getattr(sme, "transfer_grid_method", "batched")
+        )
+
+
 def _compute_almax_lineinfo_for_sme(sub_sme):
     """Worker for ALMAX/range preselection on a sub-linelist."""
     synth = Synthesizer()
     dll = synth.get_dll()
     dll.SetLibraryPath()
     _configure_continuum_opacity_grid(dll, sub_sme)
+    _configure_adaptive_transfer_grid(dll, sub_sme)
     line_ion_mask = dll.InputLineList(sub_sme.linelist)
     sub_sme.line_ion_mask = line_ion_mask
 
@@ -1706,6 +1715,7 @@ class Synthesizer:
         # Input Model data to C library
         dll.SetLibraryPath()
         _configure_continuum_opacity_grid(dll, sme)
+        _configure_adaptive_transfer_grid(dll, sme)
         dll.SetContinuumScatteringSourceMode(
             int(sme.continuum_scattering_source)
         )

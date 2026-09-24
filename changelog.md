@@ -4,6 +4,12 @@
 
 ### Changed
 
+- Replaced plane-parallel adaptive transfer for precomputed ALMAX/CDR line
+  masks with generation-batched refinement. The seed geometry and `accwi`
+  midpoint criterion are unchanged, but each sorted generation now uses the
+  fixed-grid interval index and the active line mask remains immutable. This
+  removes RKINTS' order-dependent second weak-line pruning; fixed wavelength
+  grids, spherical models, and legacy internal line selection are unchanged.
 - Reused the resident SMElib line list and atmosphere/model during
   abundance-only `solve(...)` iterations. Abundances, EOS, opacity, and
   transfer are still recomputed for every trial; mixed-parameter fits and

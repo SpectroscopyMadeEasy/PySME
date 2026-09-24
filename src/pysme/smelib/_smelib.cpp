@@ -228,6 +228,29 @@ static PyObject *smelib_SetLineInfoMode(PyObject *self, PyObject *args)
     Py_RETURN_NONE;
 }
 
+static char smelib_SetAdaptiveTransferGridMode_docstring[] =
+    "Select batched or legacy adaptive transfer";
+static PyObject *smelib_SetAdaptiveTransferGridMode(PyObject *self, PyObject *args)
+{
+    const int n = 1;
+    const char *result = NULL;
+    void *args_c[n];
+    int mode = 0;
+
+    if (!PyArg_ParseTuple(args, "i", &mode))
+        return NULL;
+
+    args_c[0] = &mode;
+    result = SetAdaptiveTransferGridMode(n, args_c);
+    if (result != NULL && result[0] != OK_response)
+    {
+        PyErr_SetString(PyExc_RuntimeError, result);
+        return NULL;
+    }
+
+    Py_RETURN_NONE;
+}
+
 static char smelib_SelectStrongLinesByBins_docstring[] =
     "Select strong lines by cumulative metric within wavelength bins";
 static PyObject *smelib_SelectStrongLinesByBins(PyObject *self, PyObject *args)
@@ -1937,6 +1960,7 @@ static PyMethodDef module_methods[] = {
     {"SetH2broad", smelib_SetH2broad, METH_NOARGS, smelib_SetH2broad_docstring},
     {"ClearH2broad", smelib_ClearH2broad, METH_NOARGS, smelib_ClearH2broad_docstring},
     {"SetLineInfoMode", smelib_SetLineInfoMode, METH_VARARGS, smelib_SetLineInfoMode_docstring},
+    {"SetAdaptiveTransferGridMode", smelib_SetAdaptiveTransferGridMode, METH_VARARGS, smelib_SetAdaptiveTransferGridMode_docstring},
     {"SelectStrongLinesByBins", smelib_SelectStrongLinesByBins, METH_VARARGS, smelib_SelectStrongLinesByBins_docstring},
     {"SetContinuumScatteringSourceMode", smelib_SetContinuumScatteringSourceMode, METH_VARARGS, smelib_SetContinuumScatteringSourceMode_docstring},
     {"SetContinuumOpacityGrid", smelib_SetContinuumOpacityGrid, METH_VARARGS, smelib_SetContinuumOpacityGrid_docstring},

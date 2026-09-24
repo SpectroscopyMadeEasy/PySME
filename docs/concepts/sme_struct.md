@@ -185,8 +185,15 @@ For more information see [system_info](../concepts/system_info.md).
     compares a newly synthesized midpoint intensity with a linear midpoint
     estimate (including a small endpoint-slope term) for the disk-center
     (largest `mu`) ray.
+    With precomputed ALMAX/CDR line information it controls only generation-
+    batched wavelength refinement and does not change the active line mask.
     It is ignored when a fixed `sme.wint` is supplied and is not a global
     interpolation-error guarantee.
+:transfer_grid_method:
+    Selects the plane-parallel adaptive transfer implementation. `batched`
+    (default) evaluates complete refinement generations with immutable
+    precomputed ALMAX/CDR masks and physical ranges. `legacy` retains the
+    sequential RKINTS implementation for compatibility and reference tests.
 :version: The version of sme used to create this structure and spectrum
 :id:
     The date and time when this structure or the

@@ -261,6 +261,9 @@ class SME_Structure(Parameters):
         ("accwi", 3e-3, asfloat, this,
             "float: adaptive wavelength-grid refinement threshold; ignored when "
             "a fixed wavelength grid is supplied and not a global error bound."),
+        ("transfer_grid_method", "batched", lowercase(oneof("batched", "legacy")), this,
+            "str: plane-parallel adaptive transfer implementation; 'batched' "
+            "is the default and 'legacy' is retained for compatibility/reference."),
         ("accrt", 1e-4, asfloat, this,
             "float: local line-to-continuum opacity-ratio threshold used for "
             "line screening/ranges; not a global synthesized-spectrum error bound."),

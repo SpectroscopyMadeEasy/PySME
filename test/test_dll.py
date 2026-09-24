@@ -25,6 +25,7 @@ def libsme():
     # SMElib keeps this mode in process-global state, so isolate tests that
     # intentionally enable strict precomputed-line-info handling.
     dll.SetLineInfoMode(0)
+    dll.SetAdaptiveTransferGridMode("batched")
     return dll
 
 
@@ -154,6 +155,13 @@ def test_select_strong_lines_by_bins_native_api():
     assert SME_DLL.SelectStrongLinesByBins([], []).size == 0
     with pytest.raises(RuntimeError, match="bin_width"):
         SME_DLL.SelectStrongLinesByBins(wavelength, metric, bin_width=0)
+
+
+def test_adaptive_transfer_grid_mode_api(libsme):
+    libsme.SetAdaptiveTransferGridMode("legacy")
+    libsme.SetAdaptiveTransferGridMode("batched")
+    with pytest.raises(ValueError, match="batched.*legacy"):
+        libsme.SetAdaptiveTransferGridMode("unknown")
 
 
 def test_linelist(libsme, linelist):
@@ -368,6 +376,90 @@ def test_transf(
         "SIGH2",
     ]:
         libsme.GetOpacity(switch)
+
+
+def test_batched_adaptive_transfer_keeps_precomputed_line_state_immutable(
+    libsme,
+    linelist,
+    teff,
+    grav,
+    vturb,
+    atmo,
+    abund,
+    vw_scale,
+    wfirst,
+    wlast,
+    mu,
+):
+    """Batched RKINTS uses the ALMAX mask/ranges without second pruning."""
+    libsme.SetLibraryPath()
+    libsme.SetContinuumOpacityGrid("exact")
+    libsme.InputLineList(linelist)
+    libsme.InputModel(teff, grav, vturb, atmo)
+    libsme.InputAbund(abund)
+    libsme.Ionization(0)
+    libsme.SetVWscale(vw_scale)
+    libsme.SetH2broad()
+    libsme.InputWaveRange(wfirst, wlast)
+    libsme.Opacity()
+
+    threshold = 1e-6
+    _, line_range = libsme.ALMAXRange(accrt=threshold)
+    # Deliberately retain every supported line. With accwi=0.5 the historical
+    # second pruning would deactivate shallow line centres; the production
+    # batched path must instead keep this input mask immutable.
+    strong = np.ones(len(line_range), dtype=np.uint8)
+    libsme.InputLinePrecomputedInfo(
+        line_range[:, 0], line_range[:, 1], strong
+    )
+    libsme.SetLineInfoMode(2)
+    libsme.SetAdaptiveTransferGridMode("batched")
+
+    try:
+        nw, wave, synth, cont = libsme.Transf(
+            mu, accrt=threshold, accwi=0.5, long_continuum=True
+        )
+        range_after = np.asarray(libsme.GetLineRange())
+
+        # Segment workflows update only the wavelength bounds and then reuse
+        # line opacity. That must preserve the fact that MARK/Wlim came from
+        # precomputed immutable line information.
+        libsme.InputWaveRange(wfirst, wlast)
+        _, wave_reused, synth_reused, cont_reused = libsme.Transf(
+            mu,
+            accrt=threshold,
+            accwi=0.5,
+            keep_lineop=True,
+            long_continuum=True,
+        )
+        range_after_reuse = np.asarray(libsme.GetLineRange())
+
+        # A fixed-grid evaluation at exactly the accepted nodes is the
+        # corresponding immutable-mask reference, independent of the adaptive
+        # scheduling order.
+        libsme.InputLinePrecomputedInfo(
+            line_range[:, 0], line_range[:, 1], strong
+        )
+        nw_ref, wave_ref, synth_ref, cont_ref = libsme.Transf(
+            mu,
+            wave=wave,
+            accrt=threshold,
+            accwi=0.5,
+            long_continuum=True,
+        )
+    finally:
+        libsme.SetLineInfoMode(0)
+        libsme.SetAdaptiveTransferGridMode("batched")
+
+    assert np.array_equal(range_after, line_range)
+    assert np.array_equal(range_after_reuse, line_range)
+    assert np.array_equal(wave_reused, wave)
+    assert np.array_equal(synth_reused, synth)
+    assert np.array_equal(cont_reused, cont)
+    assert nw_ref == nw
+    assert np.array_equal(wave_ref, wave)
+    assert np.array_equal(synth_ref, synth)
+    assert np.array_equal(cont_ref, cont)
 
 
 @pytest.mark.parametrize("spherical", [False, True])

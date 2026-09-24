@@ -242,6 +242,29 @@ Legacy-style function argument still used to force regeneration of cached line
 metadata products. It remains supported, but is not yet replaced by a clearer
 unified name.
 
+## Adaptive transfer-grid semantics
+
+When no `sme.wint` is supplied, plane-parallel synthesis with precomputed
+ALMAX or CDR line information constructs the transfer grid in refinement
+generations inside native SMElib. Each generation is evaluated through the
+indexed fixed-grid opacity path. The initial endpoints, line-centre seeds,
+0.3 km/s minimum spacing, and the `accwi` midpoint interpolation criterion
+retain the RKINTS definitions.
+
+The active line mask is fixed for the complete transfer calculation. `ALMAX`
+or CDR decides whether a line participates, `accrt` defines its wavelength
+support, and `accwi` controls wavelength sampling only. In particular,
+`accwi` no longer permanently removes a line based on the blended disk-centre
+depth at its centre.
+
+Supplying `sme.wint` continues to use that fixed grid directly. Spherical
+models and `sme.line_select_method = "internal"` retain legacy RKINTS while
+the batched path is validated for those configurations.
+
+`sme.transfer_grid_method = "batched"` is the default. Set it to `"legacy"`
+for compatibility or reference calculations. The setting affects only
+adaptive transfer; it does not change a supplied fixed `sme.wint` grid.
+
 ## Recommended usage
 
 ### CDR workflow

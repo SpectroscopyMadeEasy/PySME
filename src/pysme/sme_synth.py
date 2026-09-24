@@ -219,6 +219,18 @@ class SME_DLL:
         """Set handling mode for precomputed line info (0=internal, 1=use_if_valid, 2=trust)."""
         _smelib.SetLineInfoMode(int(mode))
 
+    def SetAdaptiveTransferGridMode(self, mode):
+        """Select native adaptive transfer: ``batched`` or ``legacy``."""
+        modes = {"legacy": 0, "batched": 1}
+        if isinstance(mode, str):
+            try:
+                mode = modes[mode.lower()]
+            except KeyError as exc:
+                raise ValueError(
+                    "adaptive transfer-grid mode must be 'batched' or 'legacy'"
+                ) from exc
+        _smelib.SetAdaptiveTransferGridMode(int(mode))
+
     @staticmethod
     def SelectStrongLinesByBins(
         wavelength, metric, bin_width=0.2, threshold=0.001, valid_mask=None
@@ -691,7 +703,10 @@ class SME_DLL:
             maximum number of wavelength points if wavelength grid is not set with wave (default: 400000)
         wave : array, optional
             wavelength grid to use for the calculation,
-            if not set will use an adaptive wavelength grid with no constant step size (default: None)
+            if not set, use a nonuniform adaptive grid. Plane-parallel runs
+            with precomputed ALMAX/CDR line information evaluate refinement
+            generations through the indexed fixed-grid path while keeping the
+            active line mask fixed (default: None)
 
         Returns
         -------
