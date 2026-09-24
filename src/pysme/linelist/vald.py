@@ -680,7 +680,8 @@ class ValdFile(LineList):
         # pybtex.format_from_string(bibdata.to_string("bibtex"), style="plain", output_backend="plaintext")
 
         entries = {}
-        for r in references:
+        # Keep citation output stable across Python versions and hash seeds.
+        for r in sorted(references):
             try:
                 entries[r] = bibdata.entries[r]
             except KeyError as ex:
