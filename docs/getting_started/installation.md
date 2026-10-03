@@ -4,6 +4,8 @@ PySME can be installed through PyPI (recommended; stable release) or from GitHub
 
 ```{admonition} Supported environments:
 - Platforms: Linux, macOS (arm platform only)
+    - PySME 1.3.0 and later provide pre-built macOS wheels for macOS 15 or later.
+    - PySME 1.2.x is the last release series with pre-built wheels for macOS 14.
     - The x86/Intel platform macOS is not supported anymore, but you can still install v0.6.23, the last supported PySME version, or download [SMElib](https://github.com/SpectroscopyMadeEasy/SMElib) and compile it manually.
 - Windows: supported via WSL2 (install/run PySME inside the Linux subsystem)
 - Python versions: 
@@ -37,8 +39,10 @@ pip install pysme-astro
 ```
 
 On macOS arm64, `pip` uses a pre-built wheel only when one matches your Python
-and macOS version. If no compatible wheel is available, it falls back to a
-source build and therefore needs a local compiler toolchain.
+and macOS version. PySME 1.3.0 and later provide pre-built wheels for macOS 15
+or later; PySME 1.2.x is the last release series with pre-built wheels for
+macOS 14. If no compatible wheel is available, it falls back to a source build
+and therefore needs a local compiler toolchain.
 
 Install the required build tools with Homebrew before retrying:
 
