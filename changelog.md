@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- Changed the minimum supported version for pre-built macOS arm64 wheels from
+  macOS 14 to macOS 15. PySME 1.2.x remains available for macOS 14 users.
+- Added a manually dispatched wheel-build path that uploads artifacts for
+  validation without publishing to PyPI or creating a GitHub release.
+- Strengthened wheel validation with a native SMElib radiative-transfer smoke
+  test after installation.
+
 ## v1.2.0 - 2026-09-24
 
 ### Performance

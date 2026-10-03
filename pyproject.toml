@@ -78,7 +78,7 @@ provider = "scikit_build_core.metadata.setuptools_scm"
 build = "cp310-* cp311-* cp312-* cp313-*"
 skip = "*-musllinux_* *-win*"
 test-requires = "pytest"
-test-command = "python -c \"from pysme.smelib import _smelib; print(_smelib.LibraryVersion())\""
+test-command = "pytest -q {project}/test/test_dll.py::test_basic {project}/test/test_dll.py::test_transf"
 
 [tool.cibuildwheel.linux]
 manylinux-x86_64-image = "manylinux_2_28"
@@ -87,9 +87,9 @@ archs = ["x86_64"]
 repair-wheel-command = "auditwheel repair -w {dest_dir} {wheel}"
 
 [tool.cibuildwheel.macos]
-before-all = "brew install gcc"
+before-all = "brew install gcc@14"
 archs = ["arm64"]
-environment = { FC = "gfortran-14", CC = "gcc-14", CXX = "g++-14", MACOSX_DEPLOYMENT_TARGET = "14.0" }
+environment = { FC = "/opt/homebrew/opt/gcc@14/bin/gfortran-14", CC = "/opt/homebrew/opt/gcc@14/bin/gcc-14", CXX = "/opt/homebrew/opt/gcc@14/bin/g++-14", MACOSX_DEPLOYMENT_TARGET = "15.0" }
 repair-wheel-command = "delocate-wheel --require-archs {delocate_archs} -w {dest_dir} -v {wheel}"
 
 # Black：代码格式化配置
