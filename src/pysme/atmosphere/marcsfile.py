@@ -231,7 +231,10 @@ class MarcsAtmosphere(Atmosphere):
         self.interp = 'RHOX'  # not sure this is needed for embedded models
         self.vturb = data["vturb"]
 
-        self.abund = Abund(monh=data["monh"], pattern=data["abund_inclmonh"].to_numpy()[0]-data["monh"], type="H=12")
+        pattern = data["abund_inclmonh"].to_numpy()[0].copy()
+        # Abund reapplies [M/H] to metals only, so preserve H and He.
+        pattern[2:] -= data["monh"]
+        self.abund = Abund(monh=data["monh"], pattern=pattern, type="H=12")
 
         mdl: pd.DataFrame = data["modelstruct"]
 
