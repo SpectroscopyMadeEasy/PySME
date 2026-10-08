@@ -14,20 +14,37 @@ class SavFile(AtmosphereGrid):
 
     _cache = {}
 
+    def _identify_abund_format(self):
+        """Recover legacy He metadata, including old converted numpy caches.
+
+        With H present, log10(N_He/N_all) is negative; a nonnegative He
+        fraction belongs to the legacy format. Never reinterpret general
+        Abund inputs, or explicitly labelled non-SME grids.
+        """
+        if self.abund_format != "sme":
+            return
+        he = self["abund"][:, 1]
+        finite = he[np.isfinite(he)]
+        if finite.size and np.any(finite >= 0):
+            if np.any(finite < 0) or np.any(finite >= 1):
+                raise ValueError("Atmosphere grid has inconsistent helium abundance formats")
+            self.abund_format = "sme_legacy"
+
     def __new__(cls, filename, source=None, lfs=None):
+        filename = os.fspath(filename)
         # Check if the file is in the cache
-        try:
+        if filename in cls._cache:
             return cls._cache[filename]
-        except:
-            pass
         # Try loading the datafile using Numpy which is faster
         # and was generated in a previous iteration of PySME
         try:
             self = cls.load(filename)
-            cls._cache = self
+        except (OSError, ValueError, KeyError):
+            self = None
+        if self is not None:
+            self._identify_abund_format()
+            cls._cache[filename] = self
             return self
-        except:
-            pass
 
         # Otherwise we parse the sav file
         data = readsav(filename)
@@ -147,9 +164,10 @@ class SavFile(AtmosphereGrid):
         self["xna"] = np.stack(atmo_grid["xna"])
         self["abund"] = np.stack(atmo_grid["abund"])
         self["opflag"] = np.stack(atmo_grid["opflag"])
+        self._identify_abund_format()
 
         # Store in cache
-        cls._cache = self
+        cls._cache[filename] = self
         # And also replace the IDL file with a numpy file in the cache
         # We have to use a try except block, as this will crash with
         # permissions denied on windows, when trying to copy an open file

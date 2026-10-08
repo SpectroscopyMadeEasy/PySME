@@ -171,6 +171,12 @@ jobs:
           storage.get("marcs2014.sav")
           PY
 
+      - name: Validate official MARCS grid abundances
+        env:
+          PYSME_TEST_OFFICIAL_MARCS: "1"
+        run: |
+          pytest -q test/test_official_marcs_abundances.py
+
       - name: Build checked-out SMElib
         if: steps.smelib-cache.outputs.cache-hit != 'true'
         run: |
@@ -314,6 +320,12 @@ jobs:
           storage.get("marcs2012p_t2.0.sav")
           storage.get("marcs2014.sav")
           PY
+
+      - name: Validate official MARCS grid abundances
+        env:
+          PYSME_TEST_OFFICIAL_MARCS: "1"
+        run: |
+          pytest -q test/test_official_marcs_abundances.py
 
       - name: Build checked-out SMElib
         if: steps.smelib-cache.outputs.cache-hit != 'true'

@@ -1,0 +1,229 @@
+{
+  "description": "Real grid records, not custom MOD models. Raw abundance, temperature, density and depth arrays are retained from the official source/cache; the record schema follows AtmosphereGrid. No abundance conversion is used to generate the fixtures. Samples deliberately retain the old sme metadata to exercise cache migration.",
+  "grids": {
+    "marcs2012.sav": {
+      "source_urls": [
+        "https://nadc.china-vo.org/res/file_upload/download?id=53703",
+        "models/marcs2012_v1.0.0.sav.gz"
+      ],
+      "source_representation": "Original IDL save file",
+      "source_sha256": "16a97ae681081d537cad81b3e448c846b0de9968fa217b4cad92222b0000a17e",
+      "source_model_count": 4289,
+      "fixture": "marcs2012.npz",
+      "fixture_sha256": "f37203fcb78261669c11b45ef29ac61fb1a7696a2fa43ff2cb5373639427b586",
+      "records": [
+        {
+          "source_index": 1873,
+          "teff": 4500.0,
+          "logg": 1.5,
+          "monh": -2.0,
+          "raw_h": 0.921999990940094,
+          "raw_he": 0.07800000160932541,
+          "expected_A_He": 10.927363694864914
+        },
+        {
+          "source_index": 3815,
+          "teff": 5500.0,
+          "logg": 4.0,
+          "monh": -1.5,
+          "raw_h": 0.921999990940094,
+          "raw_he": 0.07800000160932541,
+          "expected_A_He": 10.927363694864914
+        },
+        {
+          "source_index": 3816,
+          "teff": 5500.0,
+          "logg": 4.0,
+          "monh": -2.0,
+          "raw_h": 0.921999990940094,
+          "raw_he": 0.07800000160932541,
+          "expected_A_He": 10.927363694864914
+        },
+        {
+          "source_index": 3830,
+          "teff": 5500.0,
+          "logg": 4.5,
+          "monh": -1.5,
+          "raw_h": 0.921999990940094,
+          "raw_he": 0.07800000160932541,
+          "expected_A_He": 10.927363694864914
+        },
+        {
+          "source_index": 3831,
+          "teff": 5500.0,
+          "logg": 4.5,
+          "monh": -2.0,
+          "raw_h": 0.921999990940094,
+          "raw_he": 0.07800000160932541,
+          "expected_A_He": 10.927363694864914
+        },
+        {
+          "source_index": 3860,
+          "teff": 5750.0,
+          "logg": 4.0,
+          "monh": -1.5,
+          "raw_h": 0.921999990940094,
+          "raw_he": 0.07800000160932541,
+          "expected_A_He": 10.927363694864914
+        },
+        {
+          "source_index": 3861,
+          "teff": 5750.0,
+          "logg": 4.0,
+          "monh": -2.0,
+          "raw_h": 0.921999990940094,
+          "raw_he": 0.07800000160932541,
+          "expected_A_He": 10.927363694864914
+        },
+        {
+          "source_index": 3866,
+          "teff": 5750.0,
+          "logg": 4.5,
+          "monh": 0.0,
+          "raw_h": 0.9210000038146973,
+          "raw_he": 0.07800000160932541,
+          "expected_A_He": 10.927834979655351
+        },
+        {
+          "source_index": 3875,
+          "teff": 5750.0,
+          "logg": 4.5,
+          "monh": -1.5,
+          "raw_h": 0.921999990940094,
+          "raw_he": 0.07800000160932541,
+          "expected_A_He": 10.927363694864914
+        },
+        {
+          "source_index": 3876,
+          "teff": 5750.0,
+          "logg": 4.5,
+          "monh": -2.0,
+          "raw_h": 0.921999990940094,
+          "raw_he": 0.07800000160932541,
+          "expected_A_He": 10.927363694864914
+        },
+        {
+          "source_index": 3906,
+          "teff": 6000.0,
+          "logg": 4.0,
+          "monh": -2.0,
+          "raw_h": 0.921999990940094,
+          "raw_he": 0.07800000160932541,
+          "expected_A_He": 10.927363694864914
+        }
+      ]
+    },
+    "marcs2014.sav": {
+      "source_urls": [
+        "https://nadc.china-vo.org/res/file_upload/download?id=53701",
+        "models/marcs2014_v1.0.0.sav.gz"
+      ],
+      "source_representation": "Previously converted NumPy cache; raw abundance values preserved",
+      "source_sha256": "7700429cdbab0386473e91fb109452d6a3e513985818160b6d88dcaf1abaea9b",
+      "source_model_count": 4468,
+      "fixture": "marcs2014.npz",
+      "fixture_sha256": "efcf538d3aca73df872315e18ece378cd3c36b2a22d384aa770a880bd2bb7db5",
+      "records": [
+        {
+          "source_index": 1873,
+          "teff": 4500.0,
+          "logg": 1.5,
+          "monh": -2.0,
+          "raw_h": 0.921999990940094,
+          "raw_he": 0.07800000160932541,
+          "expected_A_He": 10.927363694864914
+        },
+        {
+          "source_index": 3994,
+          "teff": 5500.0,
+          "logg": 4.0,
+          "monh": -1.5,
+          "raw_h": 0.921999990940094,
+          "raw_he": 0.07800000160932541,
+          "expected_A_He": 10.927363694864914
+        },
+        {
+          "source_index": 3995,
+          "teff": 5500.0,
+          "logg": 4.0,
+          "monh": -2.0,
+          "raw_h": 0.921999990940094,
+          "raw_he": 0.07800000160932541,
+          "expected_A_He": 10.927363694864914
+        },
+        {
+          "source_index": 4009,
+          "teff": 5500.0,
+          "logg": 4.5,
+          "monh": -1.5,
+          "raw_h": 0.921999990940094,
+          "raw_he": 0.07800000160932541,
+          "expected_A_He": 10.927363694864914
+        },
+        {
+          "source_index": 4010,
+          "teff": 5500.0,
+          "logg": 4.5,
+          "monh": -2.0,
+          "raw_h": 0.921999990940094,
+          "raw_he": 0.07800000160932541,
+          "expected_A_He": 10.927363694864914
+        },
+        {
+          "source_index": 4039,
+          "teff": 5750.0,
+          "logg": 4.0,
+          "monh": -1.5,
+          "raw_h": 0.921999990940094,
+          "raw_he": 0.07800000160932541,
+          "expected_A_He": 10.927363694864914
+        },
+        {
+          "source_index": 4040,
+          "teff": 5750.0,
+          "logg": 4.0,
+          "monh": -2.0,
+          "raw_h": 0.921999990940094,
+          "raw_he": 0.07800000160932541,
+          "expected_A_He": 10.927363694864914
+        },
+        {
+          "source_index": 4045,
+          "teff": 5750.0,
+          "logg": 4.5,
+          "monh": 0.0,
+          "raw_h": 0.9210000038146973,
+          "raw_he": 0.07800000160932541,
+          "expected_A_He": 10.927834979655351
+        },
+        {
+          "source_index": 4054,
+          "teff": 5750.0,
+          "logg": 4.5,
+          "monh": -1.5,
+          "raw_h": 0.921999990940094,
+          "raw_he": 0.07800000160932541,
+          "expected_A_He": 10.927363694864914
+        },
+        {
+          "source_index": 4055,
+          "teff": 5750.0,
+          "logg": 4.5,
+          "monh": -2.0,
+          "raw_h": 0.921999990940094,
+          "raw_he": 0.07800000160932541,
+          "expected_A_He": 10.927363694864914
+        },
+        {
+          "source_index": 4085,
+          "teff": 6000.0,
+          "logg": 4.0,
+          "monh": -2.0,
+          "raw_h": 0.921999990940094,
+          "raw_he": 0.07800000160932541,
+          "expected_A_He": 10.927363694864914
+        }
+      ]
+    }
+  }
+}

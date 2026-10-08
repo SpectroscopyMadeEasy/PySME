@@ -8,6 +8,8 @@ import numpy as np
 from ..abund import Abund
 from .atmosphere import Atmosphere
 
+_FLOAT = r"[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[Ee][+-]?\d+)?"
+
 
 # Atmoic mass from mendeleev package.
 atmoic_mass = {
@@ -50,7 +52,7 @@ class KrzFile(Atmosphere):
             name of the file to load
         """
 
-        kB, mH = 1.380649e-16, 1.6735575e-24
+        kB, atomic_mass_unit = 1.380649e-16, 1.66053906660e-24
         
         # Judge the file source: ATLAS or MARCS
         with open(filename, "r") as file:
@@ -77,18 +79,18 @@ class KrzFile(Atmosphere):
             # vturb
 
             try:
-                self.vturb = float(re.findall(r"VTURB=?\s*(\d)", header, flags=re.I)[0])
+                self.vturb = float(re.findall(r"VTURB=?\s*(" + _FLOAT + ")", header, flags=re.I)[0])
             except IndexError:
                 self.vturb = 0
 
             try:
-                self.lonh = float(re.findall(r"L/H=?\s*(\d+.?\d*)", header, flags=re.I)[0])
+                self.lonh = float(re.findall(r"L/H=?\s*(" + _FLOAT + ")", header, flags=re.I)[0])
             except IndexError:
                 self.lonh = 0
 
-            self.teff = float(re.findall(r"T ?EFF=?\s*(\d+.?\d*)", header, flags=re.I)[0])
+            self.teff = float(re.findall(r"T ?EFF=?\s*(" + _FLOAT + ")", header, flags=re.I)[0])
             self.logg = float(
-                re.findall(r"GRAV(ITY)?=?\s*(\d+.?\d*)", header, flags=re.I)[0][1]
+                re.findall(r"GRAV(?:ITY)?=?\s*(" + _FLOAT + ")", header, flags=re.I)[0]
             )
 
             model_type = re.findall(r"MODEL TYPE=?\s*(\d)", header, flags=re.I)[0]
@@ -98,7 +100,7 @@ class KrzFile(Atmosphere):
             self.depth = model_type_key[self.model_type]
             self.geom = "pp"
 
-            self.wlstd = float(re.findall(r"WLSTD=?\s*(\d+.?\d*)", header, flags=re.I)[0])
+            self.wlstd = float(re.findall(r"WLSTD=?\s*(" + _FLOAT + ")", header, flags=re.I)[0])
             # parse opacity
             i = opacity.find("-")
             opacity = opacity[:i].split()
@@ -106,7 +108,7 @@ class KrzFile(Atmosphere):
 
             # parse abundance
             pattern = np.genfromtxt(abund).flatten()[:-1]
-            pattern[1] = 10 ** pattern[1]
+            # MARCS .krz already stores He as log10(N_He/N_all).
             self.abund = Abund(monh=0, pattern=pattern, type="sme")
 
             # parse table
@@ -134,7 +136,7 @@ class KrzFile(Atmosphere):
                     if abundance_scale_match is not None
                     else None
                 )
-                abun_list = abun_list + temp[42:].replace('E', '')
+                abun_list = abun_list + temp.split('ABUNDANCE CHANGE', 1)[1]
                 temp = file.readline()
                 while 'ABUNDANCE CHANGE' in temp:
                     abun_list = abun_list + temp[temp.index('ABUNDANCE CHANGE')+16:]
@@ -176,18 +178,18 @@ class KrzFile(Atmosphere):
                 self.monh = 0.0
 
             try:
-                self.vturb = float(re.findall(r"VTURB=?\s*(\d)", header, flags=re.I)[0])
+                self.vturb = float(re.findall(r"VTURB=?\s*(" + _FLOAT + ")", header, flags=re.I)[0])
             except IndexError:
                 self.vturb = 0
 
             try:
-                self.lonh = float(re.findall(r"L/H=?\s*(\d+.?\d*)", header, flags=re.I)[0])
+                self.lonh = float(re.findall(r"L/H=?\s*(" + _FLOAT + ")", header, flags=re.I)[0])
             except IndexError:
                 self.lonh = 0
 
-            self.teff = float(re.findall(r"T ?EFF=?\s*(\d+.?\d*)", header, flags=re.I)[0])
+            self.teff = float(re.findall(r"T ?EFF=?\s*(" + _FLOAT + ")", header, flags=re.I)[0])
             self.logg = float(
-                re.findall(r"GRAV(ITY)?=?\s*(\d+.?\d*)", header, flags=re.I)[0][1]
+                re.findall(r"GRAV(?:ITY)?=?\s*(" + _FLOAT + ")", header, flags=re.I)[0]
             )
 
             self.depth = 'RHOX'
@@ -214,9 +216,11 @@ class KrzFile(Atmosphere):
             self.temp = self.table[:, 1]
             self.xne = self.table[:, 3]
             self.P_gas = self.table[:, 2]
-            self.xna = self.P_gas / (kB * self.temp)
+            # ATLAS P includes electron pressure. This reconstruction assumes
+            # an atomic gas; the usual .krz columns omit molecular populations.
+            self.xna = self.P_gas / (kB * self.temp) - self.xne
             atmoic_mu = self.get_mu_from_abund()
-            self.rho = self.P_gas * atmoic_mu * mH / (kB * self.temp)
+            self.rho = self.xna * atmoic_mu * atomic_mass_unit
 
             # This is not used since it is tau_ross instead of tau_5000
             # self.abross = self.table[:, 4]
@@ -224,7 +228,7 @@ class KrzFile(Atmosphere):
             # self.tau[1:] = np.cumsum(0.5 * (self.abross[1:] + self.abross[:-1]) * np.diff(self.rhox))
 
     def get_mu_from_abund(self):
-        ratios = self.abund.get_pattern(type="n/nH")
+        ratios = self.abund(type="n/nH")
         valid = [
             (element, value)
             for element, value in ratios.items()

@@ -1,5 +1,29 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- Add physical H/He acceptance tests using small real MARCS 2012/2014 grid
+  samples, plus mandatory full-grid checks after CI prefetch on Linux/macOS.
+  Cover direct extraction, interpolation and SME-file persistence.
+- Distinguish legacy atmosphere-grid abundances (linear H and He) from
+  modern SME abundances (linear H, logarithmic He), including previously
+  converted NumPy caches. Preserve the format when extracting grid models.
+- Preserve internal abundance values when copying, saving and reloading
+  objects with a non-default display/input format; correct Kurucz output
+  normalization for metals.
+- Keep the atmosphere-file cache keyed by filename and report the grid's
+  stored depth count correctly.
+- Preserve logarithmic He in MARCS `.krz` input; accept signed/decimal header
+  values and scientific-notation ATLAS abundances. Reconstruct ATLAS atomic
+  density after subtracting electron pressure, using the effective metallicity
+  and atomic mass unit. This remains an atomic-gas approximation.
+
+Already incorrectly decoded atmosphere files are not repaired automatically;
+reload them from their source grids. The separate MARCS text-reader H/He
+metallicity correction is deferred. The pinned SMElib dependency is unchanged.
+
 ## v1.2.0 - 2026-09-24
 
 ### Performance
