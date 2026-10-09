@@ -284,6 +284,13 @@ class SME_Structure(Parameters):
             with mu = cos(theta), where theta is the angle of the observation,
             i.e. mu = 1 at the center of the disk and 0 at the edge
             """),
+        ("mu_dynamic", False, asbool, this,
+            "bool: Whether to recompute sme.mu from the atmosphere's depth grid every time the atmosphere is (re)computed. "
+            "Requires spherical (SPH) atmosphere geometry; raises at synthesis time otherwise. "
+            "Note: setting sme.nmu afterwards silently regenerates sme.mu via the old static formula, since nmu is unaware of mu_dynamic."),
+        ("mu_num", [10, 10], this, this,
+            "array of size (2,): [n_non_grazing, n_grazing] ray counts used when mu_dynamic is True; ignored otherwise. "
+            "Validated only when actually used (must be two positive integers), not at assignment time."),
         ("wran", None, this, this,
             "array of size (nseg, 2): beginning and end wavelength points of each segment"),
         ("wint", None, vector, this,

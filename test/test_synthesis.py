@@ -8,6 +8,7 @@ import pytest
 
 from pysme import util
 from pysme.abund import Abund
+from pysme.atmosphere.atmosphere import Atmosphere, AtmosphereError
 from pysme.atmosphere.krzfile import KrzFile
 from pysme.iliffe_vector import Iliffe_vector
 from pysme.linelist.linelist import LineList
@@ -18,6 +19,7 @@ from pysme.synthesize import (
     _compute_linelist_hash,
     _compute_almax_lineinfo_for_sme,
     _load_lineinfo_cache_file,
+    _resolve_mu_num,
     _temporary_brackett_convolution_env,
     synthesize_spectrum,
 )
@@ -854,6 +856,122 @@ def test_high_level_continuum_scattering_source_spherical_on():
     assert np.all(np.isfinite(cont_off_2))
     assert np.allclose(cont_off_2, cont_off, rtol=0, atol=0)
     assert not np.allclose(cont_on, cont_off, rtol=1e-8, atol=0)
+
+
+@skipif_smelib
+def test_mu_dynamic_updates_mu_during_real_synthesis():
+    sme = _continuum_scattering_sme(os.path.dirname(__file__), spherical=True)
+    sme.mu_dynamic = True
+    sme.mu_num = [4, 3]
+    synth = Synthesizer()
+
+    result = synth.synthesize_spectrum(sme, passNLTE=False)
+
+    mu = np.asarray(result.mu)
+    assert mu.shape == (7,)
+    assert np.all(np.isfinite(mu))
+    assert np.all((mu >= 0) & (mu <= 1))
+    assert np.all(np.diff(mu) <= 0)
+    assert not np.array_equal(mu, np.array([1.0]))
+
+
+@skipif_smelib
+def test_mu_dynamic_false_leaves_mu_as_given():
+    sme = _continuum_scattering_sme(os.path.dirname(__file__), spherical=True)
+    original_mu = np.array(sme.mu)
+    synth = Synthesizer()
+
+    result = synth.synthesize_spectrum(sme, passNLTE=False)
+
+    assert np.array_equal(np.asarray(result.mu), original_mu)
+
+
+def _make_dynamic_mu_atmo(ndep=11, radius=10.0):
+    """Minimal spherical atmosphere for dynamically_update_mu, with height
+    decreasing from the outermost (index 0) to the innermost (index ndep-1)
+    layer, matching test_dll.py's spherical-atmo-construction idiom."""
+    atmo = Atmosphere()
+    atmo.geom = "SPH"
+    atmo.radius = radius
+    atmo.height = np.linspace(4e7, 0.0, ndep)
+    atmo.temp = np.linspace(6000.0, 4000.0, ndep)
+    return atmo
+
+
+@pytest.mark.parametrize(
+    "mu_num,expected",
+    [
+        ((10, 10), (10, 10)),
+        ([10, 10], (10, 10)),
+        (np.array([10, 10]), (10, 10)),
+        (["10", "10"], (10, 10)),
+    ],
+)
+def test_resolve_mu_num_accepts_valid_input(mu_num, expected):
+    assert _resolve_mu_num(mu_num) == expected
+
+
+@pytest.mark.parametrize(
+    "mu_num",
+    [
+        [0, 10],
+        [-1, 10],
+        None,
+        [10, 10, 10],
+        10,
+        "abc",
+        [10.7, 10.2],
+        ["10.5", "10"],
+    ],
+)
+def test_resolve_mu_num_rejects_invalid_input(mu_num):
+    with pytest.raises(ValueError):
+        _resolve_mu_num(mu_num)
+
+
+def test_dynamically_update_mu_requires_spherical_geometry():
+    sme = _minimal_sme()
+    sme.atmo = _make_dynamic_mu_atmo()
+    sme.atmo.geom = "PP"
+    synth = Synthesizer(dll=_DummyDLL())
+
+    with pytest.raises(AtmosphereError, match="spherical"):
+        synth.dynamically_update_mu(sme)
+
+
+def test_dynamically_update_mu_requires_height_and_radius():
+    sme = _minimal_sme()
+    sme.atmo = _make_dynamic_mu_atmo()
+    sme.atmo.height = None
+    synth = Synthesizer(dll=_DummyDLL())
+
+    with pytest.raises(AtmosphereError, match="height"):
+        synth.dynamically_update_mu(sme)
+
+
+def test_dynamically_update_mu_computes_valid_mu_list():
+    sme = _minimal_sme()
+    sme.atmo = _make_dynamic_mu_atmo(ndep=21)
+    sme.mu_num = [5, 4]
+    synth = Synthesizer(dll=_DummyDLL())
+
+    synth.dynamically_update_mu(sme)
+
+    mu = np.asarray(sme.mu)
+    assert mu.shape == (9,)
+    assert np.all(np.isfinite(mu))
+    assert np.all((mu >= 0) & (mu <= 1))
+    assert np.all(np.diff(mu) <= 0)
+
+
+def test_dynamically_update_mu_propagates_invalid_mu_num():
+    sme = _minimal_sme()
+    sme.atmo = _make_dynamic_mu_atmo()
+    sme.mu_num = [0, 10]
+    synth = Synthesizer(dll=_DummyDLL())
+
+    with pytest.raises(ValueError):
+        synth.dynamically_update_mu(sme)
 
 
 def test_profile_nlte_h_summary_uses_default_provider(monkeypatch):

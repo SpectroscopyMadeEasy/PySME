@@ -16,6 +16,99 @@ sme = synthesize_spectrum(sme)
 
 This option supports plane-parallel and spherical atmospheres.
 
+## How to enable dynamical mu-spacing
+
+By default, PySME uses the `mu` values you set on `sme.mu` (or the class
+default) exactly as given. To instead have PySME recompute `mu` from the
+atmosphere's depth grid every time the atmosphere is (re)computed, enable
+the opt-in switch before synthesis:
+
+```py
+from pysme.synthesize import synthesize_spectrum
+
+sme.mu_dynamic = True
+sme.mu_num = [10, 10]  # optional: [n_non_grazing, n_grazing] ray counts, default [10, 10]
+sme = synthesize_spectrum(sme)
+```
+
+This option requires a spherical (SPH) atmosphere; it raises an error at
+synthesis time for plane-parallel (PP) models. `mu_num` is ignored (and
+never validated) whenever `mu_dynamic` is `False`.
+
+Setting `sme.nmu` afterwards silently regenerates `sme.mu` via the old
+static formula, since `nmu` is unaware of `mu_dynamic` -- set `mu_dynamic`
+and `mu_num` last, or avoid setting `nmu` at all once `mu_dynamic` is in use.
+
+### Worked example
+
+```py
+import numpy as np
+from pysme.sme import SME_Structure
+from pysme.atmosphere.atmosphere import Atmosphere
+from pysme.synthesize import Synthesizer
+
+R_sun = 6.957e10  # cm
+
+sme = SME_Structure()
+sme.teff, sme.logg, sme.monh, sme.vmic = 4500, 1.5, 0, 1.5
+
+# An extended atmosphere typical of the upper RGB, where the model's
+# outermost layer sits ~22% of the stellar radius above the innermost one.
+atmo = Atmosphere()
+atmo.geom = "SPH"
+atmo.radius = 30 * R_sun
+atmo.height = np.linspace(0.22 * atmo.radius, 0.0, 48)
+atmo.temp = np.linspace(3600.0, 9000.0, 48)
+sme.atmo = atmo
+
+sme.mu_dynamic = True
+Synthesizer().dynamically_update_mu(sme)
+```
+
+`sme.mu` (20 values, since `mu_num` defaults to `[10, 10]`) now reads:
+
+```py
+array([0.9835, 0.9496, 0.9144, 0.8778, 0.8396, 0.7996, 0.7575, 0.713 ,
+       0.6654, 0.6142, 0.5701, 0.5414, 0.5104, 0.4766, 0.4393, 0.3977,
+       0.3502, 0.2938, 0.2219, 0.1382])
+```
+
+The first 10 values (non-grazing rays) are spaced by equal projected area
+down to the edge of the stellar core; the last 10 (grazing rays) are each
+anchored to a depth point in `atmo`, so their exact values depend on this
+atmosphere's own height grid rather than a fixed external formula.
+
+### Why this matters
+
+Along the red giant branch, the geometric extent of the atmosphere relative
+to the stellar radius grows strongly with decreasing surface gravity: it is
+close to negligible near the base of the RGB and reaches roughly 20-30% of
+the stellar radius at the tip. This has two consequences for a *static* set
+of mu angles:
+
+1. The number of rays that fall into the "grazing" regime (rays whose line
+   of sight never reaches the bottom of the atmosphere; see `mu_num`)
+   changes with surface gravity, so spectra computed at nearby `logg` values
+   can end up sampled by a different mix of grazing and non-grazing rays.
+2. Where only a few rays are grazing, each grazing ray's
+   tangent point is pinned to whichever atmospheric depth point it happens
+   to land on. As `logg` varies continuously, that tangent point jumps
+   discretely from depth point $n$ to depth point $n+1$, producing a
+   discontinuous step in the synthesized spectrum rather than a smooth
+   change.
+
+With the historical fixed 7-angle mu grid, this produces artificial local
+minima and general non-smoothness in $\chi^2$ as a function of `logg`,
+confirmed through extensive testing; in practice, this caused PySME's
+optimizer to systematically avoid certain `logg` values that were not
+disfavored by the data, but by this sampling artifact.
+
+Dynamical mu-spacing recomputes the grazing-ray mu values directly from the
+current atmosphere's depth grid at every synthesis call, so each grazing ray
+is always anchored consistently to the model's physical layering rather than
+to a fixed external mu grid, removing this source of `logg`-dependent
+$\chi^2$ roughness.
+
 ## How to get the atmosphere grid
 
 ```py

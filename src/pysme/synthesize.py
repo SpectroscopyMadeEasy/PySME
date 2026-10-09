@@ -17,6 +17,7 @@ from tqdm import tqdm
 from scipy.spatial.distance import cdist
 
 from . import broadening
+from .atmosphere.atmosphere import AtmosphereError
 from .atmosphere.interpolation import AtmosphereInterpolator
 from .continuum_and_radial_velocity import (
     apply_radial_velocity_and_continuum,
@@ -312,6 +313,23 @@ def _same_path(a, b):
     return os.path.abspath(os.path.expanduser(str(a))) == os.path.abspath(
         os.path.expanduser(str(b))
     )
+
+
+def _resolve_mu_num(mu_num):
+    """Validate mu_num and return (non_grazing_number, grazing_number)."""
+    try:
+        arr = np.asarray(mu_num, dtype=float).reshape(2)
+    except (TypeError, ValueError):
+        raise ValueError(
+            f"sme.mu_num must be two positive integers when mu_dynamic=True, "
+            f"got {mu_num!r}."
+        )
+    if np.any(arr <= 0) or np.any(arr != np.floor(arr)):
+        raise ValueError(
+            f"sme.mu_num must be two positive integers when mu_dynamic=True, "
+            f"got {mu_num!r}."
+        )
+    return int(arr[0]), int(arr[1])
 
 
 def _iter_exception_chain(exc):
@@ -1945,6 +1963,8 @@ class Synthesizer:
                 )
         if passAtmosphere:
             sme = self.get_atmosphere(sme)
+            if sme.mu_dynamic:
+                self.dynamically_update_mu(sme)
             dll.InputModel(sme.teff, sme.logg, sme.vmic, sme.atmo)
         if passAtmosphere or passAbund:
             dll.InputAbund(sme.abund)
@@ -2194,6 +2214,76 @@ class Synthesizer:
 
         # Cleanup
         return result
+
+    def dynamically_update_mu(self, sme):
+        """Recompute sme.mu from the atmosphere's depth grid for spherical geometry
+
+        Builds a new set of limb angles (mu = cos(theta)) in two groups:
+
+        - Non-grazing rays: rays whose line of sight passes through the bottom
+          of the atmosphere (the stellar "core"), spaced by equal projected
+          area (sqrt-of-area weighting) between disk center (mu=1) and the
+          edge of the core.
+        - Grazing rays: rays that never reach the bottom of the atmosphere and
+          instead turn around (are tangent) somewhere inside it. One grazing
+          ray is placed per selected depth point, with its mu chosen so the
+          ray's tangent point falls reliably between that depth point and the
+          next deeper one.
+
+        The number of rays in each group is controlled by sme.mu_num
+        (see _resolve_mu_num). This mutates sme.mu in place; it does not
+        return a value.
+
+        Parameters
+        ----------
+        sme : SME_Struct
+            The SME structure to update. Must have an atmosphere that has
+            already been resolved to spherical (SPH) geometry, with height
+            and radius set.
+
+        Raises
+        ------
+        AtmosphereError
+            If the atmosphere is not spherical, or is missing height/radius.
+        ValueError
+            If sme.mu_num does not resolve to two positive integers
+            (see _resolve_mu_num).
+        """
+        if sme._atmo.geom != "SPH":
+            raise AtmosphereError(
+                "sme.mu_dynamic=True requires spherical (SPH) atmosphere "
+                f"geometry, but the atmosphere resolved to geom={sme._atmo.geom!r}."
+            )
+        if sme._atmo.height is None or sme._atmo.radius is None:
+            raise AtmosphereError(
+                "sme.mu_dynamic=True requires the atmosphere's height and "
+                "radius arrays, but at least one is missing (geom='SPH' was "
+                "set without providing them)."
+            )
+
+        non_grazing_number, grazing_number = _resolve_mu_num(sme.mu_num)
+
+        # for non-grazing rays, space out by sqrt as before, up to the bottom of the atmosphere
+        bottom_of_atmosphere_cm = sme._atmo.height[-1] + sme._atmo.radius
+        top_of_atmosphere_cm = sme._atmo.height[0] + sme._atmo.radius
+        bottom_of_atmosphere_fraction = bottom_of_atmosphere_cm/top_of_atmosphere_cm
+        edgecase_mu = np.sqrt(1-(bottom_of_atmosphere_fraction-0.01)**2) #round down by 1 percent so this one is in core
+
+        non_grazing_mus = ( 1 - (1 - edgecase_mu**2) * (2 * np.arange(non_grazing_number) + 1) / (2 * non_grazing_number) ) ** 0.5
+
+        ### For grazing rays, check nr of depthpoints and distribute our rays among them ##
+        nr_of_depthpoints = sme._atmo.ndep
+        # Skip the outermost 1-2 depth points as grazing-ray tangent points: they're
+        # cool enough to contribute little flux, and this range is validated by testing.
+        # Upper bound is ndep-2 (not ndep-1) because depth_indices+1 below must stay in bounds.
+        depth_indices = np.linspace(2, nr_of_depthpoints - 2, grazing_number).astype(int)
+        grazing_heights = (np.array(sme._atmo.height)[depth_indices] + np.array(sme._atmo.height)[depth_indices+1]) / 2  + sme._atmo.radius
+        grazing_mus = np.sqrt(1-(grazing_heights/top_of_atmosphere_cm)**2)
+
+        mulist = sorted(np.concatenate((non_grazing_mus, grazing_mus)), reverse=True)
+        sme.mu = mulist
+        logger.debug("Updated mu list to %s", sme.mu)
+
 
     # @profile
     @serialized_smelib_session

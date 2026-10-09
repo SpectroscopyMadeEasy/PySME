@@ -139,6 +139,49 @@ def test_h_stark_convolution_field(filename):
         loaded.h_stark_convolution = "unknown"
 
 
+def test_mu_dynamic_field(filename):
+    sme = SME_Struct()
+
+    assert sme.mu_dynamic is False
+    sme.mu_dynamic = True
+    assert sme.mu_dynamic is True
+    sme.mu_dynamic = False
+    assert sme.mu_dynamic is False
+    sme.mu_dynamic = 1
+    assert sme.mu_dynamic is True
+    sme.mu_dynamic = 0
+    assert sme.mu_dynamic is False
+
+    sme.mu_dynamic = True
+    sme.save(filename)
+    loaded = SME_Struct.load(filename)
+    assert loaded.mu_dynamic is True
+
+
+def test_mu_num_field_is_unvalidated_at_assignment(filename):
+    """mu_num is only validated inside dynamically_update_mu, the first time
+    it's actually used with mu_dynamic=True -- see test_synthesis.py for
+    that validation. At assignment time, any value is accepted."""
+    sme = SME_Struct()
+
+    assert np.array_equal(sme.mu_num, [10, 10])
+
+    sme.mu_num = [5, 4]
+    assert np.array_equal(sme.mu_num, [5, 4])
+
+    # Malformed values are accepted with no error, since mu_num is ignored
+    # entirely while mu_dynamic is False (the default).
+    sme.mu_num = "not a valid mu_num"
+    assert sme.mu_num == "not a valid mu_num"
+    sme.mu_num = None
+    assert sme.mu_num is None
+
+    sme.mu_num = [5, 4]
+    sme.save(filename)
+    loaded = SME_Struct.load(filename)
+    assert np.array_equal(loaded.mu_num, [5, 4])
+
+
 def test_load_idl_savefile(cwd):
     filename = "{}/testcase1.inp".format(cwd)
     sme = SME_Struct.load(filename)

@@ -9,7 +9,9 @@ import pytest
 from pysme.abund import Abund
 from pysme.atmosphere.krzfile import KrzFile, atmoic_mass
 from pysme.linelist.linelist import LineList
+from pysme.sme import SME_Structure as SME_Struct
 from pysme.sme_synth import SME_DLL
+from pysme.synthesize import Synthesizer
 
 
 # Create Objects to pass to library
@@ -843,6 +845,57 @@ def test_adaptive_grid_is_invariant_to_mu_order(
     mu_reverse = mu_forward[::-1].copy()
     args = {"accrt": 1e-6, "accwi": 1e-4}
 
+    nw_forward, wave_forward, synth_forward, cont_forward = libsme.Transf(
+        mu_forward, **args
+    )
+    nw_reverse, wave_reverse, synth_reverse, cont_reverse = libsme.Transf(
+        mu_reverse, **args
+    )
+
+    assert nw_reverse == nw_forward
+    assert np.array_equal(wave_reverse, wave_forward)
+    assert np.array_equal(synth_reverse[::-1], synth_forward)
+    assert np.array_equal(cont_reverse[::-1], cont_forward)
+
+
+def test_dynamic_mu_list_is_invariant_to_order(
+    libsme,
+    linelist,
+    teff,
+    grav,
+    vturb,
+    atmo,
+    abund,
+    vw_scale,
+    wfirst,
+    wlast,
+):
+    """dynamically_update_mu's grazing+non-grazing mu list, like any mu
+    array, must give order-invariant synthesis results (see
+    test_adaptive_grid_is_invariant_to_mu_order)."""
+    model_atmo = deepcopy(atmo)
+    model_atmo.geom = "SPH"
+    model_atmo.radius = 10.0
+    model_atmo.height = np.linspace(4e7, 0.0, len(model_atmo.rhox))
+
+    sme = SME_Struct()
+    sme.atmo = model_atmo
+    sme.mu_num = [4, 3]
+    Synthesizer(dll=libsme).dynamically_update_mu(sme)
+    mu_forward = np.asarray(sme.mu)
+    mu_reverse = mu_forward[::-1].copy()
+
+    libsme.SetLibraryPath()
+    libsme.InputLineList(linelist)
+    libsme.InputModel(teff, grav, vturb, model_atmo)
+    libsme.InputAbund(abund)
+    libsme.Ionization(0)
+    libsme.SetVWscale(vw_scale)
+    libsme.SetH2broad()
+    libsme.InputWaveRange(wfirst, wlast)
+    libsme.Opacity()
+
+    args = {"accrt": 1e-6, "accwi": 1e-4}
     nw_forward, wave_forward, synth_forward, cont_forward = libsme.Transf(
         mu_forward, **args
     )

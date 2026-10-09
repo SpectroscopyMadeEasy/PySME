@@ -18,6 +18,8 @@ Stellar parameters describe the star in general and are usually what we want to 
 - `vmic`: The micro-turbulence velocity in km s⁻¹. Describes turbulence on scales **smaller** than the photon mean free path, adding additional line broadening.
 - `vmac`: The macro-turbulence velocity in km s⁻¹. Describes turbulence on scales **larger** than the photon mean free path, also contributing to broadening.
 - `mu`: Limb-angle values ($\mu = \cos\theta$) at which the radiative-transfer calculation is performed. $\mu = 1$ corresponds to disk center, $0$ to the limb.
+  - `mu_dynamic`: If `True`, `mu` is recomputed from the atmosphere's depth grid every time the atmosphere is (re)computed, overwriting whatever `mu` was set to. Requires a spherical (SPH) atmosphere; raises an error at synthesis time for plane-parallel (PP) models. Default `False`, in which case `mu` is used exactly as given.
+  - `mu_num`: `[n_non_grazing, n_grazing]` ray counts used when `mu_dynamic` is `True`; ignored (and never validated) when `mu_dynamic` is `False`. Must be two positive integers when actually used, or synthesis raises an error. Default `[10, 10]`.
 
 ## Radial velocity and Continuum
 
