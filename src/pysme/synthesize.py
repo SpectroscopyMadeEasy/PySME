@@ -583,13 +583,13 @@ class Synthesizer:
                 self.atmosphere_interpolator = AtmosphereInterpolator(
                     depth=atmo.depth,
                     interp=atmo.interp,
-                    geom=atmo.geom,
+                    geom=atmo.geom_request,
                     lfs_atmo=self.lfs_atmo,
                 )
             else:
                 self.atmosphere_interpolator.depth = atmo.depth
                 self.atmosphere_interpolator.interp = atmo.interp
-                self.atmosphere_interpolator.geom = atmo.geom
+                self.atmosphere_interpolator.geom = atmo.geom_request
 
             atmo = self.atmosphere_interpolator.interp_atmo_grid(
                 atmo.source, sme.teff, sme.logg, sme.monh

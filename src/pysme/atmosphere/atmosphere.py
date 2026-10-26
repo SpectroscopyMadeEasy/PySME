@@ -26,6 +26,17 @@ class AtmosphereError(RuntimeError):
     """Something went wrong with the atmosphere interpolation"""
 
 
+def _set_geometry_request(self, value):
+    # An empty string is the legacy SME spelling of automatic geometry.
+    if isinstance(value, bytes):
+        value = value.decode()
+    if value == "":
+        value = None
+    value = uppercase(oneof("PP", "SPH", None))(self, value)
+    self._geom_request = value
+    return value
+
+
 @CollectionFactory
 class Atmosphere(Collection):
     """
@@ -45,8 +56,8 @@ class Atmosphere(Collection):
         ("source", "marcs2012.sav", this, this, "str: datafile name of this data, or atmosphere grid/file"),
         ("method", "grid", lowercase(oneof("grid", "routine", "embedded")), this,
             "str: whether the data source is a grid or a fixed atmosphere"),
-        ("geom", "PP", uppercase(oneof("PP", "SPH", None)), this,
-            "str: the geometry of the atmopshere model"),
+        ("geom", "PP", _set_geometry_request, this,
+            "str: PP, SPH, or None for automatic geometry; resolved after interpolation"),
         ("radius", 0, asfloat, this, "float: radius of the spherical model"),
         ("height", None, array(None, "f8"), this, "array: height of the spherical model"),
         ("opflag", [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], array(20, int), this,
@@ -72,15 +83,44 @@ class Atmosphere(Collection):
     ]
     # fmt: on
 
-    # TODO: pick the right geometry for the grid, based on whether it has height/radius values or not
     def __init__(self, *args, **kwargs):
         monh = kwargs.pop("monh", kwargs.pop("feh", 0))
         abund = kwargs.pop("abund", "empty")
         abund_format = kwargs.pop("abund_format", "sme")
-        if "geom" in kwargs.keys() and kwargs["geom"] == "":
-            kwargs["geom"] = None
+        # New saved models contain both the request and the resolved geometry.
+        # Old models have only geom, which remains an explicit request.
+        has_request = "geom_request" in kwargs
+        request = kwargs.pop("geom_request", None)
         super().__init__(**kwargs)
+        if has_request:
+            _set_geometry_request(self, request)
         self.abund = Abund(monh=monh, pattern=abund, type=abund_format)
+
+    @property
+    def geom_request(self):
+        """The user's geometry request, retained when auto resolves to PP/SPH."""
+        return getattr(self, "_geom_request", self.geom)
+
+    def _set_resolved_geometry(self, geometry, request):
+        """Update the native geometry without turning auto into a fixed request."""
+        self._geom = uppercase(oneof("PP", "SPH"))(self, geometry)
+        _set_geometry_request(self, request)
+
+    def to_dict(self):
+        result = super().to_dict()
+        result["geom_request"] = self.geom_request
+        return result
+
+    @classmethod
+    def from_dict(cls, data):
+        data = dict(data)
+        abund = data.get("abund")
+        if isinstance(abund, dict) and "data" in abund:
+            del data["abund"]
+            obj = cls(**data)
+            obj.abund = Abund.from_dict(abund)
+            return obj
+        return cls(**data)
 
     @property
     def monh(self):
@@ -131,6 +171,8 @@ class Atmosphere(Collection):
                 # if isinstance(value, (np.floating, np.integer, np.str, float, int, str)):
                 header[name] = value
 
+        # Empty string survives the file header even though None is omitted.
+        header["geom_request"] = self.geom_request or ""
         ext = MultipleDataExtension(header, data)
 
         return ext

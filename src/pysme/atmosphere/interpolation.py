@@ -97,8 +97,17 @@ class AtmosphereInterpolator:
             teff, logg, monh, icor, atmo_grid, interp=interp
         )
 
-        # TODO: Or should we only consider spherical models for interpolation of spherical modesl are requested?
         geom, radius = self.spherical_model_correction(atmo_grid, icor, logg)
+        # Auto uses the complete grid for the structure, then chooses transfer
+        # geometry. Keep explicit PP/SPH requests independent of this threshold.
+        if self.geom is None and logg >= 3.5:
+            geom = "PP"
+            radius = None
+        if self.geom is None and geom == "SPH" and depth != "RHOX":
+            raise AtmosphereError(
+                "Automatic geometry selected SPH transfer, which requires "
+                "atmo.depth='RHOX'; SPH transfer on TAU is not supported."
+            )
         # Create ATMO.GEOM, if necessary, and set value.
         if self.geom is not None and self.geom != geom:
             if self.geom == "SPH":
@@ -116,7 +125,7 @@ class AtmosphereInterpolator:
         # Add standard ATMO input fields, if they are missing from ATMO_IN.
         atmo.depth = depth
         atmo.interp = interp
-        atmo.geom = geom
+        atmo._set_resolved_geometry(geom, self.geom)
         if radius is not None:
             atmo.radius = radius
         atmo.source = self.source

@@ -1044,6 +1044,28 @@ class SME_Solver:
             self.progressbar_jacobian.close()
             for i, name in enumerate(self.parameter_names):
                 _set_solve_parameter_value(sme, name, res.x[i])
+            if sme.atmo.method == "grid" and sme.atmo.geom_request is None:
+                # Trial residuals/Jacobian calls can finish on the other side
+                # of the geometry threshold. Return a model and spectrum at
+                # the accepted parameters, rather than the last trial state.
+                if self.derived_param is not None:
+                    for name, derive in self.derived_param.items():
+                        value = derive(sme)
+                        if _is_abund_parameter(name):
+                            sme.abund[_get_abund_element(name)] = value - sme.monh
+                        else:
+                            sme[name] = value
+                sme = self.synthesizer.synthesize_spectrum(
+                    sme,
+                    segments=segments,
+                    linelist_mode=linelist_mode,
+                    smelib_lineinfo_mode=smelib_lineinfo_mode,
+                    line_precompute_database=line_precompute_database,
+                    cdr_database=cdr_database,
+                    cdr_create=cdr_create,
+                    keep_line_opacity=False,
+                    vbroad_expend_ratio=vbroad_expend_ratio,
+                )
             sme = self.update_fitresults(sme, res, segments)
             logger.debug("Reduced chi square: %.3f", sme.fitresults.chisq)
             try:

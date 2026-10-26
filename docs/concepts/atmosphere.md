@@ -25,7 +25,7 @@ The atmopshere object has the following fields:
 |`source`|Filename of the atmosphere grid|see [lfs](lfs.md)|
 |`depth`|The depth scale to use for calculations.|`RHOX` or `TAU`|
 |`interp`|The depth scale to use for interpolation.|`RHOX` or `TAU`|
-|`geom`|The geometry of the atmosphere.|Plane Parallel `'PP'` or Spherical `'SPH'`|
+|`geom`|The geometry of the atmosphere.|Plane Parallel `'PP'`, Spherical `'SPH'`, or automatic `None` / `''`|
 |`method`|The method to use for interpolation|`'grid'` for a model grid or `'embedded'` if only a single atmosphere is given|
 |`rhox`|Mass column at each tabulated depth in the atmosphere|[$\mathrm{g~cm^{-2}}$]|
 |`tau`|Continuum optical depth at each tabulated depth in the atmosphere||
@@ -39,6 +39,43 @@ The atmopshere object has the following fields:
 |`lonh`|Ratio of mixing length to pressure scale height (`/H) used to generate the atmosphere.||
 |`wlstd`|Wavelength for continuum optical depth scale.|Å, Default value: 5000Å|
 |`opflag`|Flags that indicate whether to enable various opacity packages during the radiative transfer calculation||
+
+## Automatic transfer geometry
+
+Set `sme.atmo.geom = None` (or `''`) to allow a grid synthesis or fit to
+cross between spherical and plane-parallel radiative transfer:
+
+```python
+sme.atmo.source = "marcs2014.sav"
+sme.atmo.geom = None
+sme.atmo.depth = "RHOX"
+```
+
+Automatic mode interpolates the atmospheric structure using the complete
+grid, including mixed PP/SPH corners. It uses PP transfer at `logg >= 3.5`.
+Below 3.5, it uses SPH transfer when all interpolation corners supply spherical
+geometry (radius and height); otherwise it uses PP. Grids without spherical
+geometry therefore continue to use PP at low gravity.
+
+After interpolation, `sme.atmo.geom` reports the resolved transfer geometry.
+The read-only `sme.atmo.geom_request` retains the request (`None`, `'PP'`, or
+`'SPH'`), so repeated synthesis, copying, and saving/loading a new `.sme` file
+preserve automatic mode. Assign `sme.atmo.geom` again to change the request.
+Old saved files without request metadata retain their stored geometry as an
+explicit request.
+
+Explicit `'PP'` and `'SPH'` requests continue to select only matching grid
+models and do not use the automatic gravity threshold. Embedded atmospheres
+retain their supplied geometry and are not switched automatically.
+
+The automatic threshold is a hard change in the radiative-transfer geometry,
+so spectra and fit objectives need not be continuous across `logg = 3.5`,
+even if the interpolated atmospheric structure is continuous. This option
+raises `AtmosphereError` if it selects SPH transfer with a TAU depth scale;
+use RHOX for spherical transfer.
+
+See the [boundary testing guide](../dev/auto_geometry_testing.md) for a
+reproducible synthesis and fitting diagnostic and its current limitations.
 
 ## Atmosphere grids:
 
