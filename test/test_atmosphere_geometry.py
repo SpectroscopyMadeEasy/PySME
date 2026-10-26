@@ -178,6 +178,7 @@ def test_solver_final_synthesis_uses_accepted_auto_geometry(
     def fake_synthesize(local_sme, **_kwargs):
         captured["accepted_logg"] = local_sme.logg
         make_synthesizer().get_atmosphere(local_sme)
+        local_sme.synth = [np.ones(3)]
         captured["resolved_geom"] = local_sme.atmo.geom
         return local_sme
 
@@ -202,7 +203,11 @@ def test_solver_final_synthesis_uses_accepted_auto_geometry(
         return SimpleNamespace(x=np.array([3.75]), jac=np.zeros((3, 1)))
 
     monkeypatch.setattr(solve_module, "least_squares", fake_least_squares)
-    result = solver.solve(sme, param_names=["logg"])
+    result = solver.solve(
+        sme,
+        param_names=["logg"],
+        bounds=np.array([[3.5], [4.5]]),
+    )
 
     assert result is sme
     assert captured["accepted_logg"] == pytest.approx(3.75)

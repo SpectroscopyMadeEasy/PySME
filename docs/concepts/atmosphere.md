@@ -74,6 +74,16 @@ even if the interpolated atmospheric structure is continuous. This option
 raises `AtmosphereError` if it selects SPH transfer with a TAU depth scale;
 use RHOX for spherical transfer.
 
+When `logg` is a free fit parameter and its bounds extend below and above 3.5,
+`solve` fits the two gravity regions separately, keeping structure
+interpolation in automatic mode. It returns only the successful candidate
+with the smallest final optimization objective (chi-square for the default
+linear loss). Exact ties select the low-gravity candidate, evaluated first.
+The returned result does not establish that the data uniquely determine the
+geometry, and it is not a guarantee of the global optimum. Geometry ambiguity
+and model comparison are left to the caller. Explicit geometry requests,
+single-region bounds, and fits without free `logg` retain a single fit.
+
 See the [boundary testing guide](../dev/auto_geometry_testing.md) for a
 reproducible synthesis and fitting diagnostic and its current limitations.
 

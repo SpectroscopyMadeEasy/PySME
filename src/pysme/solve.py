@@ -7,6 +7,7 @@ And also determines the best fit parameters
 import json
 import logging
 import warnings
+from copy import copy, deepcopy
 from numbers import Number, Real
 from os.path import splitext
 
@@ -37,6 +38,25 @@ logger = logging.getLogger(__name__)
 
 clight = speed_of_light * 1e-3  # km/s
 warnings.filterwarnings("ignore", category=OptimizeWarning)
+
+
+def _least_squares_cost(residuals, loss, f_scale):
+    """Evaluate SciPy's objective on the final, accepted synthetic spectrum."""
+    residuals = np.asarray(residuals, dtype=float)
+    if loss == "linear":
+        return 0.5 * np.sum(residuals**2)
+    z = (residuals / f_scale)**2
+    if loss == "soft_l1":
+        rho = 2 * z / (np.sqrt(1 + z) + 1)
+    elif loss == "huber":
+        rho = np.where(z <= 1, z, 2 * np.sqrt(z) - 1)
+    elif loss == "cauchy":
+        rho = np.log1p(z)
+    elif loss == "arctan":
+        rho = np.arctan(z)
+    else:
+        raise ValueError(f"Unknown least-squares loss: {loss}")
+    return 0.5 * f_scale**2 * np.sum(rho)
 
 
 def _format_log_value(value, precision=4):
@@ -166,6 +186,7 @@ class SME_Solver:
         self._smelib_state_prepared = False
         self._latest_residual = None
         self._latest_jacobian = None
+        self._fit_cost = None
         self.restore = restore
         self.f_scale = 0.2
         # For displaying the progressbars
@@ -704,8 +725,11 @@ class SME_Solver:
         sme.fitresults.covariance = covar
         sme.fitresults.gradient = result.grad
         sme.fitresults.derivative = result.jac
+        final_synth = sme.synth[segments]
+        if sme.telluric is not None:
+            final_synth = final_synth * sme.telluric[segments]
         sme.fitresults.residuals = (
-            (sme.spec[segments] - sme.synth[segments]) / sme.uncs[segments]
+            (sme.spec[segments] - final_synth) / sme.uncs[segments]
         )[sme.mask_line[segments]]
         sme.fitresults.chisq = np.sum(sme.fitresults.residuals ** 2) / (
             result.fun.size - len(self.parameter_names)
@@ -821,6 +845,59 @@ class SME_Solver:
                     f"SME Structure field '{field_name}' does not match wave at segment {seg}: "
                     f"expected length {nw}, got {nf}."
                 )
+
+    def _solve_geometry_regions(self, sme, bounds, **kwargs):
+        """Fit disjoint gravity regions and return only the better candidate."""
+        gravity_index = list(self.parameter_names).index("logg")
+        best, failures = None, []
+        filename, restore = self.filename, self.restore
+        # A strict comparison keeps the first (SPH-side) candidate on exact ties.
+        for region in ("SPH", "PP"):
+            region_bounds = np.array(bounds, dtype=float, copy=True)
+            if region == "SPH":
+                region_bounds[1, gravity_index] = np.nextafter(3.5, -np.inf)
+            else:
+                region_bounds[0, gravity_index] = 3.5
+            candidate = copy(self)
+            candidate.filename, candidate.restore = None, False
+            candidate.iteration = 0
+            candidate._latest_residual = candidate._latest_jacobian = None
+            candidate._fit_cost = None
+            candidate._smelib_state_prepared = False
+            candidate.progressbar = candidate.progressbar_jacobian = None
+            # Keep the configured backend, but isolate mutable Python caches.
+            candidate.synthesizer = copy(self.synthesizer)
+            candidate.synthesizer.wint = {}
+            candidate.synthesizer.known_sme = None
+            candidate.synthesizer.atmosphere_interpolator = None
+            try:
+                result = candidate.solve(deepcopy(sme), bounds=region_bounds, **kwargs)
+                if candidate._fit_cost is None or not np.isfinite(candidate._fit_cost):
+                    raise ValueError("non-finite final objective")
+            except Exception as error:
+                failures.append(f"{region}: {error}")
+                logger.warning("Automatic geometry %s-region fit failed: %s", region, error)
+            else:
+                if best is None or candidate._fit_cost < best[0]._fit_cost:
+                    best = candidate, result
+            finally:
+                for bar in (candidate.progressbar, candidate.progressbar_jacobian):
+                    if bar is not None:
+                        bar.close()
+        if best is None:
+            raise RuntimeError("Automatic geometry fitting failed in both regions: " + "; ".join(failures))
+        winner, result = best
+        self.__dict__.update(winner.__dict__)
+        self.filename, self.restore = filename, restore
+        # Keep the caller's SME object, including all selected spectra/metadata.
+        sme.__dict__.clear()
+        sme.__dict__.update(result.__dict__)
+        self.synthesizer.known_sme = sme
+        self._smelib_state_prepared = False
+        logger.info("Selected automatic geometry fit at logg=%.8f, objective=%.8g", sme.logg, self._fit_cost)
+        if filename is not None:
+            sme.save(filename)
+        return sme
 
     @serialized_smelib_session
     def solve(
@@ -998,6 +1075,27 @@ class SME_Solver:
         # _ = dll.InputLineList(sme.linelist)
 
         # Do the heavy lifting
+        if (
+            sme.atmo.method == "grid"
+            and sme.atmo.geom_request is None
+            and "logg" in self.parameter_names
+        ):
+            gravity_index = list(self.parameter_names).index("logg")
+            if bounds[0][gravity_index] < 3.5 < bounds[1][gravity_index]:
+                return self._solve_geometry_regions(
+                    sme,
+                    bounds,
+                    param_names=self.parameter_names,
+                    segments=segments,
+                    step_sizes=step_sizes,
+                    derived_param=self.derived_param,
+                    linelist_mode=linelist_mode,
+                    smelib_lineinfo_mode=smelib_lineinfo_mode,
+                    line_precompute_database=line_precompute_database,
+                    cdr_create=cdr_create,
+                    keep_line_opacity=keep_line_opacity,
+                    vbroad_expend_ratio=vbroad_expend_ratio,
+                )
         if self.nparam > 0:
             self.progressbar = tqdm(
                 desc="Iteration", total=0, disable=not util.show_progress_bars
@@ -1065,6 +1163,13 @@ class SME_Solver:
                     cdr_create=cdr_create,
                     keep_line_opacity=False,
                     vbroad_expend_ratio=vbroad_expend_ratio,
+                )
+                final_synth = sme.synth[segments][mask]
+                if sme.telluric is not None:
+                    final_synth = final_synth * sme.telluric[segments][mask]
+                final_residuals = ((final_synth - spec) / uncs).ravel()
+                self._fit_cost = _least_squares_cost(
+                    final_residuals, sme.leastsquares_loss, self.f_scale
                 )
             sme = self.update_fitresults(sme, res, segments)
             logger.debug("Reduced chi square: %.3f", sme.fitresults.chisq)
