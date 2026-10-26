@@ -36,6 +36,19 @@ class AtmosphereInterpolator:
         self.atmo_grid = None
         self.verbose = verbose
 
+    def load_grid(self, source):
+        """Load/cache a source without selecting geometry or interpolating."""
+        if isinstance(source, AtmosphereGrid):
+            self.atmo_grid = source
+            self.source = source.source
+        elif self.atmo_grid is None or self.source != source:
+            atmo_file = self.lfs_atmo.get(source)
+            self.source = source
+            self.atmo_grid = SavFile(
+                atmo_file, source=source, lfs=self.lfs_atmo
+            )
+        return self.atmo_grid
+
     def interp_atmo_grid(self, atmo_grid, teff, logg, monh):
         """
         General routine to interpolate in 3D grid of model atmospheres
@@ -63,17 +76,7 @@ class AtmosphereInterpolator:
             interpolated atmosphere data
         """
 
-        # Internal parameters.
-        if not isinstance(atmo_grid, AtmosphereGrid):
-            if self.atmo_grid is None or self.source != atmo_grid:
-                atmo_file = self.lfs_atmo.get(atmo_grid)
-                self.source = atmo_grid
-                self.atmo_grid = SavFile(
-                    atmo_file, source=self.source, lfs=self.lfs_atmo
-                )
-        else:
-            self.atmo_grid = atmo_grid
-            self.source = atmo_grid.source
+        self.load_grid(atmo_grid)
 
         if self.geom is not None:
             if self.geom == "PP":
@@ -98,9 +101,13 @@ class AtmosphereInterpolator:
         )
 
         geom, radius = self.spherical_model_correction(atmo_grid, icor, logg)
-        # Auto uses the complete grid for the structure, then chooses transfer
-        # geometry. Keep explicit PP/SPH requests independent of this threshold.
-        if self.geom is None and logg >= 3.5:
+        # Only mixed sources use the transfer threshold. A single-geometry
+        # source retains its own geometry even outside the usual gravity range.
+        if (
+            self.geom is None
+            and len(self.atmo_grid.geometry_types) > 1
+            and logg >= 3.5
+        ):
             geom = "PP"
             radius = None
         if self.geom is None and geom == "SPH" and depth != "RHOX":

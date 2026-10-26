@@ -76,6 +76,17 @@ def pure_pp_grid(monkeypatch):
     return grid
 
 
+@pytest.fixture
+def pure_sph_grid(monkeypatch):
+    grid = make_grid(
+        ((2.0, "SPH"), (3.0, "SPH"), (3.5, "SPH"),
+         (4.0, "SPH"), (4.5, "SPH"))
+    )
+    grid.source = "pure-sph.sav"
+    monkeypatch.setattr(interpolation, "SavFile", lambda *args, **kwargs: grid)
+    return grid
+
+
 def make_synthesizer():
     # Exercise the real atmosphere pipeline without initializing a native DLL.
     synth = Synthesizer.__new__(Synthesizer)
@@ -324,11 +335,70 @@ def test_legacy_atmosphere_header_treats_resolved_geometry_as_explicit(
 
 
 @pytest.mark.filterwarnings("ignore:Covariance of the parameters could not be estimated")
-def test_auto_pure_pp_grid_keeps_pp_below_mixed_boundary(pure_pp_grid):
+@pytest.mark.parametrize("geom_request", [None, ""])
+def test_auto_pure_pp_grid_keeps_pp_below_mixed_boundary(
+    pure_pp_grid, geom_request
+):
     sme = make_sme()
     sme.atmo.source = "pure-pp.sav"
+    sme.atmo.geom = geom_request
     sme.logg = 2.5
     make_synthesizer().get_atmosphere(sme)
 
     assert sme.atmo.geom_request is None
     assert sme.atmo.geom == "PP"
+
+
+@pytest.mark.filterwarnings("ignore:Covariance of the parameters could not be estimated")
+def test_auto_pure_sph_grid_keeps_sph_at_high_gravity_and_repeated_requests(
+    pure_sph_grid,
+):
+    sme = make_sme()
+    sme.atmo.source = "pure-sph.sav"
+    sme.atmo.geom = ""
+
+    for logg in (3.500001, 4.5, 3.500001, 4.5):
+        sme.logg = logg
+        make_synthesizer().get_atmosphere(sme)
+        assert sme.atmo.geom_request is None
+        assert sme.atmo.geom == "SPH"
+
+
+def test_geometry_types_uses_model_radii_when_grid_header_says_sph():
+    grid = make_grid(
+        ((2.0, "SPH"), (3.0, "SPH"), (3.5, "SPH"),
+         (4.0, "PP"), (4.5, "PP"))
+    )
+    grid.geom = "SPH"
+
+    assert grid.geometry_types == frozenset(("PP", "SPH"))
+
+
+def test_interpolator_refreshes_geometry_types_when_source_changes(monkeypatch):
+    pp_grid = make_grid(
+        ((2.0, "PP"), (3.0, "PP"), (3.5, "PP"),
+         (4.0, "PP"), (4.5, "PP"))
+    )
+    pp_grid.source = "source-pp.sav"
+    sph_grid = make_grid(
+        ((2.0, "SPH"), (3.0, "SPH"), (3.5, "SPH"),
+         (4.0, "SPH"), (4.5, "SPH"))
+    )
+    sph_grid.source = "source-sph.sav"
+    grids = {pp_grid.source: pp_grid, sph_grid.source: sph_grid}
+
+    def load_grid(_filename, *, source, lfs):
+        return grids[source]
+
+    monkeypatch.setattr(interpolation, "SavFile", load_grid)
+    interpolator = interpolation.AtmosphereInterpolator(
+        lfs_atmo=SimpleNamespace(get=lambda source: source)
+    )
+
+    assert interpolator.load_grid("source-pp.sav").geometry_types == frozenset(
+        ("PP",)
+    )
+    assert interpolator.load_grid("source-sph.sav").geometry_types == frozenset(
+        ("SPH",)
+    )
+    assert interpolator.source == "source-sph.sav"

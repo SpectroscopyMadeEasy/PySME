@@ -21,6 +21,7 @@ from tqdm import tqdm
 from . import __file_ending__
 from .abund import Abund
 from .atmosphere.atmosphere import AtmosphereError
+from .atmosphere.interpolation import AtmosphereInterpolator
 from .atmosphere.krzfile import KrzFile
 from .atmosphere.savfile import SavFile
 from .large_file_storage import setup_lfs
@@ -846,6 +847,14 @@ class SME_Solver:
                     f"expected length {nw}, got {nf}."
                 )
 
+    def _get_grid_geometries(self, sme):
+        """Inspect this source's actual contents, not its name or header."""
+        interpolator = self.synthesizer.atmosphere_interpolator
+        if interpolator is None:
+            interpolator = AtmosphereInterpolator(lfs_atmo=self.synthesizer.lfs_atmo)
+            self.synthesizer.atmosphere_interpolator = interpolator
+        return interpolator.load_grid(sme.atmo.source).geometry_types
+
     def _solve_geometry_regions(self, sme, bounds, **kwargs):
         """Fit disjoint gravity regions and return only the better candidate."""
         gravity_index = list(self.parameter_names).index("logg")
@@ -1081,7 +1090,10 @@ class SME_Solver:
             and "logg" in self.parameter_names
         ):
             gravity_index = list(self.parameter_names).index("logg")
-            if bounds[0][gravity_index] < 3.5 < bounds[1][gravity_index]:
+            if (
+                bounds[0][gravity_index] < 3.5 < bounds[1][gravity_index]
+                and len(self._get_grid_geometries(sme)) > 1
+            ):
                 return self._solve_geometry_regions(
                     sme,
                     bounds,

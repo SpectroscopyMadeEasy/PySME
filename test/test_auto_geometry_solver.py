@@ -45,17 +45,30 @@ def make_sme(*, geom=None, logg=3.2):
     return sme
 
 
-def make_solver(monkeypatch, outcomes):
+def make_solver(monkeypatch, outcomes, *, geometry_types_by_source=None):
     """Make an SME solver whose optimizer and synthesis are both local mocks."""
     import importlib
 
     solve_module = importlib.import_module("pysme.solve")
+    if geometry_types_by_source is None:
+        geometry_types_by_source = {
+            "mock-geometry.sav": frozenset(("PP", "SPH")),
+            "pure-pp.sav": frozenset(("PP",)),
+            "pure-sph.sav": frozenset(("SPH",)),
+        }
     calls = []
     synth_calls = []
 
     def fake_synthesize(local_sme, **_kwargs):
         requested = local_sme.atmo.geom_request
-        resolved = requested or ("SPH" if local_sme.logg < 3.5 else "PP")
+        source_geometries = geometry_types_by_source.get(
+            local_sme.atmo.source, frozenset(("PP", "SPH"))
+        )
+        resolved = requested or (
+            next(iter(source_geometries))
+            if len(source_geometries) == 1
+            else ("SPH" if local_sme.logg < 3.5 else "PP")
+        )
         local_sme.atmo._set_resolved_geometry(resolved, requested)
         outcome = outcomes.get(resolved, outcomes.get("single"))
         flux = np.ones(3)
@@ -79,6 +92,9 @@ def make_solver(monkeypatch, outcomes):
     solver._latest_jacobian = np.zeros((3, 1))
     solver._can_prepare_abundance_synthesis = lambda *_args, **_kwargs: False
     solver._validate_field_against_wave = lambda *_args, **_kwargs: None
+    solver._get_grid_geometries = lambda local_sme: geometry_types_by_source.get(
+        local_sme.atmo.source, frozenset(("PP", "SPH"))
+    )
     def fake_update_fitresults(local_sme, result, segments):
         if segments == "all":
             segments = list(range(len(local_sme.spec)))
@@ -111,9 +127,17 @@ def make_solver(monkeypatch, outcomes):
 
     def fake_least_squares(*_args, **kwargs):
         bounds = np.asarray(kwargs["bounds"], dtype=float)
+        residual_args = kwargs.get("args", ())
+        local_sme = residual_args[0] if residual_args else None
+        source_geometries = geometry_types_by_source.get(
+            getattr(getattr(local_sme, "atmo", None), "source", None),
+            frozenset(("PP", "SPH")),
+        )
         if bounds.ndim == 2 and bounds.shape[0] == 2 and bounds.shape[1] == 1:
             lower, upper = bounds[:, 0]
-            if upper <= 3.5 + 1e-10:
+            if len(source_geometries) == 1:
+                side = next(iter(source_geometries))
+            elif upper <= 3.5 + 1e-10:
                 side = "SPH"
             elif lower >= 3.5 - 1e-10:
                 side = "PP"
@@ -169,6 +193,42 @@ def test_crossing_auto_fit_runs_both_sides_and_returns_best(monkeypatch):
     assert {side for side, _ in calls} == {"SPH", "PP"}
     np.testing.assert_allclose(result.synth[0], [1.0, 1.0, 1.0])
     np.testing.assert_allclose(result.fitresults.residuals, [0.0, 0.0, 0.0])
+
+
+@pytest.mark.parametrize(
+    "source,expected_geom,accepted_logg",
+    [
+        ("pure-pp.sav", "PP", 3.2),
+        ("pure-sph.sav", "SPH", 3.8),
+    ],
+)
+def test_auto_geometry_pure_source_fits_once_across_boundary(
+    monkeypatch, source, expected_geom, accepted_logg
+):
+    sme = make_sme()
+    sme.atmo.source = source
+    solver, calls, _ = make_solver(
+        monkeypatch,
+        {
+            "SPH": (3.8, 1.0),
+            "PP": (3.2, 1.0),
+            "single": (accepted_logg, 1.0),
+        },
+    )
+
+    result = solver.solve(
+        sme,
+        param_names=["logg"],
+        bounds=np.array([[3.0], [4.0]]),
+    )
+
+    assert result is sme
+    assert len(calls) == 1
+    assert calls[0][0] == expected_geom
+    assert result.logg == pytest.approx(accepted_logg)
+    assert result.atmo.geom == expected_geom
+    assert result.atmo.geom_request is None
+    assert result.atmo.source == source
 
 
 def test_crossing_auto_fit_exact_tie_prefers_sph(monkeypatch):

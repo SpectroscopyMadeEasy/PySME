@@ -324,6 +324,18 @@ class AtmosphereGrid(np.recarray):
     def ndep(self):
         return self.dtype["temp"].shape[0]
 
+    @property
+    def geometry_types(self):
+        """Geometries present in the grid, using the per-model radius flags.
+
+        The legacy grid-level ``geom`` header can label a mixed grid SPH,
+        so it cannot distinguish mixed grids from spherical-only grids.
+        """
+        radii = np.asarray(self.radius)
+        if radii.size == 0 or not np.all(np.isfinite(radii)):
+            raise AtmosphereError("Atmosphere grid has empty or non-finite radius flags")
+        return frozenset(np.where(radii > 1, "SPH", "PP"))
+
     def save(self, filename):
         """Save the Atmopshere grid to a file using a numpy save format"""
         header = {

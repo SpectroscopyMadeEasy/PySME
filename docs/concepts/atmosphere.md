@@ -51,13 +51,21 @@ sme.atmo.geom = None
 sme.atmo.depth = "RHOX"
 ```
 
-Automatic mode interpolates the atmospheric structure using the complete
-grid, including mixed PP/SPH corners. It uses PP transfer at `logg >= 3.5`.
-Below 3.5, it uses SPH transfer when all interpolation corners supply spherical
-geometry (radius and height); otherwise it uses PP. Grids without spherical
-geometry therefore continue to use PP at low gravity.
+Automatic mode uses only the selected `source`, inspecting its per-model
+radius flags rather than assuming geometry from its filename or grid header:
 
-After interpolation, `sme.atmo.geom` reports the resolved transfer geometry.
+| Available geometry in the source | Geometry used for synthesis |
+| --- | --- |
+| PP only | PP at every requested gravity |
+| SPH only | SPH at every requested gravity |
+| Both PP and SPH | PP at `logg >= 3.5`; below 3.5, SPH when all interpolation corners supply spherical geometry, otherwise PP |
+
+Atmospheric structure is interpolated using the complete selected grid,
+including mixed PP/SPH corners. Keeping a single source's geometry does not
+extend that grid's parameter coverage or remove extrapolation warnings.
+
+After synthesis or fitting, `sme.atmo.geom` reports the actual transfer
+geometry (`'PP'` or `'SPH'`); `sme.atmo.source` retains the selected source.
 The read-only `sme.atmo.geom_request` retains the request (`None`, `'PP'`, or
 `'SPH'`), so repeated synthesis, copying, and saving/loading a new `.sme` file
 preserve automatic mode. Assign `sme.atmo.geom` again to change the request.
@@ -74,7 +82,7 @@ even if the interpolated atmospheric structure is continuous. This option
 raises `AtmosphereError` if it selects SPH transfer with a TAU depth scale;
 use RHOX for spherical transfer.
 
-When `logg` is a free fit parameter and its bounds extend below and above 3.5,
+For a mixed PP/SPH source, when `logg` is a free fit parameter and its bounds extend below and above 3.5,
 `solve` fits the two gravity regions separately, keeping structure
 interpolation in automatic mode. It returns only the successful candidate
 with the smallest final optimization objective (chi-square for the default
@@ -82,7 +90,10 @@ linear loss). Exact ties select the low-gravity candidate, evaluated first.
 The returned result does not establish that the data uniquely determine the
 geometry, and it is not a guarantee of the global optimum. Geometry ambiguity
 and model comparison are left to the caller. Explicit geometry requests,
-single-region bounds, and fits without free `logg` retain a single fit.
+single-geometry sources, single-region bounds, and fits without free `logg`
+retain a single fit. Thus synthesis selects geometry at the supplied point;
+fitting can compare optimized candidates from both gravity regions of a
+mixed source and return the smaller objective.
 
 See the [boundary testing guide](../dev/auto_geometry_testing.md) for a
 reproducible synthesis and fitting diagnostic and its current limitations.

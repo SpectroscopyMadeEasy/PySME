@@ -1,9 +1,10 @@
 # Testing automatic atmosphere geometry
 
 Automatic geometry is opt-in: set `sme.atmo.geom = None` and
-`sme.atmo.depth = "RHOX"`. The structure is interpolated from the full grid;
-transfer uses PP at `logg >= 3.5`, and SPH below that threshold when all
-interpolation corners provide spherical geometry. See
+`sme.atmo.depth = "RHOX"`. The structure is interpolated from the full selected
+grid. A PP-only source always uses PP; an SPH-only source always uses SPH.
+Only mixed sources use the `logg = 3.5` threshold: PP above or at it, and
+SPH below when all interpolation corners provide spherical geometry. See
 [atmosphere configuration](../concepts/atmosphere.md#automatic-transfer-geometry).
 
 The default remains explicit PP. This feature changes Python code only and
@@ -12,7 +13,8 @@ automatic mode rejects that combination.
 
 ## Fit result selection
 
-With automatic geometry and free `logg`, bounds with `lower < 3.5 < upper` are
+Only for a mixed PP/SPH source with automatic geometry and free `logg`,
+bounds with `lower < 3.5 < upper` are
 split into a low-gravity region ending at `nextafter(3.5, -inf)` and a
 high-gravity region starting at 3.5. Other parameter bounds are retained.
 Each fit starts from the supplied parameters, clipped into its region by
@@ -38,9 +40,22 @@ optimization histories. If `filename` is set, only the selected final SME
 model is saved. A requested restore is applied before making the independent
 candidate copies. Explicit geometry, bounds within one region, and fits
 without free gravity keep the existing single-fit behavior.
+Single-geometry sources always use a single fit, even if the requested
+gravity bounds cross 3.5. The selected `source` is never replaced by another
+grid; output `geom` is its resolved PP/SPH geometry, while `geom_request`
+retains `None` so subsequent calls can adapt if the source changes.
 Bounds ending exactly at 3.5 also retain the single-fit path: they do not
 provide two regions with positive width. To compare both sides, include an
 interval above 3.5 in the gravity bounds.
+
+Grid-level `geom` headers are not sufficient to identify mixed sources.
+Classification uses the loaded per-model radius convention (`<= 1` for PP,
+`> 1` for SPH), also used by explicit geometry filtering. Locally checked
+public examples are `marcs2012p_t1.0.sav` (2464 PP models),
+`marcs2012s_t2.0.sav` (2963 SPH models), and `marcs2014.sav`
+(1505 PP and 2963 SPH models). Legacy files lacking spherical height data
+are loaded as PP by the existing loader; raw radius values alone do not
+provide enough information for spherical transfer.
 
 ## Reproduce the boundary diagnostic
 
