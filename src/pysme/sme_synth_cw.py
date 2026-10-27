@@ -381,6 +381,8 @@ class SME_DLL:
             raise ValueError("Temperature must be positive (unit is Kelvin)")
         if vturb < 0:
             raise ValueError("Turbulence velocity must be positive or zero")
+        if str(atmo["geom"]).upper() == "SPH" and str(atmo["depth"]).upper() == "TAU":
+            return self.InputModelEx(teff, grav, vturb, atmo)
 
         try:
             motype = atmo["depth"]
@@ -422,6 +424,72 @@ class SME_DLL:
             self.state.contents.free_opacities()
 
         self.lib.InputModel(*args, type=type, state=self.state)
+
+        self.teff = teff
+        self.grav = grav
+        self.vturb = vturb
+        self.atmo = atmo
+
+    def GetModelInputCapabilities(self):
+        """Return native geometry/depth combinations supported by SMElib."""
+        if not self.lib.has_function("GetModelInputCapabilities"):
+            return "PP:RHOX,PP:TAU,SPH:RHOX"
+        result = self.lib.call(
+            "GetModelInputCapabilities", raise_error=False, state=None,
+            strict_missing=True
+        )
+        if isinstance(result, bytes):
+            result = result.decode()
+        return result or "PP:RHOX,PP:TAU,SPH:RHOX"
+
+    def InputModelEx(self, teff, grav, vturb, atmo):
+        """Input a model with explicit geometry and depth scale."""
+        if teff <= 0:
+            raise ValueError("Temperature must be positive (unit is Kelvin)")
+        if vturb < 0:
+            raise ValueError("Turbulence velocity must be positive or zero")
+        geometry = str(atmo["geom"]).upper()
+        depth_scale = str(atmo["depth"]).upper()
+        if geometry not in ("PP", "SPH"):
+            raise ValueError("geometry must be PP or SPH")
+        if depth_scale not in ("RHOX", "TAU"):
+            raise ValueError("depth must be RHOX or TAU")
+        capabilities = self.GetModelInputCapabilities()
+        if f"{geometry}:{depth_scale}" not in {
+            item.strip() for item in capabilities.split(",") if item.strip()
+        }:
+            raise RuntimeError(
+                f"SMElib does not support {geometry}:{depth_scale}; "
+                f"supported model inputs are {capabilities}"
+            )
+        if not self.lib.has_function("InputModelEx"):
+            raise RuntimeError(
+                "SMElib does not export InputModelEx; refusing to use the "
+                "legacy InputModel for this request"
+            )
+
+        depth = atmo[depth_scale]
+        ndepth = len(depth)
+        temp = atmo["temp"]
+        xne = atmo["xne"]
+        xna = atmo["xna"]
+        rho = atmo["rho"]
+        vt = np.full(ndepth, vturb) if np.size(vturb) == 1 else vturb
+        opflag = atmo["opflag"].astype(np.int16)
+        radius = atmo["radius"] if geometry == "SPH" else 0.0
+        height = atmo["height"] if geometry == "SPH" else None
+        types = (
+            "short", "double", "double", "double", "short", "short", "short",
+            "double", "double", "double", "double", "double", "double",
+            "double", "double",
+        )
+        self.lib.call(
+            "InputModelEx", ndepth, teff, grav, atmo["wlstd"],
+            0 if geometry == "PP" else 1,
+            0 if depth_scale == "RHOX" else 1,
+            opflag, depth, temp, xne, xna, rho, vt, radius, height,
+            type=types, state=self.state, strict_missing=True
+        )
 
         self.teff = teff
         self.grav = grav

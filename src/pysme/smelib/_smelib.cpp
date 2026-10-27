@@ -3,6 +3,16 @@
 #include <Python.h>
 #include <numpy/ndarraytypes.h>
 #include <numpy/arrayobject.h>
+#include <cctype>
+#include <cstdint>
+#include <cstdio>
+#include <cstring>
+
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <dlfcn.h>
+#endif
 
 // Header of the SME library
 #include "sme_synth_faster.h"
@@ -13,6 +23,127 @@
 
 // Everything else is considered an error
 const char OK_response = '\0';
+
+typedef const char *(*SME_ModelInputFunction)(int, void *[]);
+
+static const char *legacy_model_input_capabilities =
+    "PP:RHOX,PP:TAU,SPH:RHOX";
+
+/* Resolve optional symbols from the library that supplied InputModel.  The
+ * extension is also used with older SMElib binaries, so these symbols must
+ * not be direct link references. */
+static void *lookup_optional_smelib_symbol(const char *name)
+{
+#ifdef _WIN32
+    HMODULE module = NULL;
+    LPCSTR address = reinterpret_cast<LPCSTR>(
+        reinterpret_cast<const void *>(&InputModel));
+    if (!GetModuleHandleExA(
+            GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
+                GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+            address, &module))
+        return NULL;
+    return reinterpret_cast<void *>(GetProcAddress(module, name));
+#else
+    static void *smelib_handle = NULL;
+    static bool handle_initialized = false;
+    if (handle_initialized)
+        return smelib_handle == NULL ? NULL : dlsym(smelib_handle, name);
+
+    handle_initialized = true;
+    Dl_info info;
+    if (dladdr(reinterpret_cast<void *>(
+                   reinterpret_cast<uintptr_t>(&InputModel)), &info) == 0 ||
+        info.dli_fname == NULL)
+        return NULL;
+    smelib_handle = dlopen(info.dli_fname, RTLD_LAZY | RTLD_LOCAL);
+    if (smelib_handle == NULL)
+        return NULL;
+    return dlsym(smelib_handle, name);
+#endif
+}
+
+static SME_ModelInputFunction lookup_optional_model_input(const char *name)
+{
+    return reinterpret_cast<SME_ModelInputFunction>(
+        lookup_optional_smelib_symbol(name));
+}
+
+static const char *model_input_capabilities(void)
+{
+    SME_ModelInputFunction function =
+        lookup_optional_model_input("GetModelInputCapabilities");
+    if (function == NULL)
+        return legacy_model_input_capabilities;
+    const char *result = function(0, NULL);
+    return (result != NULL && result[0] != '\0')
+        ? result : legacy_model_input_capabilities;
+}
+
+static int parse_model_mode(PyObject *value, const char *name,
+                            const char *zero_name, const char *one_name,
+                            short *result)
+{
+    if (PyLong_Check(value))
+    {
+        long mode = PyLong_AsLong(value);
+        if (PyErr_Occurred())
+            return 0;
+        if (mode == 0 || mode == 1)
+        {
+            *result = static_cast<short>(mode);
+            return 1;
+        }
+    }
+    else if (PyUnicode_Check(value) || PyBytes_Check(value))
+    {
+        const char *text = PyUnicode_Check(value)
+            ? PyUnicode_AsUTF8(value) : PyBytes_AsString(value);
+        if (text == NULL)
+            return 0;
+        char normalized[16];
+        size_t length = strlen(text);
+        if (length >= sizeof(normalized))
+            length = sizeof(normalized) - 1;
+        for (size_t i = 0; i < length; ++i)
+            normalized[i] = static_cast<char>(toupper(
+                static_cast<unsigned char>(text[i])));
+        normalized[length] = '\0';
+        if (strcmp(normalized, zero_name) == 0)
+        {
+            *result = 0;
+            return 1;
+        }
+        if (strcmp(normalized, one_name) == 0)
+        {
+            *result = 1;
+            return 1;
+        }
+    }
+    PyErr_Format(PyExc_ValueError, "%s must be %s/%s or 0/1",
+                 name, zero_name, one_name);
+    return 0;
+}
+
+static int model_input_supports(const char *capabilities,
+                                short geometry, short depth_scale)
+{
+    const char *geometry_name = geometry == 0 ? "PP" : "SPH";
+    const char *depth_name = depth_scale == 0 ? "RHOX" : "TAU";
+    char requested[16];
+    snprintf(requested, sizeof(requested), "%s:%s", geometry_name, depth_name);
+    const char *match = strstr(capabilities, requested);
+    while (match != NULL)
+    {
+        const char before = match == capabilities ? ',' : match[-1];
+        const char after = match[strlen(requested)];
+        if ((match == capabilities || before == ',') &&
+            (after == '\0' || after == ','))
+            return 1;
+        match = strstr(match + 1, requested);
+    }
+    return 0;
+}
 
 static char module_docstring[] =
     "This module provides a Python interface to the SME libary";
@@ -933,6 +1064,167 @@ fail:
     Py_XDECREF(temp_arr);
     Py_XDECREF(xna_arr);
     Py_XDECREF(xne_arr);
+    Py_XDECREF(rho_arr);
+    Py_XDECREF(vt_arr);
+    Py_XDECREF(height_arr);
+    return NULL;
+}
+
+static char smelib_GetModelInputCapabilities_docstring[] =
+    "Return supported geometry/depth-scale model inputs";
+static PyObject *smelib_GetModelInputCapabilities(PyObject *self, PyObject *args)
+{
+    return PyUnicode_FromString(model_input_capabilities());
+}
+
+static char smelib_InputModelEx_docstring[] =
+    "Read a model atmosphere with explicit geometry and depth scale";
+static PyObject *smelib_InputModelEx(PyObject *self, PyObject *args,
+                                     PyObject *kwds)
+{
+    SME_ModelInputFunction function =
+        lookup_optional_model_input("InputModelEx");
+    if (function == NULL)
+    {
+        PyErr_SetString(
+            PyExc_RuntimeError,
+            "SMElib does not support InputModelEx; supported model inputs are "
+            "PP:RHOX,PP:TAU,SPH:RHOX");
+        return NULL;
+    }
+
+    double teff, grav, wlstd, radius = 0.0;
+    short geometry, depth_scale, nrhox;
+    PyObject *geometry_obj = NULL, *depth_scale_obj = NULL;
+    PyObject *opflag_obj = NULL, *depth_obj = NULL, *temp_obj = NULL;
+    PyObject *xne_obj = NULL, *xna_obj = NULL, *rho_obj = NULL, *vt_obj = NULL;
+    PyObject *height_obj = NULL;
+    PyArrayObject *opflag_arr = NULL, *depth_arr = NULL, *temp_arr = NULL;
+    PyArrayObject *xne_arr = NULL, *xna_arr = NULL, *rho_arr = NULL, *vt_arr = NULL;
+    PyArrayObject *height_arr = NULL;
+    const char *result = NULL;
+    void *args_c[15];
+    npy_intp depth_count = 0;
+    static const char *keywords[] = {
+        "teff", "grav", "wlstd", "geometry", "depth_scale", "opflag",
+        "depth", "temp", "xne", "xna", "rho", "vt", "radius", "height", NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(
+            args, kwds, "dddOOOOOOOOO|dO",
+            const_cast<char **>(keywords), &teff, &grav, &wlstd,
+            &geometry_obj, &depth_scale_obj, &opflag_obj, &depth_obj,
+            &temp_obj, &xne_obj, &xna_obj, &rho_obj, &vt_obj, &radius,
+            &height_obj))
+        return NULL;
+
+    if (!parse_model_mode(geometry_obj, "geometry", "PP", "SPH", &geometry) ||
+        !parse_model_mode(depth_scale_obj, "depth_scale", "RHOX", "TAU",
+                          &depth_scale))
+        goto fail;
+    if (!model_input_supports(model_input_capabilities(), geometry, depth_scale))
+    {
+        PyErr_Format(
+            PyExc_RuntimeError,
+            "SMElib does not advertise InputModelEx support for %s:%s; "
+            "supported model inputs are %s",
+            geometry == 0 ? "PP" : "SPH", depth_scale == 0 ? "RHOX" : "TAU",
+            model_input_capabilities());
+        goto fail;
+    }
+    if (teff <= 0)
+    {
+        PyErr_SetString(PyExc_ValueError, "Temperature must be positive (unit is Kelvin)");
+        goto fail;
+    }
+
+    opflag_arr = (PyArrayObject *)PyArray_FROM_OTF(opflag_obj, NPY_SHORT, NPY_ARRAY_IN_ARRAY);
+    depth_arr = (PyArrayObject *)PyArray_FROM_OTF(depth_obj, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY);
+    temp_arr = (PyArrayObject *)PyArray_FROM_OTF(temp_obj, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY);
+    xne_arr = (PyArrayObject *)PyArray_FROM_OTF(xne_obj, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY);
+    xna_arr = (PyArrayObject *)PyArray_FROM_OTF(xna_obj, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY);
+    rho_arr = (PyArrayObject *)PyArray_FROM_OTF(rho_obj, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY);
+    vt_arr = (PyArrayObject *)PyArray_FROM_OTF(vt_obj, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY);
+    if (height_obj != NULL && height_obj != Py_None)
+        height_arr = (PyArrayObject *)PyArray_FROM_OTF(height_obj, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY);
+    if (opflag_arr == NULL || depth_arr == NULL || temp_arr == NULL ||
+        xne_arr == NULL || xna_arr == NULL || rho_arr == NULL || vt_arr == NULL ||
+        (height_obj != NULL && height_obj != Py_None && height_arr == NULL))
+        goto fail;
+
+    if (PyArray_NDIM(opflag_arr) != 1 || PyArray_NDIM(depth_arr) != 1 ||
+        PyArray_NDIM(temp_arr) != 1 || PyArray_NDIM(xne_arr) != 1 ||
+        PyArray_NDIM(xna_arr) != 1 || PyArray_NDIM(rho_arr) != 1 ||
+        PyArray_NDIM(vt_arr) != 1 ||
+        (height_arr != NULL && PyArray_NDIM(height_arr) != 1))
+    {
+        PyErr_SetString(PyExc_ValueError, "InputModelEx arrays must be one-dimensional");
+        goto fail;
+    }
+    if (PyArray_DIM(opflag_arr, 0) != 20)
+    {
+        PyErr_SetString(PyExc_ValueError, "Expected opflag array of size 20");
+        goto fail;
+    }
+    depth_count = PyArray_DIM(depth_arr, 0);
+    if (depth_count > 32767 ||
+        PyArray_DIM(temp_arr, 0) != depth_count || PyArray_DIM(xne_arr, 0) != depth_count ||
+        PyArray_DIM(xna_arr, 0) != depth_count || PyArray_DIM(rho_arr, 0) != depth_count ||
+        PyArray_DIM(vt_arr, 0) != depth_count ||
+        (height_arr != NULL && PyArray_DIM(height_arr, 0) != depth_count))
+    {
+        PyErr_SetString(PyExc_ValueError, "InputModelEx arrays must have the same depth");
+        goto fail;
+    }
+    if (geometry == 1 && (height_arr == NULL || isnan(radius)))
+    {
+        PyErr_SetString(PyExc_ValueError, "SPH InputModelEx requires radius and height");
+        goto fail;
+    }
+    if (geometry == 0 && height_arr != NULL)
+    {
+        PyErr_SetString(PyExc_ValueError, "PP InputModelEx requires height=None");
+        goto fail;
+    }
+
+    nrhox = static_cast<short>(depth_count);
+    args_c[0] = &nrhox;
+    args_c[1] = &teff;
+    args_c[2] = &grav;
+    args_c[3] = &wlstd;
+    args_c[4] = &geometry;
+    args_c[5] = &depth_scale;
+    args_c[6] = (short *)PyArray_DATA(opflag_arr);
+    args_c[7] = (double *)PyArray_DATA(depth_arr);
+    args_c[8] = (double *)PyArray_DATA(temp_arr);
+    args_c[9] = (double *)PyArray_DATA(xne_arr);
+    args_c[10] = (double *)PyArray_DATA(xna_arr);
+    args_c[11] = (double *)PyArray_DATA(rho_arr);
+    args_c[12] = (double *)PyArray_DATA(vt_arr);
+    args_c[13] = &radius;
+    args_c[14] = height_arr == NULL ? NULL : (double *)PyArray_DATA(height_arr);
+    result = function(15, args_c);
+    if (result != NULL && result[0] != OK_response)
+    {
+        PyErr_SetString(PyExc_RuntimeError, result);
+        goto fail;
+    }
+
+    Py_XDECREF(opflag_arr);
+    Py_XDECREF(depth_arr);
+    Py_XDECREF(temp_arr);
+    Py_XDECREF(xne_arr);
+    Py_XDECREF(xna_arr);
+    Py_XDECREF(rho_arr);
+    Py_XDECREF(vt_arr);
+    Py_XDECREF(height_arr);
+    Py_RETURN_NONE;
+
+fail:
+    Py_XDECREF(opflag_arr);
+    Py_XDECREF(depth_arr);
+    Py_XDECREF(temp_arr);
+    Py_XDECREF(xne_arr);
+    Py_XDECREF(xna_arr);
     Py_XDECREF(rho_arr);
     Py_XDECREF(vt_arr);
     Py_XDECREF(height_arr);
@@ -1971,6 +2263,8 @@ static PyMethodDef module_methods[] = {
     {"OutputLineList", smelib_OutputLineList, METH_NOARGS, smelib_OutputLineList_docstring},
     {"UpdateLineList", smelib_UpdateLineList, METH_VARARGS, smelib_UpdateLineList_docstring},
     {"InputModel", (PyCFunction)(void (*)(void))smelib_InputModel, METH_VARARGS | METH_KEYWORDS, smelib_InputModel_docstring},
+    {"GetModelInputCapabilities", smelib_GetModelInputCapabilities, METH_NOARGS, smelib_GetModelInputCapabilities_docstring},
+    {"InputModelEx", (PyCFunction)(void (*)(void))smelib_InputModelEx, METH_VARARGS | METH_KEYWORDS, smelib_InputModelEx_docstring},
     {"InputDepartureCoefficients", smelib_InputDepartureCoefficients, METH_VARARGS, smelib_InputDepartureCoefficients_docstring},
     {"GetDepartureCoefficients", smelib_GetDepartureCoefficients, METH_VARARGS, smelib_GetDepartureCoefficients_docstring},
     {"ResetDepartureCoefficients", smelib_ResetDepartureCoefficients, METH_NOARGS, smelib_ResetDepartureCoefficients_docstring},

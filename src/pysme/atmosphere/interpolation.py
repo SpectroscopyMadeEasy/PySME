@@ -110,11 +110,6 @@ class AtmosphereInterpolator:
         ):
             geom = "PP"
             radius = None
-        if self.geom is None and geom == "SPH" and depth != "RHOX":
-            raise AtmosphereError(
-                "Automatic geometry selected SPH transfer, which requires "
-                "atmo.depth='RHOX'; SPH transfer on TAU is not supported."
-            )
         # Create ATMO.GEOM, if necessary, and set value.
         if self.geom is not None and self.geom != geom:
             if self.geom == "SPH":

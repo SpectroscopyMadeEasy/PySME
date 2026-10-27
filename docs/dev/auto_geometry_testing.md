@@ -7,9 +7,11 @@ Only mixed sources use the `logg = 3.5` threshold: PP above or at it, and
 SPH below when all interpolation corners provide spherical geometry. See
 [atmosphere configuration](../concepts/atmosphere.md#automatic-transfer-geometry).
 
-The default remains explicit PP. This feature changes Python code only and
-uses the existing SMElib interface. SPH transfer on TAU is a separate feature;
-automatic mode rejects that combination.
+The default remains explicit PP. Automatic geometry itself uses the existing
+SMElib interface. On the SPH+TAU feature branch, selecting TAU for spherical
+transfer requires the new native interface; see the
+[SPH+TAU testing guide](sph_tau_testing.md). Older libraries reject that
+combination explicitly.
 
 ## Fit result selection
 

@@ -99,7 +99,7 @@ target_include_directories(_smelib PRIVATE
 target_compile_definitions(_smelib PRIVATE
     "PYSME_SMELIB_VERSION_ID=\"${SMELIB_VERSION_ID}\""
 )
-target_link_libraries(_smelib PRIVATE sme)
+target_link_libraries(_smelib PRIVATE sme ${CMAKE_DL_LIBS})
 
 if(APPLE)
     set_target_properties(_smelib PROPERTIES

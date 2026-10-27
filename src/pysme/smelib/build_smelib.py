@@ -42,6 +42,8 @@ include_dirs = [np.get_include(), str(libdir)]
 extra_link_args = []
 if sys.platform == "darwin":
     extra_link_args += ["-Wl,-rpath,@loader_path/../lib"]
+elif sys.platform.startswith("linux"):
+    extra_link_args += ["-ldl"]
 # elif sys.platform.startswith("linux"):
 #     extra_link_args += ["-Wl,-rpath,$ORIGIN/../lib"]
 

@@ -78,9 +78,7 @@ retain their supplied geometry and are not switched automatically.
 
 The automatic threshold is a hard change in the radiative-transfer geometry,
 so spectra and fit objectives need not be continuous across `logg = 3.5`,
-even if the interpolated atmospheric structure is continuous. This option
-raises `AtmosphereError` if it selects SPH transfer with a TAU depth scale;
-use RHOX for spherical transfer.
+even if the interpolated atmospheric structure is continuous.
 
 For a mixed PP/SPH source, when `logg` is a free fit parameter and its bounds extend below and above 3.5,
 `solve` fits the two gravity regions separately, keeping structure
@@ -97,6 +95,42 @@ mixed source and return the smaller objective.
 
 See the [boundary testing guide](../dev/auto_geometry_testing.md) for a
 reproducible synthesis and fitting diagnostic and its current limitations.
+
+## Spherical transfer on optical depth
+
+With an SMElib build providing `InputModelEx` and the `SPH:TAU` capability,
+both spherical and plane-parallel transfer can use a reference optical-depth
+coordinate. For example:
+
+```python
+sme.atmo.source = "marcs2014.sav"
+sme.atmo.geom = "SPH"  # or None for automatic geometry
+sme.atmo.interp = "TAU"
+sme.atmo.depth = "TAU"
+```
+
+`interp` selects the coordinate for interpolating atmospheric structures;
+`depth` selects the coordinate for radiative transfer. They remain independent.
+The source must supply `tau` at `wlstd` (5000 Å by default), rather than
+Rosseland optical depth or logarithmic optical depth. For a MARCS table with
+`lgTau5`, use `tau = 10**lgTau5`. Spherical models also require `radius` and
+`height` in cm, with `radius + height > 0` and heights decreasing inward.
+The input depth coordinate must increase inward.
+
+Spherical rays retain their geometric path lengths. Transfer integrates
+`d(tau)` with wavelength opacity divided by the continuum extinction at
+`wlstd`. The reference includes absorption and scattering. Continuum-scattering
+source calculations use the same coordinate transformation. The existing
+scattering-source option and its defaults are unchanged.
+
+PySME sends SPH+TAU through the new explicit native interface. A library
+lacking this capability raises an error; it cannot silently interpret TAU
+as RHOX. The three historical geometry/depth combinations retain their old
+input interface. Default geometry and file-loader depth choices are unchanged.
+See the [SPH+TAU testing guide](../dev/sph_tau_testing.md) for build and
+coordinate-consistency checks. Independently tabulated MARCS TAU and RHOX
+need not produce identical spectra, because their opacities and radial
+column definitions can differ from the controlled transformation used there.
 
 ## Atmosphere grids:
 

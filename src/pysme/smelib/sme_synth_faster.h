@@ -61,6 +61,9 @@ extern "C" const char *SME_DLL InputLineList(int n, void *arg[]);     /* Read in
 extern "C" const char *SME_DLL OutputLineList(int n, void *arg[]);    /* Return line list */
 extern "C" const char *SME_DLL UpdateLineList(int n, void *arg[]);    /* Change line list parameters */
 extern "C" const char *SME_DLL InputModel(int n, void *arg[]);        /* Read in model atmosphere */
+/* InputModelEx and GetModelInputCapabilities are optional symbols.  The
+ * Python extension resolves them at runtime so this header must not create a
+ * hard link dependency on newer SMElib binaries. */
 extern "C" const char *SME_DLL InputDepartureCoefficients(int n, void *arg[]);
 extern "C" const char *SME_DLL GetDepartureCoefficients(int n, void *arg[]);   /* Get NLTE b's for specific line */
 extern "C" const char *SME_DLL GetNLTEflags(int n, void *arg[]);               /* Get line list NLTE flags */

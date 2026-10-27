@@ -526,6 +526,8 @@ class SME_DLL:
             raise ValueError("Temperature must be positive (unit is Kelvin)")
         if vturb < 0:
             raise ValueError("Turbulence velocity must be positive or zero")
+        if str(atmo["geom"]).upper() == "SPH" and str(atmo["depth"]).upper() == "TAU":
+            return self.InputModelEx(teff, grav, vturb, atmo)
 
         motype = atmo["depth"]
         depth = atmo[motype]
@@ -546,6 +548,60 @@ class SME_DLL:
 
         _smelib.InputModel(
             teff, grav, wlstd, motype, opflag, depth, temp, xne, xna, rho, vt, **kwargs
+        )
+
+    def GetModelInputCapabilities(self):
+        """Return native geometry/depth combinations supported by SMElib."""
+        getter = getattr(_smelib, "GetModelInputCapabilities", None)
+        if getter is None:
+            return "PP:RHOX,PP:TAU,SPH:RHOX"
+        return getter()
+
+    def InputModelEx(self, teff, grav, vturb, atmo):
+        """Input a model with explicit geometry and depth scale.
+
+        This is required for combinations such as SPH+TAU.  The legacy
+        ``InputModel`` path remains unchanged for the three historical modes.
+        """
+        if teff <= 0:
+            raise ValueError("Temperature must be positive (unit is Kelvin)")
+        if vturb < 0:
+            raise ValueError("Turbulence velocity must be positive or zero")
+
+        geometry = str(atmo["geom"]).upper()
+        depth_scale = str(atmo["depth"]).upper()
+        if geometry not in ("PP", "SPH"):
+            raise ValueError("geometry must be PP or SPH")
+        if depth_scale not in ("RHOX", "TAU"):
+            raise ValueError("depth must be RHOX or TAU")
+        capabilities = self.GetModelInputCapabilities()
+        supported = {item.strip() for item in capabilities.split(",") if item.strip()}
+        pair = f"{geometry}:{depth_scale}"
+        if pair not in supported:
+            raise RuntimeError(
+                f"SMElib does not support {pair}; supported model inputs are "
+                f"{capabilities}"
+            )
+        input_model_ex = getattr(_smelib, "InputModelEx", None)
+        if not callable(input_model_ex):
+            raise RuntimeError(
+                "SMElib does not export InputModelEx; refusing to use an "
+                f"unavailable {pair} input path"
+            )
+        depth = atmo[depth_scale]
+        ndepth = len(depth)
+        temp = atmo["temp"]
+        xne = atmo["xne"]
+        xna = atmo["xna"]
+        rho = atmo["rho"]
+        vt = np.full(ndepth, vturb) if np.size(vturb) == 1 else vturb
+        opflag = atmo["opflag"].astype(np.int16)
+        radius = atmo["radius"] if geometry == "SPH" else 0.0
+        height = atmo["height"] if geometry == "SPH" else None
+
+        input_model_ex(
+            teff, grav, atmo["wlstd"], geometry, depth_scale, opflag, depth,
+            temp, xne, xna, rho, vt, radius=radius, height=height
         )
 
     def InputAbund(self, abund):
@@ -888,7 +944,9 @@ class SME_DLL:
         """
         long_continuum_val = 1 if long_continuum else 0
 
-        res = _smelib.ContributionFunctions(mu, wave, nwmax, long_continuum_val)
+        res = _smelib.ContributionFunctions(
+            mu, wave, nwmax=nwmax, long_continuum=long_continuum_val
+        )
         table, ctable = res
         if long_continuum:
             return table, ctable

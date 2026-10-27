@@ -145,14 +145,15 @@ def test_auto_geometry_boundary_policy_and_request_state(
     assert sme.atmo.geom == expected
 
 
-def test_auto_spherical_geometry_rejects_tau_transfer(mixed_geometry_grid):
+def test_auto_spherical_geometry_retains_tau_transfer(mixed_geometry_grid):
     sme = make_sme()
     sme.atmo.depth = "TAU"
     sme.atmo.interp = "TAU"
     sme.logg = 2.5
 
-    with pytest.raises(AtmosphereError, match="requires.*RHOX.*not supported"):
-        make_synthesizer().get_atmosphere(sme)
+    make_synthesizer().get_atmosphere(sme)
+    assert sme.atmo.geom == "SPH"
+    assert sme.atmo.depth == "TAU"
 
 
 def test_solver_final_synthesis_uses_accepted_auto_geometry(

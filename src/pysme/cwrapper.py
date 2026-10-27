@@ -353,7 +353,10 @@ def idl_call_external(funcname, *args, restype="str", type=None, lib=None, state
     # keep Python elements in staying alive, so they are not discarded by the garbage collection
     for i in range(len(args)):
         # Single values
-        if isinstance(args[i], (int, float, np.number)):
+        if args[i] is None:
+            staying_alive[i] = None
+            args[i] = None
+        elif isinstance(args[i], (int, float, np.number)):
             dtype = get_dtype(type[i])
             staying_alive[i] = np.array(args[i]).astype(dtype, copy=False).ctypes
             args[i] = staying_alive[i].data
@@ -484,7 +487,16 @@ class IDL_DLL:
     def __getattr__(self, name):
         return lambda *args, **kwargs: self.call(name, *args, **kwargs)
 
-    def call(self, name, *args, raise_error=True, raise_warning=False, **kwargs):
+    def has_function(self, name):
+        """Return whether the selected native interface exports *name*."""
+        try:
+            getattr(self.lib, self.get_name(name))
+        except AttributeError:
+            return False
+        return True
+
+    def call(self, name, *args, raise_error=True, raise_warning=False,
+             strict_missing=False, **kwargs):
         """
         run idl_call_external and check for errors in the output
 
@@ -508,6 +520,10 @@ class IDL_DLL:
                 self.get_name(name), *args, lib=self.lib, **kwargs
             )
         except AttributeError as ex:
+            if strict_missing:
+                raise RuntimeError(
+                    f"SMElib function {name!r} is not available in the loaded library"
+                ) from ex
             error = "Using obsolete SME Library; {ex}".format(ex=ex)
             raise_error = False
             raise_warning = True
