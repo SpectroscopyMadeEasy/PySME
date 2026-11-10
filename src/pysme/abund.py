@@ -470,6 +470,9 @@ class Abund(IPersist):
         nuclei of each element in any form relative to the total for
         all elements in any form. For the Sun, the abundance values
         of H, He, and Li are approximately 0.92, -1.11, and -11.0.
+    'sme_legacy' - Older atmosphere grids: H and He are linear fractions
+        of all nuclei; metals are log10 fractions of all nuclei. This is
+        an input/storage format, distinct from the modern 'sme' interface.
     'n/nTot' - Abundance values are the fraction of nuclei
         of each element in any form relative to the total for all
         elements in any form. For the Sun, the abundance values of
@@ -616,10 +619,11 @@ class Abund(IPersist):
         pattern = self._pattern.copy()
         other = Abund(
             monh=self.monh,
-            type=self.type,
+            type=self._type_internal,
             pattern=pattern,
             citation_info=self.citation_info,
         )
+        other.type = self.type
         other._reference_pattern = self._reference_pattern.copy()
         other._reference_name = self._reference_name
         other._reference_is_solar = self._reference_is_solar
@@ -629,7 +633,7 @@ class Abund(IPersist):
     def fromtype(pattern, fromtype, raw=False):
         """Return a copy of the input abundance pattern, transformed from
         the input type to the 'H=12' type. Valid abundance pattern types
-        are 'sme', 'n/nTot', 'n/nH', 'n/nFe', and 'H=12'.
+        are 'sme', 'sme_legacy', 'kurucz', 'n/nTot', 'n/nH', 'n/nFe', and 'H=12'.
         """
         elem = elements
 
@@ -648,6 +652,12 @@ class Abund(IPersist):
             pass
         elif type == "sme":
             # sme -> H=12
+            abund[1:] += 12 - np.log10(abund[0])
+            abund[0] = 12
+        elif type == "sme_legacy":
+            # Legacy grids store He linearly, unlike modern SME input.
+            with np.errstate(divide="ignore"):
+                abund[1] = np.log10(abund[1])
             abund[1:] += 12 - np.log10(abund[0])
             abund[0] = 12
         elif type == "kurucz":
@@ -670,7 +680,7 @@ class Abund(IPersist):
         else:
             raise ValueError(
                 "got abundance type '{}',".format(type)
-                + " should be 'H=12', 'n/nH', 'n/nTot', 'n/nFe', 'Fe=12', or 'sme'"
+                + " should be 'H=12', 'kurucz', 'n/nH', 'n/nTot', 'n/nFe', 'Fe=12', 'sme', or 'sme_legacy'"
             )
 
         if raw:
@@ -682,7 +692,7 @@ class Abund(IPersist):
     def totype(pattern, totype, raw=False, copy=True, X=None):
         """Return a copy of the input abundance pattern, transformed from
         the 'H=12' type to the output type. Valid abundance pattern types
-        are 'sme', 'kurucz', 'n/nTot', 'n/nH', and 'H=12'.
+        are 'sme', 'sme_legacy', 'kurucz', 'n/nTot', 'n/nH', and 'H=12'.
         """
         if isinstance(pattern, dict):
             abund = [pattern[el] if el in pattern.keys() else np.nan for el in elements]
@@ -699,11 +709,17 @@ class Abund(IPersist):
         elif type == "sme":
             abund[0] = 1 / (1 + np.nansum(10**(abund[1:]-12)))
             abund[1:] = np.log10(abund[0] * 10**(abund[1:] - 12))
+        elif type == "sme_legacy":
+            abund[0] = 1 / (1 + np.nansum(10**(abund[1:] - 12)))
+            abund[1:] = np.log10(abund[0]) + abund[1:] - 12
+            abund[1] = 10**abund[1]
         elif type == "kurucz":
             # H=12 -> kurucz
+            # Keep the original He/H ratio before overwriting He with a fraction.
+            he_over_h = 10**(abund[1] - 12)
             abund[0] = 1 / (1 + np.nansum(10**(abund[1:] - 12)))
-            abund[1] = 1 / (10**(12-abund[1]) + 1 + 10**(12-abund[1]) * np.nansum(10**(abund[2:]-12)))
-            abund[2:] = abund[2:] - 12 - np.log10(1 + 10**(abund[1]-12))
+            abund[1] = abund[0] * he_over_h
+            abund[2:] = abund[2:] - 12 - np.log10(1 + he_over_h)
         elif type == "n/ntot":
             abund = 10 ** (abund - 12)
             abund /= np.nansum(abund)
@@ -721,7 +737,7 @@ class Abund(IPersist):
         else:
             raise ValueError(
                 "got abundance type '{}',".format(type)
-                + " should be 'H=12', 'kurucz', 'n/nH', 'n/nTot', 'n/nFe', 'Fe=12', or 'sme'"
+                + " should be 'H=12', 'kurucz', 'n/nH', 'n/nTot', 'n/nFe', 'Fe=12', 'sme', or 'sme_legacy'"
             )
 
         if raw:
@@ -729,7 +745,7 @@ class Abund(IPersist):
         else:
             return {el: abund[elements_dict[el]] for el in elements}
 
-    _formats = ["H=12", "sme", "n/nTot", "n/nH", "n/nFe", "Fe=12"]
+    _formats = ["H=12", "sme", "sme_legacy", "kurucz", "n/nTot", "n/nH", "n/nFe", "Fe=12"]
 
     @property
     def elem(self):
@@ -1033,9 +1049,10 @@ class Abund(IPersist):
         abund = cls(
             monh=header["monh"],
             pattern=pattern,
-            type=header["type"],
+            type=header.get("type_internal", header["type"]),
             citation_info=header["citation_info"],
         )
+        abund.type = header["type"]
         abund._reference_pattern = np.array(
             header.get("reference_pattern", pattern), dtype=float, copy=True
         )
