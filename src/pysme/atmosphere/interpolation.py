@@ -79,6 +79,7 @@ class RbfGrid:
         self.fit_points = None  # scaled_coords on the active axes
         self.scaled_axis_values = None  # sorted unique values of scaled_coords
         self.selection_points = None  # coordinates the neighbors are chosen in
+        self.grid_index_set = None  # grid points as tuples of axis_values indices
         self.grid_rows = None  # sav_grid row of each grid point
         self.gridpoints = None
         # Set by initialize_tags()
@@ -90,6 +91,8 @@ class RbfGrid:
         self.array_for_interpol = None
         # Search tree over selection_points, for finding the neighbors of a query
         self.neighbor_tree = None
+        # Grid cells already reported by report_incomplete_cell()
+        self._reported_cells = set()
 
         if not isinstance(sav_grid, AtmosphereGrid):
             raise AtmosphereError(
@@ -187,6 +190,58 @@ class RbfGrid:
         lands exactly on that grid point; rounding hides float32/float64 noise.
         """
         return np.round(np.asarray(points, dtype=float) * self.axis_scales, 3)
+
+    def missing_cell_corners(self, point):
+        """
+        Find the grid cell around a point (in _AXES order) and its corners that
+        are missing from the grid. Per axis the cell spans the grid values just
+        below and above the point, or the one value it is on; outside the grid
+        it is the edge value.
+
+        Returns
+        -------
+        cell : tuple of tuple of int
+            axis_values indices of the cell, per axis.
+        missing : list of tuple of int
+            Missing corners, as axis_values indices.
+        n_corners : int
+            Number of corners of the cell.
+        """
+        cell = []
+        for value, values in zip(self.to_scaled(point), self.scaled_axis_values):
+            value = min(max(value, values[0]), values[-1])
+            i = int(np.searchsorted(values, value))  # first i with values[i] >= value
+            cell.append((i,) if values[i] == value else (i - 1, i))
+        cell = tuple(cell)
+        corners = list(itertools.product(*cell))
+        missing = [corner for corner in corners if corner not in self.grid_index_set]
+        return cell, missing, len(corners)
+
+    def report_incomplete_cell(self, point):
+        """
+        Report if grid models around a point (in _AXES order) are missing, so
+        the RBF fit relies on more distant models there. Logged at info level
+        the first time per grid cell, at debug level after that.
+        """
+        cell, missing, n_corners = self.missing_cell_corners(point)
+        if not missing:
+            return
+        log = logger.debug if cell in self._reported_cells else logger.info
+        self._reported_cells.add(cell)
+        if n_corners == 1:
+            problem = f"no grid model at {self.describe_point(point)}"
+        else:
+            example = [values[i] for values, i in zip(self.axis_values, missing[0])]
+            problem = (
+                f"{len(missing)} of {n_corners} grid models around "
+                f"{self.describe_point(point)} are missing "
+                f"(e.g. {self.describe_point(example)})"
+            )
+        log(
+            "RBF interpolation: %s; the result relies on more distant grid models "
+            "and is less certain.",
+            problem,
+        )
 
     def check_within_bounds(self, point, interpolation_policy="allow"):
         """
@@ -352,6 +407,14 @@ class RbfGrid:
                 f"{self._NEIGHBOR_SELECTION!r}, expected 'index' or 'physical'."
             )
         self.selection_points = self.to_selection_space(self.grid_coords)
+
+        grid_indices = np.column_stack(
+            [
+                np.searchsorted(values, self.scaled_coords[:, j])
+                for j, values in enumerate(self.scaled_axis_values)
+            ]
+        )
+        self.grid_index_set = set(map(tuple, grid_indices.tolist()))
 
     def initialize_tags(self, sav_grid, geometry):
         """
@@ -591,6 +654,7 @@ class AtmosphereInterpolator:
         """
         query = rbf_grid.query_vector(teff=teff, logg=logg, monh=monh)
         rbf_grid.check_within_bounds(query, interpolation_policy)
+        rbf_grid.report_incomplete_cell(query)
         atmo = Atmo(interp="rhox")  # empty structure to fill
         target_vector = rbf_grid.interpolate(query)
 

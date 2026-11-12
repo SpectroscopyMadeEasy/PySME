@@ -260,6 +260,71 @@ def test_rbf_rejects_unknown_neighbor_selection(monkeypatch):
         RbfGrid(_uneven_monh_grid(), "PP")
 
 
+def _grid_with_missing_model():
+    # 3x3x3 grid without the model at (5200, 4.4, 0.5)
+    grid = _make_synthetic_grid(
+        "missing_model_grid", teffs=[4800.0, 5000.0, 5200.0],
+        loggs=[3.6, 4.0, 4.4], monhs=[-0.5, 0.0, 0.5], temp_value=5000.0,
+    )
+    missing = (
+        (np.asarray(grid["teff"]) == 5200.0)
+        & np.isclose(grid["logg"], 4.4)
+        & (np.asarray(grid["monh"]) == 0.5)
+    )
+    return grid[~missing]
+
+
+def _cell_messages(caplog, level):
+    return [
+        r.getMessage() for r in caplog.records
+        if r.levelname == level and "less certain" in r.getMessage()
+    ]
+
+
+def test_rbf_reports_incomplete_grid_cell_once_at_info_level(caplog):
+    interpolator = AtmosphereInterpolator(interp="RBF")
+    grid = _grid_with_missing_model()
+    with caplog.at_level("DEBUG", logger="pysme.atmosphere.interpolation"):
+        interpolator.interp_atmo_grid(grid, 5100.0, 4.2, 0.25)
+        # Another point in the same cell: debug message only
+        interpolator.interp_atmo_grid(grid, 5150.0, 4.3, 0.3)
+
+    infos = _cell_messages(caplog, "INFO")
+    assert len(infos) == 1
+    assert "1 of 8 grid models around Teff=5100, log(g)=4.2, [M/H]=0.25" in infos[0]
+    assert "Teff=5200, log(g)=4.4, [M/H]=0.5" in infos[0]
+    assert len(_cell_messages(caplog, "DEBUG")) == 1
+
+
+@pytest.mark.parametrize(
+    "query",
+    [
+        (4900.0, 3.8, -0.25),  # cell away from the missing model
+        (5200.0, 4.0, 0.5),  # existing grid model next to the missing one
+        (5100.0, 4.0, 0.5),  # on a grid edge whose two models both exist
+    ],
+)
+def test_rbf_does_not_report_complete_grid_cell(caplog, query):
+    interpolator = AtmosphereInterpolator(interp="RBF")
+    with caplog.at_level("DEBUG", logger="pysme.atmosphere.interpolation"):
+        interpolator.interp_atmo_grid(_grid_with_missing_model(), *query)
+    assert not _cell_messages(caplog, "INFO")
+    assert not _cell_messages(caplog, "DEBUG")
+
+
+def test_rbf_reports_missing_grid_model_without_raising(caplog):
+    # Only reported: the "error" policy is about the grid range
+    interpolator = AtmosphereInterpolator(interp="RBF")
+    with caplog.at_level("INFO", logger="pysme.atmosphere.interpolation"):
+        interpolator.interp_atmo_grid(
+            _grid_with_missing_model(), 5200.0, 4.4, 0.5,
+            interpolation_policy="error",
+        )
+    infos = _cell_messages(caplog, "INFO")
+    assert len(infos) == 1
+    assert "no grid model at Teff=5200, log(g)=4.4, [M/H]=0.5" in infos[0]
+
+
 def test_rbf_drops_and_reports_model_with_non_positive_values(caplog):
     # Like the model in marcs2014.sav with a negative xna at its top depth point
     teffs, loggs, monhs = [4900.0, 5100.0], [3.8, 4.2], [-0.2, 0.2]
