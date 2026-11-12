@@ -41,6 +41,12 @@ class RbfGrid:
         ("monh", "[M/H]", 10),
     )
 
+    # Space in which the neighbors of a query are chosen. "index": every grid
+    # step counts as 1 (times the axis weight), so uneven grid steps don't leave
+    # an axis with too few neighbor values. "physical": the scaled coordinates
+    # of the fit itself, as before index selection was added.
+    _NEIGHBOR_SELECTION = "index"
+
     # Number of grid points in each local RBF fit, tuned by trial and error on real
     # grids: fewer can make results inaccurate or discontinuous, more makes the
     # linear solve very slow. Re-validate on a real grid before changing it.
@@ -71,6 +77,8 @@ class RbfGrid:
         self.bounds = None  # (min, max)
         self.active_axes = None  # axes with more than one value; only these are fit
         self.fit_points = None  # scaled_coords on the active axes
+        self.scaled_axis_values = None  # sorted unique values of scaled_coords
+        self.selection_points = None  # coordinates the neighbors are chosen in
         self.grid_rows = None  # sav_grid row of each grid point
         self.gridpoints = None
         # Set by initialize_tags()
@@ -80,7 +88,7 @@ class RbfGrid:
         self.depthpoints = None
         # Set by read_in_grid(): all interpolated values, one row per grid point
         self.array_for_interpol = None
-        # Search tree over fit_points, for finding the neighbors of a query
+        # Search tree over selection_points, for finding the neighbors of a query
         self.neighbor_tree = None
 
         if not isinstance(sav_grid, AtmosphereGrid):
@@ -112,7 +120,7 @@ class RbfGrid:
             self.sav_grid = sav_grid = sav_grid[keep]
             self._read_grid(sav_grid, geometry)
 
-        self.neighbor_tree = KDTree(self.fit_points)
+        self.neighbor_tree = KDTree(self.selection_points)
 
     def _read_grid(self, sav_grid, geometry):
         """Read grid points, fields to interpolate, depth count and data."""
@@ -213,27 +221,63 @@ class RbfGrid:
                         f"grid range [{lo}, {hi}]."
                     )
 
-    def to_fit_space(self, scaled_point):
-        """Keep the active axes of a scaled point in _AXES order."""
-        return np.asarray(scaled_point)[self.active_axes]
+    def to_fit_space(self, scaled_points):
+        """Keep the active axes of scaled points (last dimension in _AXES order)."""
+        return np.asarray(scaled_points)[..., self.active_axes]
 
-    def neighbor_indices(self, scaled_point):
+    @staticmethod
+    def _to_index_space(values, axis_values):
         """
-        Indices of the _RBF_NEIGHBORS grid points nearest to a scaled point (in
-        _AXES order), sorted by index like RBFInterpolator(neighbors=...) does.
+        Map values on one axis to grid-step indices: grid values to 0, 1, 2, ...,
+        linear in between and beyond the edges. A single-valued axis maps to 0.
         """
+        values = np.asarray(values, dtype=float)
+        n = len(axis_values)
+        if n == 1:
+            return np.zeros_like(values)
+        index = np.interp(values, axis_values, np.arange(n))
+        below = (values - axis_values[0]) / (axis_values[1] - axis_values[0])
+        above = n - 1 + (values - axis_values[-1]) / (axis_values[-1] - axis_values[-2])
+        index = np.where(values > axis_values[-1], above, index)
+        return np.where(values < axis_values[0], below, index)
+
+    def to_selection_space(self, points):
+        """
+        Map points (last dimension in _AXES order) to the space of
+        selection_points. Index space is computed from the scaled values, so
+        float32 noise in the grid values doesn't break exact ties.
+        """
+        scaled = self.to_scaled(points)
+        if self._NEIGHBOR_SELECTION == "physical":
+            return self.to_fit_space(scaled)
+        index = [
+            self._to_index_space(scaled[..., j], values) * weight
+            for j, (values, (_, _, weight)) in enumerate(
+                zip(self.scaled_axis_values, self._AXES)
+            )
+        ]
+        return self.to_fit_space(np.stack(index, axis=-1))
+
+    def neighbor_indices(self, point):
+        """
+        Indices of the _RBF_NEIGHBORS grid points nearest to a point (in _AXES
+        order) in selection space, sorted by index. Points tied with the last
+        one are all included, so the choice doesn't depend on the tree.
+        """
+        selection_point = self.to_selection_space(point)
         k = min(self._RBF_NEIGHBORS, self.gridpoints)
-        _, idx = self.neighbor_tree.query(self.to_fit_space(scaled_point), k=k)
-        return np.sort(np.atleast_1d(idx))
+        distances, _ = self.neighbor_tree.query(selection_point, k=k)
+        radius = np.max(distances) * (1 + 1e-9)
+        return np.sort(self.neighbor_tree.query_ball_point(selection_point, radius))
 
-    def interpolate(self, scaled_point):
+    def interpolate(self, point):
         """
-        Fit an RBF to the neighbors of a scaled point (in _AXES order) and
-        evaluate it there. Returns a row in the layout of array_for_interpol.
+        Fit an RBF to the neighbors of a point (in _AXES order) and evaluate it
+        there. Returns a row in the layout of array_for_interpol.
         """
-        idx = self.neighbor_indices(scaled_point)
+        idx = self.neighbor_indices(point)
         rbf = RBFInterpolator(self.fit_points[idx], self.array_for_interpol[idx])
-        return rbf(self.to_fit_space(scaled_point)[np.newaxis])[0]
+        return rbf(self.to_fit_space(self.to_scaled(point))[np.newaxis])[0]
 
     def to_interp_space_vector(self, vtag, values, atmo):
         """Map a vector field to log10; height is combined with radius first."""
@@ -298,6 +342,16 @@ class RbfGrid:
         )
         self.scaled_coords = self.to_scaled(self.grid_coords)
         self.fit_points = self.scaled_coords[:, self.active_axes]
+        self.scaled_axis_values = [
+            np.unique(self.scaled_coords[:, j]) for j in range(n_axes)
+        ]
+
+        if self._NEIGHBOR_SELECTION not in ("index", "physical"):
+            raise AtmosphereError(
+                f"RBF interpolation: unknown neighbor selection "
+                f"{self._NEIGHBOR_SELECTION!r}, expected 'index' or 'physical'."
+            )
+        self.selection_points = self.to_selection_space(self.grid_coords)
 
     def initialize_tags(self, sav_grid, geometry):
         """
@@ -537,9 +591,8 @@ class AtmosphereInterpolator:
         """
         query = rbf_grid.query_vector(teff=teff, logg=logg, monh=monh)
         rbf_grid.check_within_bounds(query, interpolation_policy)
-        target_params = rbf_grid.to_scaled(query)
         atmo = Atmo(interp="rhox")  # empty structure to fill
-        target_vector = rbf_grid.interpolate(target_params)
+        target_vector = rbf_grid.interpolate(query)
 
         def from_interp_space_vector(vtag, values, atmo):
             values = np.asarray(values)
@@ -563,6 +616,7 @@ class AtmosphereInterpolator:
 
         # opflag and wlstd are not physical structure, so they are copied from the
         # nearest model, as in the corner-model interpolation
+        target_params = rbf_grid.to_scaled(query)
         distances = np.sum((rbf_grid.scaled_coords - target_params) ** 2, axis=1)
         nearest = np.argmin(distances)
         nearest_row = rbf_grid.grid_rows[nearest]

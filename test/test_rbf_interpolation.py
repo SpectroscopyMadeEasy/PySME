@@ -7,7 +7,7 @@ import pytest
 
 from pysme.abund import Abund, elements_dict
 from pysme.atmosphere.atmosphere import AtmosphereError, AtmosphereGrid
-from pysme.atmosphere.interpolation import AtmosphereInterpolator
+from pysme.atmosphere.interpolation import AtmosphereInterpolator, RbfGrid
 from pysme.atmosphere.savfile import SavFile
 
 from .test_largefilestorage import lfs_atmo, skipif_lfs
@@ -189,6 +189,75 @@ def test_rbf_reproduces_grid_models_on_any_scaled_value():
     atmo = interpolator.interp_atmo_grid(grid, *query)
 
     assert np.allclose(atmo.temp, expected.temp, rtol=1e-9)
+
+
+def test_rbf_index_space_maps_grid_steps_to_integers():
+    axis_values = np.array([-5.0, -4.0, -3.0, -2.5, -2.0])
+    values = [-6.0, -5.0, -4.5, -2.75, -2.0, -1.5]
+    expected = [-1.0, 0.0, 0.5, 2.5, 4.0, 5.0]  # linear beyond the edges
+    assert np.allclose(RbfGrid._to_index_space(values, axis_values), expected)
+    assert np.array_equal(RbfGrid._to_index_space([0.3], np.array([0.0])), [0.0])
+
+
+def _uneven_monh_grid():
+    # Dense Teff and logg, with 1 dex [M/H] steps at the metal-poor end like MARCS
+    teffs = np.arange(4000.0, 6001.0, 100.0)
+    loggs = np.arange(1.0, 4.01, 0.5)
+    monhs = [-5.0, -4.0, -3.0, -2.0, -1.5, -1.0, -0.75, -0.5, -0.25, 0.0]
+    return _make_synthetic_grid(
+        "uneven_monh_grid", teffs, loggs, monhs, temp_value=5000.0
+    )
+
+
+def test_rbf_index_selection_spreads_neighbors_over_uneven_metallicity_steps(
+    monkeypatch,
+):
+    # In physical units the 1 dex steps are far apart, so the neighbors cover
+    # only 2 [M/H] values; counting grid steps gives 4
+    grid = _uneven_monh_grid()
+    query = (5000.0, 2.5, -4.5)
+
+    def n_monh(rbf_grid):
+        neighbors = rbf_grid.neighbor_indices(query)
+        return len(np.unique(rbf_grid.grid_coords[neighbors, 2]))
+
+    index_grid = RbfGrid(grid, "PP")
+    monkeypatch.setattr(RbfGrid, "_NEIGHBOR_SELECTION", "physical")
+    physical_grid = RbfGrid(grid, "PP")
+
+    assert n_monh(index_grid) == 4
+    assert n_monh(physical_grid) == 2
+
+
+@pytest.mark.parametrize("selection", ["index", "physical"])
+def test_rbf_includes_all_neighbors_tied_with_the_last(monkeypatch, selection):
+    # On a regular grid the neighbors of the central point are symmetric around
+    # it; picking only some of the points tied at the cut would break that.
+    # logg=3.8 is stored as float32, which must not break the ties either.
+    monkeypatch.setattr(RbfGrid, "_NEIGHBOR_SELECTION", selection)
+    steps = np.array([200.0, 0.2, 0.2])
+    grid = _make_synthetic_grid(
+        "regular_grid",
+        teffs=np.arange(4000.0, 5601.0, 200.0),
+        loggs=np.round(np.arange(3.0, 4.61, 0.2), 1),
+        monhs=np.round(np.arange(-0.8, 0.81, 0.2), 1),
+        temp_value=5000.0,
+    )
+    rbf_grid = RbfGrid(grid, "PP")
+    query = np.array([4800.0, 3.8, 0.0])
+
+    neighbors = rbf_grid.neighbor_indices(query)
+    offsets = np.round((rbf_grid.grid_coords[neighbors] - query) / steps)
+    offsets = {tuple(offset) for offset in offsets.astype(int)}
+
+    assert len(neighbors) > RbfGrid._RBF_NEIGHBORS
+    assert offsets == {tuple(-np.array(offset)) for offset in offsets}
+
+
+def test_rbf_rejects_unknown_neighbor_selection(monkeypatch):
+    monkeypatch.setattr(RbfGrid, "_NEIGHBOR_SELECTION", "nearest")
+    with pytest.raises(AtmosphereError, match="unknown neighbor selection"):
+        RbfGrid(_uneven_monh_grid(), "PP")
 
 
 def test_rbf_drops_and_reports_model_with_non_positive_values(caplog):
