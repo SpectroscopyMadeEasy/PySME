@@ -33,8 +33,8 @@ class RbfGrid:
     """
 
     # Grid axes: (sav_grid field, display name, weight). All per-axis arrays use
-    # this column order. The weights prefer neighbors close in Teff, then [M/H],
-    # then logg, where grid steps would otherwise tie.
+    # this column order. The weights set the relative length of a grid step on
+    # each axis in the RBF fit (and in "physical" neighbor selection).
     _AXES = (
         ("teff", "Teff", 9),
         ("logg", "log(g)", 11),
@@ -42,9 +42,9 @@ class RbfGrid:
     )
 
     # Space in which the neighbors of a query are chosen. "index": every grid
-    # step counts as 1 (times the axis weight), so uneven grid steps don't leave
-    # an axis with too few neighbor values. "physical": the scaled coordinates
-    # of the fit itself, as before index selection was added.
+    # step on every axis counts as 1, so uneven grid steps don't leave an axis
+    # with too few neighbor values. "physical": the scaled coordinates of the
+    # fit itself, as before index selection was added.
     _NEIGHBOR_SELECTION = "index"
 
     # Number of grid points in each local RBF fit, tuned by trial and error on real
@@ -307,10 +307,8 @@ class RbfGrid:
         if self.neighbor_selection == "physical":
             return self.to_fit_space(scaled)
         index = [
-            self._to_index_space(scaled[..., j], values) * weight
-            for j, (values, (_, _, weight)) in enumerate(
-                zip(self.scaled_axis_values, self._AXES)
-            )
+            self._to_index_space(scaled[..., j], values)
+            for j, values in enumerate(self.scaled_axis_values)
         ]
         return self.to_fit_space(np.stack(index, axis=-1))
 
@@ -389,7 +387,7 @@ class RbfGrid:
                 f"but all its models are at {self.describe_point(self.grid_coords[0])}."
             )
 
-        # Same step size on every axis, with the weights breaking ties
+        # Same step size on every axis, times its weight
         self.axis_scales = np.array(
             [
                 round(1 / float(self._min_step(values)) * weight, 4)
