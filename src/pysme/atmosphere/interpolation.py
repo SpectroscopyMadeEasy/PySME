@@ -32,13 +32,12 @@ class RbfGrid:
     and reused for every query.
     """
 
-    # Grid axes: (sav_grid field, display name, weight). All per-axis arrays use
-    # this column order. The weights set the relative length of a grid step on
-    # each axis in the RBF fit.
+    # Grid axes: (sav_grid field, display name). All per-axis arrays use this
+    # column order.
     _AXES = (
-        ("teff", "Teff", 9),
-        ("logg", "log(g)", 11),
-        ("monh", "[M/H]", 10),
+        ("teff", "Teff"),
+        ("logg", "log(g)"),
+        ("monh", "[M/H]"),
     )
 
     # Number of grid points in each local RBF fit, tuned by trial and error on real
@@ -170,12 +169,12 @@ class RbfGrid:
     def describe_point(self, point):
         """Format a point in _AXES order, e.g. "Teff=5000, log(g)=4, [M/H]=0"."""
         return ", ".join(
-            f"{name}={value:g}" for (_, name, _), value in zip(self._AXES, point)
+            f"{name}={value:g}" for (_, name), value in zip(self._AXES, point)
         )
 
     def query_vector(self, **params):
         """Put stellar parameters, given by _AXES field name, in _AXES order."""
-        return tuple(params[field] for field, _, _ in self._AXES)
+        return tuple(params[field] for field, _ in self._AXES)
 
     def to_scaled(self, points):
         """
@@ -256,7 +255,7 @@ class RbfGrid:
         AtmosphereError
             If the point is out of range and interpolation_policy isn't "allow".
         """
-        for (_, name, _), value, (lo, hi) in zip(self._AXES, point, self.bounds):
+        for (_, name), value, (lo, hi) in zip(self._AXES, point, self.bounds):
             if value < lo or value > hi:
                 if interpolation_policy == "allow":
                     logger.info(
@@ -340,8 +339,8 @@ class RbfGrid:
 
     def initialize_gridpoints(self, sav_grid):
         """
-        Find the grid points along _AXES and scale each axis by its weight over
-        its smallest step, so neighbors can be found by Euclidean distance.
+        Find the grid points along _AXES and scale each axis by its smallest
+        step, so the RBF fit treats a grid step alike on every axis.
 
         Raises
         ------
@@ -350,14 +349,14 @@ class RbfGrid:
         """
         # np.unique sorts the points, so their sav_grid rows are kept in grid_rows
         columns = np.column_stack(
-            [np.asarray(sav_grid[field]) for field, _, _ in self._AXES]
+            [np.asarray(sav_grid[field]) for field, _ in self._AXES]
         )
         self.grid_coords, self.grid_rows, counts = np.unique(
             columns, axis=0, return_index=True, return_counts=True
         )
         if np.any(counts > 1):
             first = np.flatnonzero(counts > 1)[0]
-            axis_names = ", ".join(name for _, name, _ in self._AXES)
+            axis_names = ", ".join(name for _, name in self._AXES)
             raise AtmosphereError(
                 f"RBF interpolation: the grid has {counts[first]} models at "
                 f"{self.describe_point(self.grid_coords[first])}, but RBF "
@@ -379,12 +378,9 @@ class RbfGrid:
                 f"but all its models are at {self.describe_point(self.grid_coords[0])}."
             )
 
-        # Same step size on every axis, times its weight
+        # Smallest step of 1 on every axis
         self.axis_scales = np.array(
-            [
-                round(1 / float(self._min_step(values)) * weight, 4)
-                for values, (_, _, weight) in zip(self.axis_values, self._AXES)
-            ]
+            [1 / float(self._min_step(values)) for values in self.axis_values]
         )
         self.scaled_coords = self.to_scaled(self.grid_coords)
         self.fit_points = self.scaled_coords[:, self.active_axes]

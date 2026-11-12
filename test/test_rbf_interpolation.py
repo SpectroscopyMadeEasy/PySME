@@ -173,7 +173,7 @@ def test_rbf_takes_opflag_and_wlstd_from_the_nearest_model_regardless_of_row_ord
 
 
 def test_rbf_reproduces_grid_models_on_any_scaled_value():
-    # Teff steps of 100 and 250 K put Teff=4450 at 400.5 scaled units, and
+    # Teff steps of 100 and 250 K put Teff=4450 at 44.5 scaled units, and
     # logg=3.8 is stored as float32; the fit must still pass through these models
     teffs = [4000.0, 4100.0, 4200.0, 4450.0, 4700.0]
     loggs, monhs = [3.4, 3.8, 4.2], [0.0, 0.5]
