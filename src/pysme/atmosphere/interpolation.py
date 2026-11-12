@@ -172,11 +172,13 @@ class RbfGrid:
         """Put stellar parameters, given by _AXES field name, in _AXES order."""
         return tuple(params[field] for field, _, _ in self._AXES)
 
-    def to_scaled(self, point):
-        """Rescale a point in _AXES order the same way as scaled_coords."""
-        return np.array(
-            [round(value * scale, 3) for value, scale in zip(point, self.axis_scales)]
-        )
+    def to_scaled(self, points):
+        """
+        Rescale points (last dimension in _AXES order) to the common step size.
+        Grid points and queries both go through here, so a query on a grid value
+        lands exactly on that grid point; rounding hides float32/float64 noise.
+        """
+        return np.round(np.asarray(points, dtype=float) * self.axis_scales, 3)
 
     def check_within_bounds(self, point, interpolation_policy="allow"):
         """
@@ -288,17 +290,14 @@ class RbfGrid:
             )
 
         # Same step size on every axis, with the weights breaking ties
-        self.axis_scales = [
-            round(1 / self._min_step(values) * weight, 4)
-            for values, (_, _, weight) in zip(self.axis_values, self._AXES)
-        ]
-        self.scaled_coords = np.column_stack(
+        self.axis_scales = np.array(
             [
-                np.around(self.grid_coords[:, j] * scale, 0).astype(np.int32)
-                for j, scale in enumerate(self.axis_scales)
+                round(1 / float(self._min_step(values)) * weight, 4)
+                for values, (_, _, weight) in zip(self.axis_values, self._AXES)
             ]
         )
-        self.fit_points = self.scaled_coords[:, self.active_axes].astype(float)
+        self.scaled_coords = self.to_scaled(self.grid_coords)
+        self.fit_points = self.scaled_coords[:, self.active_axes]
 
     def initialize_tags(self, sav_grid, geometry):
         """

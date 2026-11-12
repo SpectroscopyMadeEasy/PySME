@@ -172,6 +172,25 @@ def test_rbf_takes_opflag_and_wlstd_from_the_nearest_model_regardless_of_row_ord
     assert np.array_equal(atmo.opflag, expected.opflag)
 
 
+def test_rbf_reproduces_grid_models_on_any_scaled_value():
+    # Teff steps of 100 and 250 K put Teff=4450 at 400.5 scaled units, and
+    # logg=3.8 is stored as float32; the fit must still pass through these models
+    teffs = [4000.0, 4100.0, 4200.0, 4450.0, 4700.0]
+    loggs, monhs = [3.4, 3.8, 4.2], [0.0, 0.5]
+    grid = _make_synthetic_grid(
+        "uneven_teff_grid", teffs, loggs, monhs, temp_value=5000.0
+    )
+    rng = np.random.default_rng(0)
+    grid["temp"] = rng.uniform(4000.0, 6000.0, size=grid["temp"].shape)
+
+    query = (4450.0, 3.8, 0.5)
+    expected = grid.get(*query)
+    interpolator = AtmosphereInterpolator(interp="RBF")
+    atmo = interpolator.interp_atmo_grid(grid, *query)
+
+    assert np.allclose(atmo.temp, expected.temp, rtol=1e-9)
+
+
 def test_rbf_drops_and_reports_model_with_non_positive_values(caplog):
     # Like the model in marcs2014.sav with a negative xna at its top depth point
     teffs, loggs, monhs = [4900.0, 5100.0], [3.8, 4.2], [-0.2, 0.2]
