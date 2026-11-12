@@ -82,7 +82,7 @@ class RbfGrid:
         self.bounds = None        # Per-axis (min, max)
         self.grid_rows = None # sav_grid row of each grid point (RbfGrid's order differs from sav_grid's)
         self.gridpoints = None
-        self._rbf_degree = None # Set by self.initialize_gridpoints()
+        self.active_axes = None   # Per-axis bool: does the axis vary (and so take part in the fit)?
         # set by self.initialize_tags():
         self.vtags = None
         self.stags = None
@@ -225,11 +225,19 @@ class RbfGrid:
                     )
 
     def build_interpolator(self):
-        """Build the RBFInterpolator over the whole grid, once, for reuse across queries."""
-        kwargs = {} if self._rbf_degree is None else {"degree": self._rbf_degree}
+        """
+        Build the RBFInterpolator over the whole grid, once, for reuse across
+        queries. Only the axes in ``active_axes`` take part; a query must be
+        passed through ``to_fit_space`` to match.
+        """
         return RBFInterpolator(
-            self.scaled_coords, self.array_for_interpol, neighbors=self._RBF_NEIGHBORS, **kwargs
+            self.scaled_coords[:, self.active_axes], self.array_for_interpol,
+            neighbors=self._RBF_NEIGHBORS,
         )
+
+    def to_fit_space(self, scaled_point):
+        """Keep only the ``active_axes`` of a point given in ``_AXES`` order (e.g. from ``to_scaled``)."""
+        return np.asarray(scaled_point)[self.active_axes]
 
     def to_interp_space_vector(self, vtag, values, atmo):
         """
@@ -286,15 +294,19 @@ class RbfGrid:
         self.axis_values = [np.unique(self.grid_coords[:, j]) for j in range(len(self._AXES))]
         self.bounds = [(values.min(), values.max()) for values in self.axis_values]
 
-        # RBFInterpolator's default (degree=1) polynomial includes a linear
-        # term per axis; if any axis has a single value grid-wide (e.g. a
-        # spherical grid with only one metallicity), that axis's column is
-        # constant and collinear with the constant term, making the
-        # polynomial matrix singular. Dropping to degree=0 (constant term
-        # only) sidesteps this - only relevant when an axis is degenerate,
-        # so normal (all-axes-varying) grids keep the default degree.
-        if any(len(values) < 2 for values in self.axis_values):
-            self._rbf_degree = 0
+        # An axis with a single value grid-wide (e.g. a spherical grid with
+        # only one metallicity) carries no information to interpolate along,
+        # and its constant column would make the linear term of
+        # RBFInterpolator's polynomial singular. Such axes are left out of
+        # the fit (but still checked by check_within_bounds), so the
+        # interpolation works in the remaining axes with the default
+        # (degree=1) polynomial.
+        self.active_axes = np.array([len(values) > 1 for values in self.axis_values])
+        if not self.active_axes.any():
+            raise AtmosphereError(
+                "RBF interpolation needs a grid with more than one grid point, but all its "
+                f"models are at {self.describe_point(self.grid_coords[0])}."
+            )
 
         # Scale s.t. all step sizes match, except for the per-axis weight that
         # breaks ties between axes when all would otherwise be equidistant
@@ -571,7 +583,7 @@ class AtmosphereInterpolator:
         atmo = Atmo(interp="rhox") #purely to initliaize the structure
 
         # INTERPOLATION (uses the interpolator cached on rbf_grid, built once for the whole grid)
-        target_vector = rbf_grid.interpolator([target_params])[0]
+        target_vector = rbf_grid.interpolator([rbf_grid.to_fit_space(target_params)])[0]
 
         # READ-OUT
         def from_interp_space_vector(vtag, values, atmo):

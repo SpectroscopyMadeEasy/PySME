@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 """Tests for the RBF-based atmosphere-grid interpolation path (RbfGrid/interpolate_RBF)."""
+import warnings
+
 import numpy as np
 import pytest
 
@@ -101,16 +103,49 @@ def test_rbf_cache_invalidated_on_source_change():
     assert not np.allclose(atmo_b.temp, atmo_a.temp)
 
 
-def test_rbf_handles_single_valued_metallicity_axis():
-    # A single metallicity value (like the real spherical MARCS grid) must
-    # not crash the per-axis step-size computation in initialize_gridpoints.
+def _single_monh_grid():
+    # A single metallicity value, like the real spherical MARCS grid, with a
+    # temperature structure that varies across the grid so results differ.
     grid = _make_synthetic_grid(
-        "single_monh_grid", teffs=[4900.0, 5100.0], loggs=[3.8, 4.2], monhs=[0.0],
+        "single_monh_grid", teffs=[4800.0, 5000.0, 5200.0], loggs=[3.6, 4.0, 4.4], monhs=[0.0],
         temp_value=5000.0,
     )
+    grid["temp"] = _log_linear_temp(np.asarray(grid["teff"]), np.asarray(grid["logg"]))[:, None]
+    return grid
+
+
+def _log_linear_temp(teff, logg):
+    # RBF interpolates log10(temp), and its degree-1 polynomial reproduces a
+    # function that is linear in the (scaled) axes exactly.
+    return 10.0 ** (3.7 + 1e-4 * (teff - 5000.0) + 0.02 * logg)
+
+
+def test_rbf_handles_single_valued_metallicity_axis():
+    # The [M/H] axis has a single value, so it is left out of the fit: no
+    # crash, and none of scipy's warnings about an unsuitable polynomial degree.
     interpolator = AtmosphereInterpolator(interp="RBF")
-    atmo = interpolator.interp_atmo_grid(grid, 5000.0, 4.0, 0.0)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        atmo = interpolator.interp_atmo_grid(_single_monh_grid(), 4900.0, 3.8, 0.0)
+    assert list(interpolator.rbf_grid.active_axes) == [True, True, False]
     assert np.all(np.isfinite(atmo.temp))
+    assert np.allclose(atmo.temp, _log_linear_temp(4900.0, 3.8), rtol=1e-6)
+
+
+def test_rbf_ignores_off_grid_value_on_single_valued_axis(caplog):
+    # The grid has no information about how atmospheres change with [M/H],
+    # so asking for another [M/H] returns the grid's own [M/H] result and
+    # reports that the request is outside the grid.
+    grid = _single_monh_grid()
+    interpolator = AtmosphereInterpolator(interp="RBF")
+    on_grid = interpolator.interp_atmo_grid(grid, 4900.0, 3.8, 0.0)
+    with caplog.at_level("INFO", logger="pysme.atmosphere.interpolation"):
+        off_grid = interpolator.interp_atmo_grid(grid, 4900.0, 3.8, 0.3)
+
+    assert np.array_equal(off_grid.temp, on_grid.temp)
+    assert any("[M/H]=0.300 outside grid range" in r.getMessage() for r in caplog.records)
+    with pytest.raises(AtmosphereError, match="outside grid range"):
+        interpolator.interp_atmo_grid(grid, 4900.0, 3.8, 0.3, interpolation_policy="error")
 
 
 def test_rbf_preserves_opflag_and_wlstd():
