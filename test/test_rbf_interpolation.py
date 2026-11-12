@@ -128,6 +128,36 @@ def test_rbf_preserves_opflag_and_wlstd():
     assert atmo.wlstd == 6000.0
 
 
+def test_rbf_takes_opflag_and_wlstd_from_the_nearest_model_regardless_of_row_order():
+    # RbfGrid keeps its grid points in sorted (teff, logg, monh) order. Real
+    # grid files are stored in a different order, so the nearest grid point
+    # must be mapped back to its own sav_grid row. Reversing the rows and giving
+    # every model its own wlstd/opflag exposes a mix-up between the two orders.
+    teffs, loggs, monhs = [4900.0, 5100.0], [3.8, 4.2], [-0.2, 0.2]
+    grid = _make_synthetic_grid("row_order_grid", teffs, loggs, monhs, temp_value=5000.0)
+    grid["wlstd"] = 1000.0 + np.arange(len(grid))
+    grid["opflag"][:, 0] = np.arange(len(grid))
+    grid = grid[np.arange(len(grid))[::-1]]
+
+    query = (5100.0, 3.8, 0.2)  # exactly on a grid point, so it is its own nearest model
+    expected = grid.get(*query)
+    interpolator = AtmosphereInterpolator(interp="RBF")
+    atmo = interpolator.interp_atmo_grid(grid, *query)
+
+    assert atmo.wlstd == expected.wlstd
+    assert np.array_equal(atmo.opflag, expected.opflag)
+
+
+def test_rbf_rejects_grid_with_several_models_at_one_point():
+    teffs, loggs, monhs = [4900.0, 5100.0], [3.8, 4.2], [-0.2, 0.2]
+    grid = _make_synthetic_grid("duplicate_grid", teffs, loggs, monhs, temp_value=5000.0)
+    grid["monh"][1] = grid["monh"][0]  # rows 0 and 1 now share (teff, logg, monh)
+
+    interpolator = AtmosphereInterpolator(interp="RBF")
+    with pytest.raises(AtmosphereError, match="one model per"):
+        interpolator.interp_atmo_grid(grid, 5000.0, 4.0, 0.0)
+
+
 def test_rbf_abundance_stays_consistent_with_interpolated_metallicity():
     # Every grid point's abundance is solar shifted by exactly its own monh
     # (a stand-in for a realized, metallicity-baked-in pattern, as confirmed

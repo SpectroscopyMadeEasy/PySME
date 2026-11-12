@@ -77,6 +77,7 @@ class RbfGrid:
         self.grid_teffs = None # Not scaled, same as in sav_grid
         self.grid_loggs = None
         self.grid_mets = None
+        self.grid_rows = None # sav_grid row of each grid point (RbfGrid's order differs from sav_grid's)
         self.teff_step_scale = 1.0 # to convert between teffs and grid_teffs
         self.logg_step_scale = 1.0
         self.met_step_scale = 1.0
@@ -193,21 +194,36 @@ class RbfGrid:
         ``build_interpolator``. Sets ``self.grid_teffs``/``grid_loggs``/``grid_mets``
         (unscaled) and ``self.teffs``/``loggs``/``mets`` (scaled).
         """
-        # Pull out all gridpoint parameters from sav_grid
-        temp_teffs = np.array(sorted(np.unique(sav_grid['teff'])))
-        temp_loggs = np.array(sorted(np.unique(sav_grid['logg'])))
-        grid_teffs, grid_loggs, grid_mets = [], [], [] 
+        # Pull out all gridpoint parameters from sav_grid. The grid points are
+        # collected in sorted (teff, logg, monh) order, which generally differs
+        # from the row order of sav_grid itself, so the matching sav_grid row
+        # of every grid point is kept in self.grid_rows.
+        teff_col = np.asarray(sav_grid['teff'])
+        logg_col = np.asarray(sav_grid['logg'])
+        monh_col = np.asarray(sav_grid['monh'])
+        temp_teffs = np.array(sorted(np.unique(teff_col)))
+        temp_loggs = np.array(sorted(np.unique(logg_col)))
+        grid_teffs, grid_loggs, grid_mets, grid_rows = [], [], [], []
         for t in temp_teffs:
             for l in temp_loggs:
-                preselection = sav_grid[(sav_grid['teff'] == t) & (sav_grid['logg'] == l)]
-                available_mets = np.unique(preselection['monh'])
-                for m in available_mets:
+                rows = np.flatnonzero((teff_col == t) & (logg_col == l))
+                for m in np.unique(monh_col[rows]):
+                    matching_rows = rows[monh_col[rows] == m]
+                    if len(matching_rows) > 1:
+                        raise AtmosphereError(
+                            f"RBF interpolation: the grid has {len(matching_rows)} models at "
+                            f"Teff={t}, log(g)={l}, [M/H]={m}, but RBF interpolation needs exactly "
+                            "one model per (Teff, log(g), [M/H]) point. Does the grid vary along "
+                            "an additional parameter?"
+                        )
                     grid_teffs.append(t)
                     grid_loggs.append(l)
                     grid_mets.append(m)
+                    grid_rows.append(matching_rows[0])
         self.grid_teffs = np.array(grid_teffs)
         self.grid_loggs = np.array(grid_loggs)
         self.grid_mets = np.array(grid_mets)
+        self.grid_rows = np.array(grid_rows, dtype=int)
         self.teff_bounds = (self.grid_teffs.min(), self.grid_teffs.max())
         self.logg_bounds = (self.grid_loggs.min(), self.grid_loggs.max())
         self.met_bounds = (self.grid_mets.min(), self.grid_mets.max())
@@ -250,7 +266,7 @@ class RbfGrid:
         stags : list of str
             Names of the scalar fields to interpolate.
         """
-        relevant_atmo = sav_grid[(sav_grid['teff'] == self.grid_teffs[0]) & (sav_grid['logg'] == self.grid_loggs[0]) & (sav_grid['monh'] == self.grid_mets[0])]
+        relevant_atmo = sav_grid[self.grid_rows[0]]
 
         vtags = ["temp", "xne", "xna", "rho"]
         if "tau" in relevant_atmo.dtype.names:
@@ -275,7 +291,7 @@ class RbfGrid:
         points.
         """
         # Use first atmosphere to define sizes
-        relevant_atmo = sav_grid[(sav_grid['teff'] == self.grid_teffs[0]) & (sav_grid['logg'] == self.grid_loggs[0]) & (sav_grid['monh'] == self.grid_mets[0])]
+        relevant_atmo = sav_grid[self.grid_rows[0]]
         temp = [len(relevant_atmo[vtag]) for vtag in self.vtags]
         # check for irregularities in tau
         if np.isnan(relevant_atmo["tau"][-1]): # Nan at the end
@@ -308,7 +324,7 @@ class RbfGrid:
         width = abund_offset + self.n_abund
         self.array_for_interpol = np.zeros(dtype='float64', shape=(self.gridpoints, width))
         for i in range(self.gridpoints): # Loop over all atmospheres
-            relevant_atmo = sav_grid[(sav_grid['teff'] == self.grid_teffs[i]) & (sav_grid['logg'] == self.grid_loggs[i]) & (sav_grid['monh'] == self.grid_mets[i])]
+            relevant_atmo = sav_grid[self.grid_rows[i]]
             for n, vtag in enumerate(self.vtags): # Read in vectors
                 self.array_for_interpol[i,n*self.depthpoints:(n+1)*self.depthpoints] = self.to_interp_space_vector(vtag, relevant_atmo[vtag][:self.depthpoints], relevant_atmo)
             for s, stag in enumerate(self.stags): # Read in scalars
@@ -516,14 +532,17 @@ class AtmosphereInterpolator:
         # opflag and wlstd are administrative fields, not smoothly varying
         # physical structure, so copy them from the nearest grid point
         # instead - the same way the standard corner-model path copies them
-        # verbatim rather than interpolating them.
+        # verbatim rather than interpolating them. ``nearest`` indexes RbfGrid's
+        # own (sorted) grid-point order, so it is mapped back to the matching
+        # sav_grid row via ``grid_rows``.
         nearest = np.argmin(
             (rbf_grid.teffs - target_params[0]) ** 2
             + (rbf_grid.loggs - target_params[1]) ** 2
             + (rbf_grid.mets - target_params[2]) ** 2
         )
-        atmo.opflag = rbf_grid.sav_grid["opflag"][nearest]
-        atmo.wlstd = rbf_grid.sav_grid["wlstd"][nearest]
+        nearest_row = rbf_grid.grid_rows[nearest]
+        atmo.opflag = rbf_grid.sav_grid["opflag"][nearest_row]
+        atmo.wlstd = rbf_grid.sav_grid["wlstd"][nearest_row]
 
         # The abundance pattern, unlike opflag/wlstd, does vary smoothly (it's
         # metallicity- and enhancement-dependent), so it's part of the RBF fit
