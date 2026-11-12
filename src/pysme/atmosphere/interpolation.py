@@ -78,6 +78,7 @@ class RbfGrid:
         self.active_axes = None  # axes with more than one value; only these are fit
         self.fit_points = None  # scaled_coords on the active axes
         self.scaled_axis_values = None  # sorted unique values of scaled_coords
+        self.neighbor_selection = None  # _NEIGHBOR_SELECTION when the grid was built
         self.selection_points = None  # coordinates the neighbors are chosen in
         self.grid_index_set = None  # grid points as tuples of axis_values indices
         self.grid_rows = None  # sav_grid row of each grid point
@@ -303,7 +304,7 @@ class RbfGrid:
         float32 noise in the grid values doesn't break exact ties.
         """
         scaled = self.to_scaled(points)
-        if self._NEIGHBOR_SELECTION == "physical":
+        if self.neighbor_selection == "physical":
             return self.to_fit_space(scaled)
         index = [
             self._to_index_space(scaled[..., j], values) * weight
@@ -401,10 +402,12 @@ class RbfGrid:
             np.unique(self.scaled_coords[:, j]) for j in range(n_axes)
         ]
 
-        if self._NEIGHBOR_SELECTION not in ("index", "physical"):
+        # Kept per grid, so the tree and the queries always use the same space
+        self.neighbor_selection = self._NEIGHBOR_SELECTION
+        if self.neighbor_selection not in ("index", "physical"):
             raise AtmosphereError(
                 f"RBF interpolation: unknown neighbor selection "
-                f"{self._NEIGHBOR_SELECTION!r}, expected 'index' or 'physical'."
+                f"{self.neighbor_selection!r}, expected 'index' or 'physical'."
             )
         self.selection_points = self.to_selection_space(self.grid_coords)
 

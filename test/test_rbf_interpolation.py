@@ -254,6 +254,16 @@ def test_rbf_includes_all_neighbors_tied_with_the_last(monkeypatch, selection):
     assert offsets == {tuple(-np.array(offset)) for offset in offsets}
 
 
+def test_rbf_grid_keeps_its_neighbor_selection(monkeypatch):
+    # Changing the class setting later must not mix up a built grid's spaces
+    grid = _uneven_monh_grid()
+    query = (5000.0, 2.5, -4.5)
+    rbf_grid = RbfGrid(grid, "PP")
+    before = rbf_grid.neighbor_indices(query)
+    monkeypatch.setattr(RbfGrid, "_NEIGHBOR_SELECTION", "physical")
+    assert np.array_equal(rbf_grid.neighbor_indices(query), before)
+
+
 def test_rbf_rejects_unknown_neighbor_selection(monkeypatch):
     monkeypatch.setattr(RbfGrid, "_NEIGHBOR_SELECTION", "nearest")
     with pytest.raises(AtmosphereError, match="unknown neighbor selection"):
