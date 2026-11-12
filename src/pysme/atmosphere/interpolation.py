@@ -8,6 +8,7 @@ from astropy import constants as const
 from scipy.interpolate import interp1d
 from scipy.optimize import curve_fit
 from scipy.interpolate import RBFInterpolator
+from scipy.spatial import KDTree
 
 from ..abund import Abund
 from ..large_file_storage import setup_atmo
@@ -47,7 +48,7 @@ class RbfGrid:
 
     def __init__(self, sav_grid, geometry):
         """
-        Read the grid points and models of sav_grid and build the interpolator.
+        Read the grid points and models of sav_grid and build the neighbor search.
 
         Parameters
         ----------
@@ -69,6 +70,7 @@ class RbfGrid:
         self.axis_values = None  # sorted unique values
         self.bounds = None  # (min, max)
         self.active_axes = None  # axes with more than one value; only these are fit
+        self.fit_points = None  # scaled_coords on the active axes
         self.grid_rows = None  # sav_grid row of each grid point
         self.gridpoints = None
         # Set by initialize_tags()
@@ -78,8 +80,8 @@ class RbfGrid:
         self.depthpoints = None
         # Set by read_in_grid(): all interpolated values, one row per grid point
         self.array_for_interpol = None
-        # Set by build_interpolator()
-        self.interpolator = None
+        # Search tree over fit_points, for finding the neighbors of a query
+        self.neighbor_tree = None
 
         if not isinstance(sav_grid, AtmosphereGrid):
             raise AtmosphereError(
@@ -110,7 +112,7 @@ class RbfGrid:
             self.sav_grid = sav_grid = sav_grid[keep]
             self._read_grid(sav_grid, geometry)
 
-        self.interpolator = self.build_interpolator()
+        self.neighbor_tree = KDTree(self.fit_points)
 
     def _read_grid(self, sav_grid, geometry):
         """Read grid points, fields to interpolate, depth count and data."""
@@ -209,17 +211,27 @@ class RbfGrid:
                         f"grid range [{lo}, {hi}]."
                     )
 
-    def build_interpolator(self):
-        """Build the RBFInterpolator on the active axes, once per grid."""
-        return RBFInterpolator(
-            self.scaled_coords[:, self.active_axes],
-            self.array_for_interpol,
-            neighbors=self._RBF_NEIGHBORS,
-        )
-
     def to_fit_space(self, scaled_point):
         """Keep the active axes of a scaled point in _AXES order."""
         return np.asarray(scaled_point)[self.active_axes]
+
+    def neighbor_indices(self, scaled_point):
+        """
+        Indices of the _RBF_NEIGHBORS grid points nearest to a scaled point (in
+        _AXES order), sorted by index like RBFInterpolator(neighbors=...) does.
+        """
+        k = min(self._RBF_NEIGHBORS, self.gridpoints)
+        _, idx = self.neighbor_tree.query(self.to_fit_space(scaled_point), k=k)
+        return np.sort(np.atleast_1d(idx))
+
+    def interpolate(self, scaled_point):
+        """
+        Fit an RBF to the neighbors of a scaled point (in _AXES order) and
+        evaluate it there. Returns a row in the layout of array_for_interpol.
+        """
+        idx = self.neighbor_indices(scaled_point)
+        rbf = RBFInterpolator(self.fit_points[idx], self.array_for_interpol[idx])
+        return rbf(self.to_fit_space(scaled_point)[np.newaxis])[0]
 
     def to_interp_space_vector(self, vtag, values, atmo):
         """Map a vector field to log10; height is combined with radius first."""
@@ -286,6 +298,7 @@ class RbfGrid:
                 for j, scale in enumerate(self.axis_scales)
             ]
         )
+        self.fit_points = self.scaled_coords[:, self.active_axes].astype(float)
 
     def initialize_tags(self, sav_grid, geometry):
         """
@@ -527,7 +540,7 @@ class AtmosphereInterpolator:
         rbf_grid.check_within_bounds(query, interpolation_policy)
         target_params = rbf_grid.to_scaled(query)
         atmo = Atmo(interp="rhox")  # empty structure to fill
-        target_vector = rbf_grid.interpolator([rbf_grid.to_fit_space(target_params)])[0]
+        target_vector = rbf_grid.interpolate(target_params)
 
         def from_interp_space_vector(vtag, values, atmo):
             values = np.asarray(values)
