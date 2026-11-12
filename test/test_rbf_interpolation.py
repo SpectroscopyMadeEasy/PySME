@@ -148,6 +148,27 @@ def test_rbf_takes_opflag_and_wlstd_from_the_nearest_model_regardless_of_row_ord
     assert np.array_equal(atmo.opflag, expected.opflag)
 
 
+def test_rbf_drops_and_reports_model_with_non_positive_values(caplog):
+    # Like the one model in marcs2014.sav with a negative xna at its top depth
+    # point: log10 of it is NaN, which would spread into every interpolation
+    # that uses this model as a neighbor.
+    teffs, loggs, monhs = [4900.0, 5100.0], [3.8, 4.2], [-0.2, 0.2]
+    grid = _make_synthetic_grid("bad_model_grid", teffs, loggs, monhs, temp_value=5000.0)
+    bad_row = 5  # (5100, 3.8, 0.2)
+    grid["xna"][bad_row, 0] = -1.0
+
+    interpolator = AtmosphereInterpolator(interp="RBF")
+    with caplog.at_level("WARNING", logger="pysme.atmosphere.interpolation"):
+        atmo = interpolator.interp_atmo_grid(grid, 5000.0, 4.0, 0.0)
+
+    warnings = [r.getMessage() for r in caplog.records if r.levelname == "WARNING"]
+    assert len(warnings) == 1
+    assert "Teff=5100, log(g)=3.8, [M/H]=0.2" in warnings[0]
+    assert "xna=-1 at depth point 0" in warnings[0]
+    assert interpolator.rbf_grid.gridpoints == len(grid) - 1
+    assert np.all(np.isfinite(atmo.xna))
+
+
 def test_rbf_rejects_grid_with_several_models_at_one_point():
     teffs, loggs, monhs = [4900.0, 5100.0], [3.8, 4.2], [-0.2, 0.2]
     grid = _make_synthetic_grid("duplicate_grid", teffs, loggs, monhs, temp_value=5000.0)

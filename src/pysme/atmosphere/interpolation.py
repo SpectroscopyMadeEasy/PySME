@@ -101,12 +101,71 @@ class RbfGrid:
         # part of the RBF fit itself.
         self.sav_grid = sav_grid
         self.abund_format = getattr(sav_grid, "abund_format", "sme")
+        self._read_grid(sav_grid, geometry)
 
+        # A model whose interpolated fields can't be log-transformed (e.g. a
+        # negative density in the grid file) would turn its share of every
+        # nearby interpolation into NaN, so it is reported and left out.
+        invalid = self.find_invalid_models()
+        if invalid:
+            for description in invalid.values():
+                logger.warning(
+                    "RBF interpolation: grid model %s; this model is left out of the RBF grid.",
+                    description,
+                )
+            keep = np.ones(len(sav_grid), dtype=bool)
+            keep[self.grid_rows[list(invalid)]] = False
+            if not keep.any():
+                raise AtmosphereError("RBF interpolation: no valid models left in the grid.")
+            self.sav_grid = sav_grid = sav_grid[keep]
+            self._read_grid(sav_grid, geometry)
+
+        self.interpolator = self.build_interpolator()
+
+    def _read_grid(self, sav_grid, geometry):
+        """Set up grid points, interpolated fields, depth count and the data array from ``sav_grid``."""
         self.initialize_gridpoints(sav_grid) # read in and scale teff, logg, and metallicity of the grid
         self.vtags, self.stags = self.initialize_tags(sav_grid, geometry) # Check if e.g. height and radius are used
         self.depthpoints = self.initialize_depth(sav_grid) # Set self.depthpoints
         self.read_in_grid(sav_grid) # Stores all data in self.array_for_interpol
-        self.interpolator = self.build_interpolator()
+
+    def find_invalid_models(self):
+        """
+        Find grid models with non-finite values in ``array_for_interpol``,
+        i.e. a vector/scalar field that was non-positive (or NaN) before its
+        log10 transform. The abundance block is not checked: NaN there marks
+        elements a grid doesn't track, which only affects those elements.
+
+        Returns
+        -------
+        dict
+            Grid-point index -> human-readable description of the model and
+            its invalid entries.
+        """
+        n_vector_cols = len(self.vtags) * self.depthpoints
+        n_checked = n_vector_cols + len(self.stags)
+        bad = ~np.isfinite(self.array_for_interpol[:, :n_checked])
+        invalid = {}
+        for i in np.flatnonzero(bad.any(axis=1)):
+            atmo = self.sav_grid[self.grid_rows[i]]
+            entries = []
+            for col in np.flatnonzero(bad[i]):
+                if col < n_vector_cols:
+                    vtag, depth = self.vtags[col // self.depthpoints], col % self.depthpoints
+                    raw = atmo[vtag][depth]
+                    if vtag == "height":
+                        entries.append(f"height+radius={raw + atmo['radius']:.3g} at depth point {depth}")
+                    else:
+                        entries.append(f"{vtag}={raw:.3g} at depth point {depth}")
+                else:
+                    stag = self.stags[col - n_vector_cols]
+                    entries.append(f"{stag}={atmo[stag]:.3g}")
+            invalid[i] = (
+                f"Teff={self.grid_teffs[i]:g}, log(g)={self.grid_loggs[i]:g}, "
+                f"[M/H]={self.grid_mets[i]:g} has values that can't be interpolated in log space "
+                f"({'; '.join(entries)})"
+            )
+        return invalid
 
     @staticmethod
     def _min_step(sorted_unique_vals, fallback=1.0):
@@ -323,13 +382,17 @@ class RbfGrid:
         abund_offset = len(self.vtags) * self.depthpoints + len(self.stags)
         width = abund_offset + self.n_abund
         self.array_for_interpol = np.zeros(dtype='float64', shape=(self.gridpoints, width))
-        for i in range(self.gridpoints): # Loop over all atmospheres
-            relevant_atmo = sav_grid[self.grid_rows[i]]
-            for n, vtag in enumerate(self.vtags): # Read in vectors
-                self.array_for_interpol[i,n*self.depthpoints:(n+1)*self.depthpoints] = self.to_interp_space_vector(vtag, relevant_atmo[vtag][:self.depthpoints], relevant_atmo)
-            for s, stag in enumerate(self.stags): # Read in scalars
-                self.array_for_interpol[i,len(self.vtags)*self.depthpoints + s] = self.to_interp_space_scalar(stag, relevant_atmo[stag])
-            self.array_for_interpol[i, abund_offset:] = self._realized_abund_h12(relevant_atmo)
+        # Non-positive values give NaN/-inf here; they are reported (with the
+        # model they belong to) by find_invalid_models instead of numpy's
+        # anonymous RuntimeWarning.
+        with np.errstate(invalid="ignore", divide="ignore"):
+            for i in range(self.gridpoints): # Loop over all atmospheres
+                relevant_atmo = sav_grid[self.grid_rows[i]]
+                for n, vtag in enumerate(self.vtags): # Read in vectors
+                    self.array_for_interpol[i,n*self.depthpoints:(n+1)*self.depthpoints] = self.to_interp_space_vector(vtag, relevant_atmo[vtag][:self.depthpoints], relevant_atmo)
+                for s, stag in enumerate(self.stags): # Read in scalars
+                    self.array_for_interpol[i,len(self.vtags)*self.depthpoints + s] = self.to_interp_space_scalar(stag, relevant_atmo[stag])
+                self.array_for_interpol[i, abund_offset:] = self._realized_abund_h12(relevant_atmo)
 
     def _realized_abund_h12(self, relevant_atmo):
         """
