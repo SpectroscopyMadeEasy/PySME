@@ -32,12 +32,16 @@ class RbfGrid:
     every subsequent RBF interpolation query against that grid.
     """
 
-    # Relative weights used to rescale Teff/logg/[M/H] onto a shared step size before
-    # nearest-neighbor search, so that neighbors are preferentially chosen close in Teff,
-    # next in [M/H], and least strictly in logg when grid spacing would otherwise tie them.
-    _TEFF_WEIGHT = 9
-    _LOGG_WEIGHT = 11
-    _MET_WEIGHT = 10
+    # The grid axes RBF interpolates across: (sav_grid field, display name, weight).
+    # Every per-axis array in this class has its columns in this order. The weights
+    # rescale each axis onto a shared step size before the nearest-neighbor search,
+    # so that neighbors are preferentially chosen close in Teff, next in [M/H], and
+    # least strictly in logg when grid spacing would otherwise tie them.
+    _AXES = (
+        ("teff", "Teff", 9),
+        ("logg", "log(g)", 11),
+        ("monh", "[M/H]", 10),
+    )
 
     # Number of nearest grid points used to build the local RBF interpolant.
     # WARNING: this was tuned empirically (trial and error against real atmosphere grids),
@@ -70,17 +74,13 @@ class RbfGrid:
         AtmosphereError
             If ``sav_grid`` is not an AtmosphereGrid.
         """
-        # Set by self.initialize_gridpoints():
-        self.teffs = None   # Scaled to have standard step size, used for finding neighbors in interpolation step
-        self.loggs = None
-        self.mets = None
-        self.grid_teffs = None # Not scaled, same as in sav_grid
-        self.grid_loggs = None
-        self.grid_mets = None
+        # Set by self.initialize_gridpoints(), one column per entry of _AXES:
+        self.grid_coords = None   # (gridpoints, n_axes) grid point coordinates, as in sav_grid
+        self.scaled_coords = None # Same, rescaled to a common step size (used to find neighbors)
+        self.axis_scales = None   # Per-axis factor from grid_coords to scaled_coords
+        self.axis_values = None   # Per-axis sorted unique grid values
+        self.bounds = None        # Per-axis (min, max)
         self.grid_rows = None # sav_grid row of each grid point (RbfGrid's order differs from sav_grid's)
-        self.teff_step_scale = 1.0 # to convert between teffs and grid_teffs
-        self.logg_step_scale = 1.0
-        self.met_step_scale = 1.0
         self.gridpoints = None
         self._rbf_degree = None # Set by self.initialize_gridpoints()
         # set by self.initialize_tags():
@@ -161,9 +161,8 @@ class RbfGrid:
                     stag = self.stags[col - n_vector_cols]
                     entries.append(f"{stag}={atmo[stag]:.3g}")
             invalid[i] = (
-                f"Teff={self.grid_teffs[i]:g}, log(g)={self.grid_loggs[i]:g}, "
-                f"[M/H]={self.grid_mets[i]:g} has values that can't be interpolated in log space "
-                f"({'; '.join(entries)})"
+                f"{self.describe_point(self.grid_coords[i])} has values that can't be "
+                f"interpolated in log space ({'; '.join(entries)})"
             )
         return invalid
 
@@ -179,9 +178,21 @@ class RbfGrid:
         diffs = np.abs(sorted_unique_vals[1:] - sorted_unique_vals[:-1])
         return np.min(diffs) if diffs.size > 0 else fallback
 
-    def check_within_bounds(self, teff, logg, monh, interpolation_policy="allow"):
+    def describe_point(self, point):
+        """Format a point given in ``_AXES`` order, e.g. "Teff=5000, log(g)=4, [M/H]=0"."""
+        return ", ".join(f"{name}={value:g}" for (_, name, _), value in zip(self._AXES, point))
+
+    def query_vector(self, **params):
+        """Order requested stellar parameters (keyword per ``_AXES`` field) like the grid axes."""
+        return tuple(params[field] for field, _, _ in self._AXES)
+
+    def to_scaled(self, point):
+        """Rescale a point given in ``_AXES`` order the same way as ``scaled_coords``."""
+        return np.array([round(value * scale, 3) for value, scale in zip(point, self.axis_scales)])
+
+    def check_within_bounds(self, point, interpolation_policy="allow"):
         """
-        Check a query point against the grid's Teff/logg/[M/H] range.
+        Check a query point (in ``_AXES`` order) against the grid's range on every axis.
         ``RBFInterpolator`` (in local-neighbors mode) extrapolates with no
         warning for points outside the grid, so this is the only thing that
         stops that from happening silently.
@@ -201,11 +212,7 @@ class RbfGrid:
         AtmosphereError
             If the query is out of range and ``interpolation_policy`` isn't "allow".
         """
-        for name, value, (lo, hi) in [
-            ("Teff", teff, self.teff_bounds),
-            ("log(g)", logg, self.logg_bounds),
-            ("[M/H]", monh, self.met_bounds),
-        ]:
+        for (_, name, _), value, (lo, hi) in zip(self._AXES, point, self.bounds):
             if value < lo or value > hi:
                 if interpolation_policy == "allow":
                     logger.info(
@@ -219,10 +226,9 @@ class RbfGrid:
 
     def build_interpolator(self):
         """Build the RBFInterpolator over the whole grid, once, for reuse across queries."""
-        grid_points = np.vstack((self.teffs, self.loggs, self.mets)).T
         kwargs = {} if self._rbf_degree is None else {"degree": self._rbf_degree}
         return RBFInterpolator(
-            grid_points, self.array_for_interpol, neighbors=self._RBF_NEIGHBORS, **kwargs
+            self.scaled_coords, self.array_for_interpol, neighbors=self._RBF_NEIGHBORS, **kwargs
         )
 
     def to_interp_space_vector(self, vtag, values, atmo):
@@ -246,52 +252,39 @@ class RbfGrid:
 
     def initialize_gridpoints(self, sav_grid):
         """
-        Read the (teff, logg, [M/H]) coordinate of every grid point in
-        ``sav_grid`` and rescale each axis (via ``_TEFF_WEIGHT``,
-        ``_LOGG_WEIGHT``, ``_MET_WEIGHT``) onto a common step size, so nearest
-        neighbors can be found with a plain Euclidean distance in
-        ``build_interpolator``. Sets ``self.grid_teffs``/``grid_loggs``/``grid_mets``
-        (unscaled) and ``self.teffs``/``loggs``/``mets`` (scaled).
-        """
-        # Pull out all gridpoint parameters from sav_grid. The grid points are
-        # collected in sorted (teff, logg, monh) order, which generally differs
-        # from the row order of sav_grid itself, so the matching sav_grid row
-        # of every grid point is kept in self.grid_rows.
-        teff_col = np.asarray(sav_grid['teff'])
-        logg_col = np.asarray(sav_grid['logg'])
-        monh_col = np.asarray(sav_grid['monh'])
-        temp_teffs = np.array(sorted(np.unique(teff_col)))
-        temp_loggs = np.array(sorted(np.unique(logg_col)))
-        grid_teffs, grid_loggs, grid_mets, grid_rows = [], [], [], []
-        for t in temp_teffs:
-            for l in temp_loggs:
-                rows = np.flatnonzero((teff_col == t) & (logg_col == l))
-                for m in np.unique(monh_col[rows]):
-                    matching_rows = rows[monh_col[rows] == m]
-                    if len(matching_rows) > 1:
-                        raise AtmosphereError(
-                            f"RBF interpolation: the grid has {len(matching_rows)} models at "
-                            f"Teff={t}, log(g)={l}, [M/H]={m}, but RBF interpolation needs exactly "
-                            "one model per (Teff, log(g), [M/H]) point. Does the grid vary along "
-                            "an additional parameter?"
-                        )
-                    grid_teffs.append(t)
-                    grid_loggs.append(l)
-                    grid_mets.append(m)
-                    grid_rows.append(matching_rows[0])
-        self.grid_teffs = np.array(grid_teffs)
-        self.grid_loggs = np.array(grid_loggs)
-        self.grid_mets = np.array(grid_mets)
-        self.grid_rows = np.array(grid_rows, dtype=int)
-        self.teff_bounds = (self.grid_teffs.min(), self.grid_teffs.max())
-        self.logg_bounds = (self.grid_loggs.min(), self.grid_loggs.max())
-        self.met_bounds = (self.grid_mets.min(), self.grid_mets.max())
+        Read the coordinate of every grid point along the ``_AXES`` and
+        rescale each axis by its weight divided by its smallest grid step, so
+        nearest neighbors can be found with a plain Euclidean distance in
+        ``build_interpolator``. Sets ``self.grid_coords`` (unscaled),
+        ``self.scaled_coords``, ``self.axis_scales``, ``self.axis_values``,
+        ``self.bounds`` and ``self.grid_rows``.
 
-        # Scale s.t. all step sizes match, except for a slight scaling that will prefer teff over met over logg steps when all would otherwise be equidistant
-        temp_mets = np.array(sorted(np.unique(grid_mets)))
-        teff_step_original = self._min_step(temp_teffs)
-        logg_step_original = self._min_step(temp_loggs)
-        met_step_original = self._min_step(temp_mets)
+        Raises
+        ------
+        AtmosphereError
+            If several models share the same grid point.
+        """
+        # One column per axis. np.unique sorts the points lexicographically
+        # (first axis first), which generally differs from the row order of
+        # sav_grid itself, so the sav_grid row of every point is kept in
+        # self.grid_rows.
+        columns = np.column_stack([np.asarray(sav_grid[field]) for field, _, _ in self._AXES])
+        self.grid_coords, self.grid_rows, counts = np.unique(
+            columns, axis=0, return_index=True, return_counts=True
+        )
+        if np.any(counts > 1):
+            first = np.flatnonzero(counts > 1)[0]
+            axis_names = ", ".join(name for _, name, _ in self._AXES)
+            raise AtmosphereError(
+                f"RBF interpolation: the grid has {counts[first]} models at "
+                f"{self.describe_point(self.grid_coords[first])}, but RBF interpolation needs "
+                f"exactly one model per ({axis_names}) point. Does the grid vary along an "
+                "additional parameter?"
+            )
+        self.gridpoints = len(self.grid_coords)
+
+        self.axis_values = [np.unique(self.grid_coords[:, j]) for j in range(len(self._AXES))]
+        self.bounds = [(values.min(), values.max()) for values in self.axis_values]
 
         # RBFInterpolator's default (degree=1) polynomial includes a linear
         # term per axis; if any axis has a single value grid-wide (e.g. a
@@ -299,18 +292,21 @@ class RbfGrid:
         # constant and collinear with the constant term, making the
         # polynomial matrix singular. Dropping to degree=0 (constant term
         # only) sidesteps this - only relevant when an axis is degenerate,
-        # so normal (3-axis-varying) grids keep the default degree.
-        if len(temp_teffs) < 2 or len(temp_loggs) < 2 or len(temp_mets) < 2:
+        # so normal (all-axes-varying) grids keep the default degree.
+        if any(len(values) < 2 for values in self.axis_values):
             self._rbf_degree = 0
 
-        self.teff_step_scale = round(1/teff_step_original * self._TEFF_WEIGHT,4) # weighs Teff as more important / "closer" when selecting neighbors
-        self.logg_step_scale = round(1/logg_step_original * self._LOGG_WEIGHT,4) # weighs logg as less important / further away when selecting neighbors
-        self.met_step_scale = round(1/met_step_original * self._MET_WEIGHT,4)
-        self.teffs = np.around(np.array(grid_teffs) * self.teff_step_scale, 0).astype(np.int32) # the attributes are scaled; these are used for selecting neighbors
-        self.loggs = np.around(np.array(grid_loggs)*self.logg_step_scale, 0).astype(np.int32)
-        self.mets = np.around(np.array(grid_mets) * self.met_step_scale, 0).astype(np.int32)
-        self.gridpoints = len(self.teffs)
-    
+        # Scale s.t. all step sizes match, except for the per-axis weight that
+        # breaks ties between axes when all would otherwise be equidistant
+        self.axis_scales = [
+            round(1 / self._min_step(values) * weight, 4)
+            for values, (_, _, weight) in zip(self.axis_values, self._AXES)
+        ]
+        self.scaled_coords = np.column_stack([
+            np.around(self.grid_coords[:, j] * scale, 0).astype(np.int32)
+            for j, scale in enumerate(self.axis_scales)
+        ])
+
     def initialize_tags(self, sav_grid, geometry):
         """
         Determine which vector fields (``vtags``) and scalar fields (``stags``)
@@ -569,8 +565,9 @@ class AtmosphereInterpolator:
         AtmosphereError
             If the query is out of range and ``interpolation_policy`` isn't "allow".
         """
-        rbf_grid.check_within_bounds(teff, logg, monh, interpolation_policy)
-        target_params = np.array([round(teff * rbf_grid.teff_step_scale,3), round(logg * rbf_grid.logg_step_scale,3), round(monh * rbf_grid.met_step_scale,3)]) #scaled so all three params have same step-size
+        query = rbf_grid.query_vector(teff=teff, logg=logg, monh=monh)
+        rbf_grid.check_within_bounds(query, interpolation_policy)
+        target_params = rbf_grid.to_scaled(query) # scaled so all axes have the same step size
         atmo = Atmo(interp="rhox") #purely to initliaize the structure
 
         # INTERPOLATION (uses the interpolator cached on rbf_grid, built once for the whole grid)
@@ -598,11 +595,7 @@ class AtmosphereInterpolator:
         # verbatim rather than interpolating them. ``nearest`` indexes RbfGrid's
         # own (sorted) grid-point order, so it is mapped back to the matching
         # sav_grid row via ``grid_rows``.
-        nearest = np.argmin(
-            (rbf_grid.teffs - target_params[0]) ** 2
-            + (rbf_grid.loggs - target_params[1]) ** 2
-            + (rbf_grid.mets - target_params[2]) ** 2
-        )
+        nearest = np.argmin(np.sum((rbf_grid.scaled_coords - target_params) ** 2, axis=1))
         nearest_row = rbf_grid.grid_rows[nearest]
         atmo.opflag = rbf_grid.sav_grid["opflag"][nearest_row]
         atmo.wlstd = rbf_grid.sav_grid["wlstd"][nearest_row]
