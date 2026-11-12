@@ -34,18 +34,12 @@ class RbfGrid:
 
     # Grid axes: (sav_grid field, display name, weight). All per-axis arrays use
     # this column order. The weights set the relative length of a grid step on
-    # each axis in the RBF fit (and in "physical" neighbor selection).
+    # each axis in the RBF fit.
     _AXES = (
         ("teff", "Teff", 9),
         ("logg", "log(g)", 11),
         ("monh", "[M/H]", 10),
     )
-
-    # Space in which the neighbors of a query are chosen. "index": every grid
-    # step on every axis counts as 1, so uneven grid steps don't leave an axis
-    # with too few neighbor values. "physical": the scaled coordinates of the
-    # fit itself, as before index selection was added.
-    _NEIGHBOR_SELECTION = "index"
 
     # Number of grid points in each local RBF fit, tuned by trial and error on real
     # grids: fewer can make results inaccurate or discontinuous, more makes the
@@ -78,8 +72,7 @@ class RbfGrid:
         self.active_axes = None  # axes with more than one value; only these are fit
         self.fit_points = None  # scaled_coords on the active axes
         self.scaled_axis_values = None  # sorted unique values of scaled_coords
-        self.neighbor_selection = None  # _NEIGHBOR_SELECTION when the grid was built
-        self.selection_points = None  # coordinates the neighbors are chosen in
+        self.selection_points = None  # grid-index coordinates, for choosing neighbors
         self.grid_index_set = None  # grid points as tuples of axis_values indices
         self.grid_rows = None  # sav_grid row of each grid point
         self.gridpoints = None
@@ -299,13 +292,12 @@ class RbfGrid:
 
     def to_selection_space(self, points):
         """
-        Map points (last dimension in _AXES order) to the space of
-        selection_points. Index space is computed from the scaled values, so
-        float32 noise in the grid values doesn't break exact ties.
+        Map points (last dimension in _AXES order) to grid-index space, where
+        neighbors are chosen: every grid step on every axis counts as 1, so
+        uneven grid steps don't leave an axis with too few neighbor values.
+        Computed from the scaled values, so float32 noise doesn't break ties.
         """
         scaled = self.to_scaled(points)
-        if self.neighbor_selection == "physical":
-            return self.to_fit_space(scaled)
         index = [
             self._to_index_space(scaled[..., j], values)
             for j, values in enumerate(self.scaled_axis_values)
@@ -400,13 +392,6 @@ class RbfGrid:
             np.unique(self.scaled_coords[:, j]) for j in range(n_axes)
         ]
 
-        # Kept per grid, so the tree and the queries always use the same space
-        self.neighbor_selection = self._NEIGHBOR_SELECTION
-        if self.neighbor_selection not in ("index", "physical"):
-            raise AtmosphereError(
-                f"RBF interpolation: unknown neighbor selection "
-                f"{self.neighbor_selection!r}, expected 'index' or 'physical'."
-            )
         self.selection_points = self.to_selection_space(self.grid_coords)
 
         grid_indices = np.column_stack(

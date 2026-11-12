@@ -209,32 +209,18 @@ def _uneven_monh_grid():
     )
 
 
-def test_rbf_index_selection_spreads_neighbors_over_uneven_metallicity_steps(
-    monkeypatch,
-):
-    # In physical units the 1 dex steps are far apart, so the neighbors cover
-    # only 2 [M/H] values; counting grid steps gives 4
-    grid = _uneven_monh_grid()
-    query = (5000.0, 2.5, -4.5)
-
-    def n_monh(rbf_grid):
-        neighbors = rbf_grid.neighbor_indices(query)
-        return len(np.unique(rbf_grid.grid_coords[neighbors, 2]))
-
-    index_grid = RbfGrid(grid, "PP")
-    monkeypatch.setattr(RbfGrid, "_NEIGHBOR_SELECTION", "physical")
-    physical_grid = RbfGrid(grid, "PP")
-
-    assert n_monh(index_grid) == 4
-    assert n_monh(physical_grid) == 2
+def test_rbf_index_selection_spreads_neighbors_over_uneven_metallicity_steps():
+    # In physical units the 1 dex steps are far apart and the nearest 64 models
+    # cover only 2 [M/H] values; counting grid steps gives 4
+    rbf_grid = RbfGrid(_uneven_monh_grid(), "PP")
+    neighbors = rbf_grid.neighbor_indices((5000.0, 2.5, -4.5))
+    assert len(np.unique(rbf_grid.grid_coords[neighbors, 2])) == 4
 
 
-@pytest.mark.parametrize("selection", ["index", "physical"])
-def test_rbf_includes_all_neighbors_tied_with_the_last(monkeypatch, selection):
+def test_rbf_includes_all_neighbors_tied_with_the_last():
     # On a regular grid the neighbors of the central point are symmetric around
     # it; picking only some of the points tied at the cut would break that.
     # logg=3.8 is stored as float32, which must not break the ties either.
-    monkeypatch.setattr(RbfGrid, "_NEIGHBOR_SELECTION", selection)
     steps = np.array([200.0, 0.2, 0.2])
     grid = _make_synthetic_grid(
         "regular_grid",
@@ -252,22 +238,6 @@ def test_rbf_includes_all_neighbors_tied_with_the_last(monkeypatch, selection):
 
     assert len(neighbors) > RbfGrid._RBF_NEIGHBORS
     assert offsets == {tuple(-np.array(offset)) for offset in offsets}
-
-
-def test_rbf_grid_keeps_its_neighbor_selection(monkeypatch):
-    # Changing the class setting later must not mix up a built grid's spaces
-    grid = _uneven_monh_grid()
-    query = (5000.0, 2.5, -4.5)
-    rbf_grid = RbfGrid(grid, "PP")
-    before = rbf_grid.neighbor_indices(query)
-    monkeypatch.setattr(RbfGrid, "_NEIGHBOR_SELECTION", "physical")
-    assert np.array_equal(rbf_grid.neighbor_indices(query), before)
-
-
-def test_rbf_rejects_unknown_neighbor_selection(monkeypatch):
-    monkeypatch.setattr(RbfGrid, "_NEIGHBOR_SELECTION", "nearest")
-    with pytest.raises(AtmosphereError, match="unknown neighbor selection"):
-        RbfGrid(_uneven_monh_grid(), "PP")
 
 
 def _grid_with_missing_model():
