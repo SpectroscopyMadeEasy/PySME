@@ -7,6 +7,8 @@ import numpy as np
 from astropy import constants as const
 from scipy.interpolate import interp1d
 from scipy.optimize import curve_fit
+from scipy.interpolate import RBFInterpolator
+from scipy.spatial import KDTree
 
 from ..abund import Abund
 from ..large_file_storage import setup_atmo
@@ -23,6 +25,460 @@ g_sun = (const.G * const.M_sun / const.R_sun ** 2).to_value("cm/s**2")
 logg_sun = np.log10(g_sun)
 
 
+class RbfGrid:
+    """
+    Atmosphere grid prepared for radial basis function (RBF) interpolation, as an
+    alternative to the default corner-model interpolation. Built once per grid
+    and reused for every query.
+    """
+
+    # Grid axes: (sav_grid field, display name). All per-axis arrays use this
+    # column order.
+    _AXES = (
+        ("teff", "Teff"),
+        ("logg", "log(g)"),
+        ("monh", "[M/H]"),
+    )
+
+    # Number of grid points in each local RBF fit, tuned by trial and error on real
+    # grids: fewer can make results inaccurate or discontinuous, more makes the
+    # linear solve very slow. Re-validate on a real grid before changing it.
+    _RBF_NEIGHBORS = 64
+
+    def __init__(self, sav_grid, geometry):
+        """
+        Read the grid points and models of sav_grid and build the neighbor search.
+
+        Parameters
+        ----------
+        sav_grid : AtmosphereGrid
+            Grid of model atmospheres to interpolate between.
+        geometry : {"PP", "SPH"}
+            Geometry of the models. height and radius are only interpolated
+            for "SPH".
+
+        Raises
+        ------
+        AtmosphereError
+            If sav_grid is not an AtmosphereGrid.
+        """
+        # Set by initialize_gridpoints(), one column or entry per axis in _AXES
+        self.grid_coords = None  # grid point coordinates, as in sav_grid
+        self.scaled_coords = None  # rescaled to a common step size
+        self.axis_scales = None  # factors from grid_coords to scaled_coords
+        self.axis_values = None  # sorted unique values
+        self.bounds = None  # (min, max)
+        self.active_axes = None  # axes with more than one value; only these are fit
+        self.fit_points = None  # scaled_coords on the active axes
+        self.scaled_axis_values = None  # sorted unique values of scaled_coords
+        self.selection_points = None  # grid-index coordinates, for choosing neighbors
+        self.grid_index_set = None  # grid points as tuples of axis_values indices
+        self.grid_rows = None  # sav_grid row of each grid point
+        self.gridpoints = None
+        # Set by initialize_tags()
+        self.vtags = None
+        self.stags = None
+        # Set by initialize_depth()
+        self.depthpoints = None
+        # Set by read_in_grid(): all interpolated values, one row per grid point
+        self.array_for_interpol = None
+        # Search tree over selection_points, for finding the neighbors of a query
+        self.neighbor_tree = None
+        # Grid cells already reported by report_incomplete_cell()
+        self._reported_cells = set()
+
+        if not isinstance(sav_grid, AtmosphereGrid):
+            raise AtmosphereError(
+                "Rbf initialization was requested but no sav-grid was provided"
+            )
+
+        # Kept for the fields copied from the nearest model (opflag, wlstd)
+        self.sav_grid = sav_grid
+        self.abund_format = getattr(sav_grid, "abund_format", "sme")
+        self._read_grid(sav_grid, geometry)
+
+        # Models with values that can't be log-transformed would give NaN in
+        # every nearby interpolation, so they are reported and left out
+        invalid = self.find_invalid_models()
+        if invalid:
+            for description in invalid.values():
+                logger.warning(
+                    "RBF interpolation: grid model %s; "
+                    "this model is left out of the RBF grid.",
+                    description,
+                )
+            keep = np.ones(len(sav_grid), dtype=bool)
+            keep[self.grid_rows[list(invalid)]] = False
+            if not keep.any():
+                raise AtmosphereError(
+                    "RBF interpolation: no valid models left in the grid."
+                )
+            self.sav_grid = sav_grid = sav_grid[keep]
+            self._read_grid(sav_grid, geometry)
+
+        self.neighbor_tree = KDTree(self.selection_points)
+
+    def _read_grid(self, sav_grid, geometry):
+        """Read grid points, fields to interpolate, depth count and data."""
+        self.initialize_gridpoints(sav_grid)
+        self.vtags, self.stags = self.initialize_tags(sav_grid, geometry)
+        self.depthpoints = self.initialize_depth(sav_grid)
+        self.read_in_grid(sav_grid)
+
+    def find_invalid_models(self):
+        """
+        Find models with non-finite values after the log transform, i.e.
+        non-positive or NaN values in the grid. Abundances are not checked,
+        since NaN there marks elements the grid doesn't track.
+
+        Returns
+        -------
+        dict
+            Grid point index -> description of the model and its invalid values.
+        """
+        n_vector_cols = len(self.vtags) * self.depthpoints
+        n_checked = n_vector_cols + len(self.stags)
+        bad = ~np.isfinite(self.array_for_interpol[:, :n_checked])
+        invalid = {}
+        for i in np.flatnonzero(bad.any(axis=1)):
+            atmo = self.sav_grid[self.grid_rows[i]]
+            entries = []
+            for col in np.flatnonzero(bad[i]):
+                if col < n_vector_cols:
+                    vtag = self.vtags[col // self.depthpoints]
+                    depth = col % self.depthpoints
+                    value = atmo[vtag][depth]
+                    if vtag == "height":
+                        vtag, value = "height+radius", value + atmo["radius"]
+                    entries.append(f"{vtag}={value:.3g} at depth point {depth}")
+                else:
+                    stag = self.stags[col - n_vector_cols]
+                    entries.append(f"{stag}={atmo[stag]:.3g}")
+            invalid[i] = (
+                f"{self.describe_point(self.grid_coords[i])} has values that can't "
+                f"be interpolated in log space ({'; '.join(entries)})"
+            )
+        return invalid
+
+    @staticmethod
+    def _min_step(sorted_unique_vals, fallback=1.0):
+        """Smallest step between sorted unique values, or fallback for one value."""
+        diffs = np.abs(sorted_unique_vals[1:] - sorted_unique_vals[:-1])
+        return np.min(diffs) if diffs.size > 0 else fallback
+
+    def describe_point(self, point):
+        """Format a point in _AXES order, e.g. "Teff=5000, log(g)=4, [M/H]=0"."""
+        return ", ".join(
+            f"{name}={value:g}" for (_, name), value in zip(self._AXES, point)
+        )
+
+    def query_vector(self, **params):
+        """Put stellar parameters, given by _AXES field name, in _AXES order."""
+        return tuple(params[field] for field, _ in self._AXES)
+
+    def to_scaled(self, points):
+        """
+        Rescale points (last dimension in _AXES order) to the common step size.
+        Grid points and queries both go through here, so a query on a grid value
+        lands exactly on that grid point; rounding hides float32/float64 noise.
+        """
+        return np.round(np.asarray(points, dtype=float) * self.axis_scales, 3)
+
+    def missing_cell_corners(self, point):
+        """
+        Find the grid cell around a point (in _AXES order) and its corners that
+        are missing from the grid. Per axis the cell spans the grid values just
+        below and above the point, or the one value it is on; outside the grid
+        it is the edge value.
+
+        Returns
+        -------
+        cell : tuple of tuple of int
+            axis_values indices of the cell, per axis.
+        missing : list of tuple of int
+            Missing corners, as axis_values indices.
+        n_corners : int
+            Number of corners of the cell.
+        """
+        cell = []
+        for value, values in zip(self.to_scaled(point), self.scaled_axis_values):
+            value = min(max(value, values[0]), values[-1])
+            i = int(np.searchsorted(values, value))  # first i with values[i] >= value
+            cell.append((i,) if values[i] == value else (i - 1, i))
+        cell = tuple(cell)
+        corners = list(itertools.product(*cell))
+        missing = [corner for corner in corners if corner not in self.grid_index_set]
+        return cell, missing, len(corners)
+
+    def report_incomplete_cell(self, point):
+        """
+        Report if grid models around a point (in _AXES order) are missing, so
+        the RBF fit relies on more distant models there. Logged at info level
+        the first time per grid cell, at debug level after that.
+        """
+        cell, missing, n_corners = self.missing_cell_corners(point)
+        if not missing:
+            return
+        log = logger.debug if cell in self._reported_cells else logger.info
+        self._reported_cells.add(cell)
+        if n_corners == 1:
+            problem = f"no grid model at {self.describe_point(point)}"
+        else:
+            example = [values[i] for values, i in zip(self.axis_values, missing[0])]
+            problem = (
+                f"{len(missing)} of {n_corners} grid models around "
+                f"{self.describe_point(point)} are missing "
+                f"(e.g. {self.describe_point(example)})"
+            )
+        log(
+            "RBF interpolation: %s; the result relies on more distant grid models "
+            "and is less certain.",
+            problem,
+        )
+
+    def check_within_bounds(self, point, interpolation_policy="allow"):
+        """
+        Check a point (in _AXES order) against the grid range on every axis.
+        RBFInterpolator extrapolates silently, so out-of-range queries are
+        reported here. interpolation_policy follows the (unmerged) feature of
+        the same name on upstream/codex/interpolation-policy.
+
+        Parameters
+        ----------
+        point : tuple of float
+            Requested parameters, in _AXES order.
+        interpolation_policy : {"allow", "error"}, optional
+            "allow" (default) logs and extrapolates, "error" raises.
+
+        Raises
+        ------
+        AtmosphereError
+            If the point is out of range and interpolation_policy isn't "allow".
+        """
+        for (_, name), value, (lo, hi) in zip(self._AXES, point, self.bounds):
+            if value < lo or value > hi:
+                if interpolation_policy == "allow":
+                    logger.info(
+                        "RBF interpolation: requested %s=%.3f outside grid range "
+                        "[%.3f, %.3f]; extrapolating.",
+                        name, value, lo, hi,
+                    )
+                else:
+                    raise AtmosphereError(
+                        f"RBF interpolation: requested {name}={value} outside "
+                        f"grid range [{lo}, {hi}]."
+                    )
+
+    def to_fit_space(self, scaled_points):
+        """Keep the active axes of scaled points (last dimension in _AXES order)."""
+        return np.asarray(scaled_points)[..., self.active_axes]
+
+    @staticmethod
+    def _to_index_space(values, axis_values):
+        """
+        Map values on one axis to grid-step indices: grid values to 0, 1, 2, ...,
+        linear in between and beyond the edges. A single-valued axis maps to 0.
+        """
+        values = np.asarray(values, dtype=float)
+        n = len(axis_values)
+        if n == 1:
+            return np.zeros_like(values)
+        index = np.interp(values, axis_values, np.arange(n))
+        below = (values - axis_values[0]) / (axis_values[1] - axis_values[0])
+        above = n - 1 + (values - axis_values[-1]) / (axis_values[-1] - axis_values[-2])
+        index = np.where(values > axis_values[-1], above, index)
+        return np.where(values < axis_values[0], below, index)
+
+    def to_selection_space(self, points):
+        """
+        Map points (last dimension in _AXES order) to grid-index space, where
+        neighbors are chosen: every grid step on every axis counts as 1, so
+        uneven grid steps don't leave an axis with too few neighbor values.
+        Computed from the scaled values, so float32 noise doesn't break ties.
+        """
+        scaled = self.to_scaled(points)
+        index = [
+            self._to_index_space(scaled[..., j], values)
+            for j, values in enumerate(self.scaled_axis_values)
+        ]
+        return self.to_fit_space(np.stack(index, axis=-1))
+
+    def neighbor_indices(self, point):
+        """
+        Indices of the _RBF_NEIGHBORS grid points nearest to a point (in _AXES
+        order) in selection space, sorted by index. Points tied with the last
+        one are all included, so the choice doesn't depend on the tree.
+        """
+        selection_point = self.to_selection_space(point)
+        k = min(self._RBF_NEIGHBORS, self.gridpoints)
+        distances, _ = self.neighbor_tree.query(selection_point, k=k)
+        radius = np.max(distances) * (1 + 1e-9)
+        return np.sort(self.neighbor_tree.query_ball_point(selection_point, radius))
+
+    def interpolate(self, point):
+        """
+        Fit an RBF to the neighbors of a point (in _AXES order) and evaluate it
+        there. Returns a row in the layout of array_for_interpol.
+        """
+        idx = self.neighbor_indices(point)
+        rbf = RBFInterpolator(self.fit_points[idx], self.array_for_interpol[idx])
+        return rbf(self.to_fit_space(self.to_scaled(point))[np.newaxis])[0]
+
+    def to_interp_space_vector(self, vtag, values, atmo):
+        """Map a vector field to log10; height is combined with radius first."""
+        values = np.asarray(values)
+        if vtag == "height":
+            return np.log10(values + atmo["radius"])
+        return np.log10(values)
+
+    def to_interp_space_scalar(self, stag, value):
+        """Map a scalar field for interpolation (log10 for radius only)."""
+        if stag == "radius":
+            return np.log10(value)
+        return value
+
+    def initialize_gridpoints(self, sav_grid):
+        """
+        Find the grid points along _AXES and scale each axis by its smallest
+        step, so the RBF fit treats a grid step alike on every axis.
+
+        Raises
+        ------
+        AtmosphereError
+            If several models share a grid point, or the grid has only one point.
+        """
+        # np.unique sorts the points, so their sav_grid rows are kept in grid_rows
+        columns = np.column_stack(
+            [np.asarray(sav_grid[field]) for field, _ in self._AXES]
+        )
+        self.grid_coords, self.grid_rows, counts = np.unique(
+            columns, axis=0, return_index=True, return_counts=True
+        )
+        if np.any(counts > 1):
+            first = np.flatnonzero(counts > 1)[0]
+            axis_names = ", ".join(name for _, name in self._AXES)
+            raise AtmosphereError(
+                f"RBF interpolation: the grid has {counts[first]} models at "
+                f"{self.describe_point(self.grid_coords[first])}, but RBF "
+                f"interpolation needs exactly one model per ({axis_names}) point. "
+                "Does the grid vary along an additional parameter?"
+            )
+        self.gridpoints = len(self.grid_coords)
+
+        n_axes = len(self._AXES)
+        self.axis_values = [np.unique(self.grid_coords[:, j]) for j in range(n_axes)]
+        self.bounds = [(values.min(), values.max()) for values in self.axis_values]
+
+        # An axis with a single value has nothing to interpolate along and would
+        # make the linear term of the RBF polynomial singular, so it is not fit
+        self.active_axes = np.array([len(values) > 1 for values in self.axis_values])
+        if not self.active_axes.any():
+            raise AtmosphereError(
+                "RBF interpolation needs a grid with more than one grid point, "
+                f"but all its models are at {self.describe_point(self.grid_coords[0])}."
+            )
+
+        # Smallest step of 1 on every axis
+        self.axis_scales = np.array(
+            [1 / float(self._min_step(values)) for values in self.axis_values]
+        )
+        self.scaled_coords = self.to_scaled(self.grid_coords)
+        self.fit_points = self.scaled_coords[:, self.active_axes]
+        self.scaled_axis_values = [
+            np.unique(self.scaled_coords[:, j]) for j in range(n_axes)
+        ]
+
+        self.selection_points = self.to_selection_space(self.grid_coords)
+
+        grid_indices = np.column_stack(
+            [
+                np.searchsorted(values, self.scaled_coords[:, j])
+                for j, values in enumerate(self.scaled_axis_values)
+            ]
+        )
+        self.grid_index_set = set(map(tuple, grid_indices.tolist()))
+
+    def initialize_tags(self, sav_grid, geometry):
+        """
+        Find the vector (vtags) and scalar (stags) fields to interpolate.
+        height and radius are only used for "SPH" geometry.
+
+        Returns
+        -------
+        vtags : list of str
+            Fields with one value per depth point.
+        stags : list of str
+            Scalar fields.
+        """
+        relevant_atmo = sav_grid[self.grid_rows[0]]
+
+        vtags = ["temp", "xne", "xna", "rho"]
+        if "tau" in relevant_atmo.dtype.names:
+            vtags += ["tau"]
+        if "rhox" in relevant_atmo.dtype.names:
+            vtags += ["rhox"]
+        if "height" in relevant_atmo.dtype.names and geometry == "SPH":
+            vtags += ["height"]  # interpolated as height+radius
+
+        stags = ["teff", "logg", "monh", "vturb", "lonh"]
+        if "radius" in relevant_atmo.dtype.names and geometry == "SPH":
+            stags += ["radius"]
+
+        return vtags, stags
+
+    def initialize_depth(self, sav_grid):
+        """
+        Number of depth points to use, from the first model. Trailing NaN or
+        zero padding in tau is not counted.
+        """
+        relevant_atmo = sav_grid[self.grid_rows[0]]
+        temp = [len(relevant_atmo[vtag]) for vtag in self.vtags]
+        if np.isnan(relevant_atmo["tau"][-1]):  # NaN padding
+            temp_notnan = relevant_atmo["tau"][~np.isnan(relevant_atmo["tau"])]
+            return len(temp_notnan)
+        elif relevant_atmo["tau"][-1] == 0:  # zero padding
+            temp_notnan = np.array(relevant_atmo["tau"])[
+                np.array(relevant_atmo["tau"]) > 0.0
+            ]
+            return len(temp_notnan)
+        return np.min(temp)
+
+    def read_in_grid(self, sav_grid):
+        """
+        Fill array_for_interpol with one row per grid point: all vector fields,
+        then the scalars, then the realized H=12 abundance pattern (already
+        logarithmic). Fitting the realized pattern with the same weights keeps it
+        consistent with the interpolated monh.
+        """
+        self.n_abund = sav_grid["abund"].shape[-1]
+        n_vector_cols = len(self.vtags) * self.depthpoints
+        abund_offset = n_vector_cols + len(self.stags)
+        width = abund_offset + self.n_abund
+        self.array_for_interpol = np.zeros((self.gridpoints, width), dtype="float64")
+        # Non-positive values are reported by find_invalid_models instead
+        with np.errstate(invalid="ignore", divide="ignore"):
+            for i in range(self.gridpoints):
+                atmo = sav_grid[self.grid_rows[i]]
+                for n, vtag in enumerate(self.vtags):
+                    cols = slice(n * self.depthpoints, (n + 1) * self.depthpoints)
+                    self.array_for_interpol[i, cols] = self.to_interp_space_vector(
+                        vtag, atmo[vtag][: self.depthpoints], atmo
+                    )
+                for s, stag in enumerate(self.stags):
+                    self.array_for_interpol[i, n_vector_cols + s] = (
+                        self.to_interp_space_scalar(stag, atmo[stag])
+                    )
+                abund = self._realized_abund_h12(atmo)
+                self.array_for_interpol[i, abund_offset:] = abund
+
+    def _realized_abund_h12(self, relevant_atmo):
+        """
+        Realized (metallicity included) H=12 abundance pattern of a grid model.
+        Abund._pattern already holds it (checked on MARCS grids).
+        """
+        return np.array(relevant_atmo["abund"]._pattern, dtype=float, copy=True)
+
+
 class AtmosphereInterpolator:
     def __init__(self, depth=None, interp=None, geom=None, lfs_atmo=None, verbose=0):
         self.depth = depth
@@ -34,9 +490,13 @@ class AtmosphereInterpolator:
 
         self.source = None
         self.atmo_grid = None
+        self.rbf_grid = None
+        self.rbf_grid_key = None
         self.verbose = verbose
 
-    def interp_atmo_grid(self, atmo_grid, teff, logg, monh):
+    def interp_atmo_grid(
+        self, atmo_grid, teff, logg, monh, interpolation_policy="allow"
+    ):
         """
         General routine to interpolate in 3D grid of model atmospheres
 
@@ -56,6 +516,10 @@ class AtmosphereInterpolator:
             wether to plot debug information (default: False)
         reload : bool
             wether to reload atmosphere information from disk (default: False)
+        interpolation_policy : {"allow", "error"}, optional
+            RBF only: what to do when the requested parameters are outside the
+            grid range. "allow" (default) logs and extrapolates, "error" raises
+            AtmosphereError.
 
         Returns
         -------
@@ -89,16 +553,33 @@ class AtmosphereInterpolator:
         depth = self.determine_depth_scale(self.depth, atmo_grid)
         interp = self.determine_interpolation_scale(self.interp, atmo_grid)
 
-        # Find the corner models bracketing the given values
-        icor = self.find_corner_models(teff, logg, monh, atmo_grid)
+        if interp == "RBF":
+            # The RbfGrid is cached until the grid source or geometry changes
+            rbf_key = (self.source, self.geom)
+            if not isinstance(self.rbf_grid, RbfGrid) or self.rbf_grid_key != rbf_key:
+                self.rbf_grid = RbfGrid(atmo_grid, self.geom)
+                self.rbf_grid_key = rbf_key
+            atmo = self.interpolate_RBF(
+                teff, logg, monh, self.rbf_grid, interpolation_policy
+            )
+            if self.geom == "SPH":
+                geom = "SPH"
+                radius = atmo.radius
+            else:
+                geom = "PP"
+                radius = None
+        else:
+            # Find the corner models bracketing the given values
+            icor = self.find_corner_models(teff, logg, monh, atmo_grid)
 
-        # Interpolate the corner models
-        atmo = self.interpolate_corner_models(
-            teff, logg, monh, icor, atmo_grid, interp=interp
-        )
+            # Interpolate the corner models
+            atmo = self.interpolate_corner_models(
+                teff, logg, monh, icor, atmo_grid, interp=interp
+            )
 
-        # TODO: Or should we only consider spherical models for interpolation of spherical modesl are requested?
-        geom, radius = self.spherical_model_correction(atmo_grid, icor, logg)
+            # TODO: Or should we only consider spherical models for interpolation of spherical modesl are requested?
+            geom, radius = self.spherical_model_correction(atmo_grid, icor, logg)
+
         # Create ATMO.GEOM, if necessary, and set value.
         if self.geom is not None and self.geom != geom:
             if self.geom == "SPH":
@@ -121,6 +602,82 @@ class AtmosphereInterpolator:
             atmo.radius = radius
         atmo.source = self.source
         atmo.method = "grid"
+
+        return atmo
+
+    def interpolate_RBF(self, teff, logg, monh, rbf_grid, interpolation_policy="allow"):
+        """
+        Interpolate a model atmosphere at (teff, logg, monh) with radial basis
+        functions, as an alternative to interpolate_corner_models.
+
+        Parameters
+        ----------
+        teff : float
+            effective temperature of desired model (K).
+        logg : float
+            logarithmic gravity of desired model (log cm/s/s).
+        monh : float
+            metallicity of desired model.
+        rbf_grid : RbfGrid
+            Prepared grid to interpolate from.
+        interpolation_policy : {"allow", "error"}, optional
+            What to do when the requested parameters are outside the grid range:
+            "allow" (default) logs and extrapolates, "error" raises.
+
+        Returns
+        -------
+        atmo : Atmosphere
+            interpolated atmosphere data
+
+        Raises
+        ------
+        AtmosphereError
+            If the query is out of range and interpolation_policy isn't "allow".
+        """
+        query = rbf_grid.query_vector(teff=teff, logg=logg, monh=monh)
+        rbf_grid.check_within_bounds(query, interpolation_policy)
+        rbf_grid.report_incomplete_cell(query)
+        atmo = Atmo(interp="rhox")  # empty structure to fill
+        target_vector = rbf_grid.interpolate(query)
+
+        def from_interp_space_vector(vtag, values, atmo):
+            values = np.asarray(values)
+            if vtag == "height":
+                return 10.0 ** (values) - atmo["radius"]  # separate height and radius
+            return 10.0 ** values
+
+        def from_interp_space_scalar(stag, value):
+            if stag == "radius":
+                return 10.0 ** value
+            return value
+
+        ndep = rbf_grid.depthpoints
+        n_vector_cols = len(rbf_grid.vtags) * ndep
+        for s, stag in enumerate(rbf_grid.stags):
+            value = target_vector[n_vector_cols + s]
+            atmo[stag] = from_interp_space_scalar(stag, value)
+        for n, vtag in enumerate(rbf_grid.vtags):
+            values = target_vector[n * ndep : (n + 1) * ndep]
+            atmo[vtag] = from_interp_space_vector(vtag, values, atmo)
+
+        # opflag and wlstd are not physical structure, so they are copied from the
+        # nearest model, as in the corner-model interpolation
+        target_params = rbf_grid.to_scaled(query)
+        distances = np.sum((rbf_grid.scaled_coords - target_params) ** 2, axis=1)
+        nearest = np.argmin(distances)
+        nearest_row = rbf_grid.grid_rows[nearest]
+        atmo.opflag = rbf_grid.sav_grid["opflag"][nearest_row]
+        atmo.wlstd = rbf_grid.sav_grid["wlstd"][nearest_row]
+
+        # The abundance pattern is part of the fit (see RbfGrid.read_in_grid).
+        # Replacing atmo.abund would reset atmo.monh, so the interpolated monh is
+        # carried over; the pattern is already realized, so it isn't applied twice.
+        abund_offset = n_vector_cols + len(rbf_grid.stags)
+        interpolated_pattern = target_vector[abund_offset:]
+        interpolated_monh = atmo.monh
+        atmo.abund = Abund(
+            monh=interpolated_monh, pattern=interpolated_pattern, type="H=12"
+        )
 
         return atmo
 
@@ -588,14 +1145,14 @@ class AtmosphereInterpolator:
 
         Parameters
         ----------
-        interp : {"RHOX", "TAU", None}
+        interp : {"RHOX", "TAU", "RBF", None}
             requested interpolation axis, or None for autoselect
         atmo_grid : AtmosphereGrid
             Atmosphere grid for interpolation
 
         Returns
         -------
-        interp: {"RHOX", "TAU"}
+        interp: {"RHOX", "TAU", "RBF"}
             the interpolation axis
 
         Raises
@@ -616,11 +1173,11 @@ class AtmosphereInterpolator:
             interp = "RHOX"
         else:
             raise AtmosphereError("no value for ATMO.INTERP")
-        if interp not in ["TAU", "RHOX"]:
+        if interp not in ["TAU", "RHOX", "RBF"]:
             raise AtmosphereError(
-                "ATMO.INTERP must be 'TAU' or 'RHOX', not '%s'" % interp
+                "ATMO.INTERP must be 'TAU', 'RHOX', or 'RBF', not '%s'" % interp
             )
-        if interp.lower() not in gtags:
+        if interp != "RBF" and interp.lower() not in gtags:
             raise AtmosphereError(
                 "ATMO.INTERP='{}', but ATMO. {} does not exist".format(interp, interp)
             )
