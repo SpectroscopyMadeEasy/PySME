@@ -2,8 +2,17 @@
 
 ## Unreleased
 
+### Changed
+
+- Changed the minimum supported version for pre-built macOS arm64 wheels from
+  macOS 14 to macOS 15. PySME 1.2.x remains available for macOS 14 users.
+- Strengthened wheel validation with a native SMElib radiative-transfer smoke
+  test after installation.
+
 ### Added
 
+- Added a manually dispatched wheel-build path that uploads artifacts for
+  validation without publishing to PyPI or creating a GitHub release.
 - Optional radial basis function (RBF) interpolation of model atmospheres
   (`sme.atmo.interp = "RBF"`), as an alternative to the default corner-model
   interpolation. Each query is fit to its 64 nearest grid models (more when
