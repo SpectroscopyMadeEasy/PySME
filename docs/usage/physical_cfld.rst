@@ -15,6 +15,27 @@ numerical interpolation. It does not claim identical source assumptions or
 complete physical validation; the native numerical correction N is distinct
 from the underlying physical formulation.
 
+Minimal executable example
+--------------------------
+
+After installing the modified Python package and building its companion native
+library, run from the PySME checkout::
+
+    python examples/line_depression.py --library /absolute/path/to/libsme_cfld.so
+
+Alternatively set ``CFLD_LIBRARY``. Add ``--output demo_cfld.npz`` to save the
+six channels, boundary metadata, complete interval contributions and reference-
+optical-depth density. Existing output files are refused. Expected output is
+``PASS_PRESCRIBED_DEMO``, a relative closure residual below 1e-6, and a passing
+no-line cancellation check. The tested Linux build gives a residual about
+-4.53e-9; last digits need not be identical on other builds.
+
+This deliberately simple single-ray linear-source example needs no atmosphere,
+line list, downloaded stellar data or EOS calculation. Its depth coordinate is
+reference continuum optical depth, not tauRoss or tau5000. It demonstrates the
+native diagnostic and accounting, not a stellar spectrum or full analytical
+shape-validation suite. A real stellar setup requires the preparation below.
+
 Prerequisites and calling the diagnostic
 ----------------------------------------
 
