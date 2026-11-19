@@ -5,7 +5,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-spec=importlib.util.spec_from_file_location('cfld_api',Path(__file__).resolve().parents[2]/'src/pysme/line_depression.py')
+spec=importlib.util.spec_from_file_location('cfld_api',Path(__file__).resolve().parents[1]/'src/pysme/line_depression.py')
 api=importlib.util.module_from_spec(spec);spec.loader.exec_module(api)
 @pytest.fixture
 def native():

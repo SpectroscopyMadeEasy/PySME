@@ -110,7 +110,7 @@ Portable prescribed-opacity tests
 
 Set CFLD_LIBRARY to an isolated compiled diagnostic library and run::
 
-    python -m pytest -q tests/cfld/test_prescribed.py
+    python -m pytest -q test/test_line_depression.py
 
 These tests perform no stellar synthesis. No molecular line lists, observations,
 abundance fitting or velocity-analysis functionality are part of this change.
@@ -124,3 +124,11 @@ closure. Native ray limits require chunking when exceeded; the tested limit is
 The companion SMElib document ``docs/physical_cfld.md`` contains the derivation,
 L/Q/N definitions, spherical mapping and boundary conventions. Detailed
 validation history is supplied with the PR rather than maintained in this page.
+
+The test lives in the existing ``test/`` directory and is discovered by the
+repository's pytest configuration. The standard command loads the shared
+``test/conftest.py`` and therefore requires PySME's normal test dependencies.
+For a minimal prescribed-field check that bypasses those unrelated fixtures,
+use ``python -m pytest --noconftest -q test/test_line_depression.py`` with
+``CFLD_LIBRARY`` set as above. This restricted run does not validate integration
+with the shared test fixtures.
