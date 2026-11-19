@@ -7,6 +7,14 @@ It currently supports prepared spherical atmospheres. Plane-parallel analytical
 validation uses prescribed ray fields; a general plane-parallel stellar interface
 is not implemented.
 
+The implementation aims to follow the absolute line-depression contribution
+approach of `Kravchenko et al. (2018), A&A 610, A29
+<https://doi.org/10.1051/0004-6361/201731530>`_. It independently adapts that
+physical objective to SMElib's actual source functions, spherical transfer and
+numerical interpolation. It does not claim identical source assumptions or
+complete physical validation; the native numerical correction N is distinct
+from the underlying physical formulation.
+
 Prerequisites and calling the diagnostic
 ----------------------------------------
 
