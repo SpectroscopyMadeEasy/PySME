@@ -7,6 +7,18 @@ It currently supports prepared spherical atmospheres. Plane-parallel analytical
 validation uses prescribed ray fields; a general plane-parallel stellar interface
 is not implemented.
 
+Prerequisites and calling the diagnostic
+----------------------------------------
+
+Use the modified PySME code and a Python bridge linked to the companion
+diagnostic-enabled SMElib. An unmodified installed library does not provide
+these symbols. Do not replace a working installation to test this prototype.
+
+The following is an API fragment, not a complete stellar setup. ``dll`` must
+be the same verified instance used to prepare the atmosphere, abundances,
+line list, EOS and opacities. Keep continuum normalisation, broadening and
+RV fitting disabled when testing absolute native closure.
+
 Within a ``smelib_session`` encompassing ordinary model/EOS/opacity preparation,
 call the same ``SME_DLL`` instance::
 
@@ -14,6 +26,11 @@ call the same ``SME_DLL`` instance::
     intensity_bins = result.total
     boundary = result.boundary
     flux_bins, flux_boundary = result.disc_flux(global_area_weights)
+    cfld_ross = flux_bins / abs(np.diff(logtauRoss))
+
+Here ``np`` is NumPy. The required closure is ``flux_bins.sum(axis=-1) +
+flux_boundary == continuum_flux - full_flux`` within the declared numerical
+tolerance, using matching absolute, unbroadened native fluxes.
 
 ``wave`` uses the same wavelength convention as the native prepared state;
 ``mu`` contains native spherical rays, not a plane-parallel Jacobian. ``layers``
@@ -22,6 +39,13 @@ or line-opacity preparation is performed by this method. Unsupported libraries
 raise an explicit error. The method binds symbols through the already loaded
 Python extension to share its linked SMElib state. Platform portability of this
 binding must be reviewed; only Linux has been tested.
+
+The diagnostic evaluates opacity/source fields and repeats native formal
+transfer with tracing enabled; it is not an accessor for previously cached
+intensity traces. A request before model/EOS/opacity preparation fails explicitly.
+
+Outputs and conventions
+-----------------------
 
 Raw channels have shape (wavelength, ray, 6, radial_interval). The channels are
 line driving L, Q+N, continuum emission, full emission, Q, N. Complete physical
@@ -46,11 +70,7 @@ abs(diff(logtau5000)); boundaries remain separate. No broadening is applied.
 The existing native transfer domain excludes interval 0--1 and assigns zero
 output to two-entry grazing paths. This implementation preserves those
 conventions. Near/far paths are folded onto radial intervals. Agreement of
-integrated depression does not establish angular/depth convergence. Current-develop stellar regression reproduces all 184 exported arrays from
-eight frozen model35 jobs exactly, covering four full-feature windows and two
-angular chunks each. This establishes numerical preservation for those inputs,
-not independent source-physics validation or new angular/depth convergence.
-
+integrated depression does not establish angular/depth convergence. 
 Compared with the existing emission contribution function
 --------------------------------------------------------
 
@@ -86,3 +106,13 @@ Set CFLD_LIBRARY to an isolated compiled diagnostic library and run::
 
 These tests perform no stellar synthesis. No molecular line lists, observations,
 abundance fitting or velocity-analysis functionality are part of this change.
+
+Save wavelength convention, atmosphere/abundance identities, ray nodes/weights,
+coordinate arrays, source mode, native/bridge versions and ordinary spectra
+alongside the diagnostic. Preserve signed values and do not rescale to force
+closure. Native ray limits require chunking when exceeded; the tested limit is
+77 rays per call. Keep global weights when summing chunks.
+
+The companion SMElib document ``docs/physical_cfld.md`` contains the derivation,
+L/Q/N definitions, spherical mapping and boundary conventions. Detailed
+validation history is supplied with the PR rather than maintained in this page.
