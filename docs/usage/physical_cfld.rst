@@ -70,7 +70,7 @@ abs(diff(logtau5000)); boundaries remain separate. No broadening is applied.
 The existing native transfer domain excludes interval 0--1 and assigns zero
 output to two-entry grazing paths. This implementation preserves those
 conventions. Near/far paths are folded onto radial intervals. Agreement of
-integrated depression does not establish angular/depth convergence. 
+integrated depression does not establish angular/depth convergence.
 Compared with the existing emission contribution function
 --------------------------------------------------------
 
