@@ -4,6 +4,12 @@
 
 ### Changed
 
+- Updated the bundled SMElib to v6.13.21. The corrected Stehlé NALPHA table
+  padding changes affected rows of the default H8--H30 profiles and removes
+  narrow spurious spikes in H22, H26, H27, and H30. The STARK1 cache key now
+  includes the line-center wavelength, so results no longer depend on the
+  order of calls for lines with the same lower/upper levels. Continuum-
+  scattering mode 1 is deprecated in SMElib.
 - Changed the minimum supported version for pre-built macOS arm64 wheels from
   macOS 14 to macOS 15. PySME 1.2.x remains available for macOS 14 users.
 - Strengthened wheel validation with a native SMElib radiative-transfer smoke
@@ -14,8 +20,16 @@
 
 ### Added
 
+- Added `continuum_scattering_mode` with values `0` (Planck source), `1`
+  (deprecated continuum-only scattering), and `2` (line-inclusive scattering).
 - Added a manually dispatched wheel-build path that uploads artifacts for
   validation without publishing to PyPI or creating a GitHub release.
+
+### Deprecated
+
+- Deprecated `continuum_scattering_source` in favor of
+  `continuum_scattering_mode`, and deprecated continuum-scattering mode `1` in
+  favor of mode `2`.
 
 ### Fixed
 

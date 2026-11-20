@@ -46,6 +46,13 @@ def from_flex(ff, sme):
                 sme[name] = sme[name]._load(extensions[name])
             else:
                 sme[name] = extensions[name]
+    if (
+        "continuum_scattering_mode" not in header
+        and "continuum_scattering_source" in header
+    ):
+        sme.continuum_scattering_mode = (
+            1 if bool(header["continuum_scattering_source"]) else 0
+        )
     return sme
 
 
