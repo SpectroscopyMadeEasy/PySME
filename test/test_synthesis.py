@@ -9,9 +9,11 @@ import pytest
 from pysme import util
 from pysme.abund import Abund
 from pysme.atmosphere.atmosphere import Atmosphere, AtmosphereError
+from pysme.atmosphere.interpolation import AtmosphereInterpolator
 from pysme.atmosphere.krzfile import KrzFile
 from pysme.iliffe_vector import Iliffe_vector
 from pysme.linelist.linelist import LineList
+from pysme.linelist.vald import ValdFile
 from pysme.sme import SME_Structure as SME_Struct
 from pysme.synthesize import (
     Synthesizer,
@@ -24,6 +26,7 @@ from pysme.synthesize import (
     synthesize_spectrum,
 )
 from .conftest import skipif_smelib
+from .test_largefilestorage import lfs_atmo, skipif_lfs  # noqa: F401
 
 
 @skipif_smelib
@@ -998,6 +1001,63 @@ def test_dynamically_update_mu_rejects_more_grazing_rays_than_intervals():
 
     with pytest.raises(ValueError, match="at most 9"):
         synth.dynamically_update_mu(sme)
+
+
+# Convergence of dynamical mu-spacing on spherical MARCS giants. Errors are the
+# largest difference from a 77-ray reference ([40, 37], the most SMElib allows),
+# in the continuum-normalized spectrum (what fits use) and in the absolute
+# continuum. 0.1% in normalized flux is below the noise for S/N up to ~1000.
+# Continuum level offsets come mostly from the non-grazing rays and are absorbed
+# by continuum normalization, so the continuum gets a looser 0.5% limit.
+# Measured for [10, 10], [15, 15], [20, 20], [30, 30] (normalized / continuum):
+#   4800/3.0, core-limited:      3.1e-4 1.4e-4 7.6e-5 2.2e-5 /
+#                                2.6e-3 1.2e-3 6.3e-4 1.8e-4
+#   3600/-0.5, grazing-limited:  1.3e-3 8.6e-4 4.4e-4 8.1e-5 /
+#                                4.0e-4 6.5e-5 6.7e-6 2.6e-5
+# At the tip the continuum error drops below the reference's own accuracy
+# (~4e-5) from 20x20 on, so only the normalized error must keep decreasing.
+CONVERGENCE_NMU_DYN = [[10, 10], [15, 15], [20, 20], [30, 30]]
+
+
+@skipif_smelib
+@skipif_lfs
+@pytest.mark.parametrize("teff,logg", [(4800, 3.0), (3600, -0.5)])
+def test_mu_dynamic_converges_on_rgb_models(lfs_atmo, teff, logg):
+    interpolator = AtmosphereInterpolator(
+        depth="RHOX", interp="RHOX", geom="SPH", lfs_atmo=lfs_atmo
+    )
+    atmo = interpolator.interp_atmo_grid("marcs2014.sav", teff, logg, 0.0)
+    atmo.method = "embedded"
+    linelist = ValdFile(os.path.join(os.path.dirname(__file__), "testcase3.lin"))
+
+    def synthesize(nmu_dyn):
+        sme = SME_Struct()
+        sme.teff, sme.logg, sme.vmic = teff, logg, 2.0
+        sme.vmac, sme.vsini = 0.0, 0.0
+        sme.abund = Abund(monh=0.0, pattern="asplund2009")
+        sme.linelist = linelist
+        sme.atmo = deepcopy(atmo)
+        sme.wran = [[6436.0, 6444.0]]
+        sme.wint = [np.linspace(6436.5, 6443.5, 1401)]
+        sme.vrad_flag = "none"
+        sme.cscale_flag = "none"
+        sme.normalize_by_continuum = False
+        sme.mu_dynamic = True
+        sme.nmu_dyn = nmu_dyn
+        out = Synthesizer().synthesize_spectrum(sme, passNLTE=False)
+        return np.asarray(out.synth[0]), np.asarray(out.cont[0])
+
+    flux_ref, cont_ref = synthesize([40, 37])
+    norm_err, cont_err = [], []
+    for nmu_dyn in CONVERGENCE_NMU_DYN:
+        flux, cont = synthesize(nmu_dyn)
+        norm_err.append(np.max(np.abs(flux / cont - flux_ref / cont_ref)))
+        cont_err.append(np.max(np.abs(cont - cont_ref) / cont_ref))
+
+    default = CONVERGENCE_NMU_DYN.index([15, 15])
+    assert norm_err[default] < 1e-3
+    assert cont_err[default] < 5e-3
+    assert np.all(np.diff(norm_err) < 0)
 
 
 def test_dynamically_update_mu_requires_spherical_geometry():
