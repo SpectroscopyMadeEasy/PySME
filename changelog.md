@@ -26,6 +26,16 @@
   (deprecated continuum-only scattering), and `2` (line-inclusive scattering).
 - Added a manually dispatched wheel-build path that uploads artifacts for
   validation without publishing to PyPI or creating a GitHub release.
+- Added opt-in dynamical mu-spacing for spherical atmospheres
+  (`sme.mu_dynamic`, `sme.nmu_dyn`), recomputing grazing-ray limb angles from
+  the atmosphere's own depth grid at each synthesis call instead of a fixed
+  external mu grid. This removes `logg`-dependent $\chi^2$ discontinuities
+  seen with a static mu grid, most noticeably along the red giant branch
+  where atmospheric extent varies strongly with surface gravity. The default
+  `sme.nmu_dyn = [15, 15]` keeps normalized spectra within about 0.1% of a
+  converged calculation across the red giant branch. The total
+  ray count in `sme.nmu_dyn` is checked against SMElib's limit of 77, and the
+  number of grazing rays against the `ndep - 2` usable depth intervals.
 
 ### Deprecated
 

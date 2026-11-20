@@ -139,6 +139,49 @@ def test_h_stark_convolution_field(filename):
         loaded.h_stark_convolution = "unknown"
 
 
+def test_mu_dynamic_field(filename):
+    sme = SME_Struct()
+
+    assert sme.mu_dynamic is False
+    sme.mu_dynamic = True
+    assert sme.mu_dynamic is True
+    sme.mu_dynamic = False
+    assert sme.mu_dynamic is False
+    sme.mu_dynamic = 1
+    assert sme.mu_dynamic is True
+    sme.mu_dynamic = 0
+    assert sme.mu_dynamic is False
+
+    sme.mu_dynamic = True
+    sme.save(filename)
+    loaded = SME_Struct.load(filename)
+    assert loaded.mu_dynamic is True
+
+
+def test_nmu_dyn_field_is_unvalidated_at_assignment(filename):
+    """nmu_dyn is only validated inside dynamically_update_mu, the first time
+    it's actually used with mu_dynamic=True -- see test_synthesis.py for
+    that validation. At assignment time, any value is accepted."""
+    sme = SME_Struct()
+
+    assert np.array_equal(sme.nmu_dyn, [15, 15])
+
+    sme.nmu_dyn = [5, 4]
+    assert np.array_equal(sme.nmu_dyn, [5, 4])
+
+    # Malformed values are accepted with no error, since nmu_dyn is ignored
+    # entirely while mu_dynamic is False (the default).
+    sme.nmu_dyn = "not a valid nmu_dyn"
+    assert sme.nmu_dyn == "not a valid nmu_dyn"
+    sme.nmu_dyn = None
+    assert sme.nmu_dyn is None
+
+    sme.nmu_dyn = [5, 4]
+    sme.save(filename)
+    loaded = SME_Struct.load(filename)
+    assert np.array_equal(loaded.nmu_dyn, [5, 4])
+
+
 def test_load_idl_savefile(cwd):
     filename = "{}/testcase1.inp".format(cwd)
     sme = SME_Struct.load(filename)
