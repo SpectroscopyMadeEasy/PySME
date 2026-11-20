@@ -121,6 +121,20 @@ class SME_DLL:
         """str: (Expected) Location of the library file"""
         return self.libfile or CURRENT_LIB or get_full_libfile()
 
+    def GetLineDepressionContributionfunction(self, wave, mu, layers, quadrature=24):
+        """Experimental complete physical CFLD of the prepared spherical state.
+
+        Call within ``smelib_session`` covering model/EOS/opacity preparation
+        and this diagnostic. Returns per-ray absolute interval contributions,
+        source/numerical terms and separate boundaries; see line_depression.
+        Requires the optional native CFLD symbols. Does not run synthesis.
+        """
+        from .line_depression import NativeLineDepression
+        with smelib_session():
+            module = ensure_smelib_ready(self.libfile)
+            return NativeLineDepression(module.__file__).spherical_state(
+                wave, mu, layers, quadrature=quadrature)
+
     def check_data_files_exist(self):
         """
         Checks if required data files for the SME library exist.
