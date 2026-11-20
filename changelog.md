@@ -8,6 +8,9 @@
   macOS 14 to macOS 15. PySME 1.2.x remains available for macOS 14 users.
 - Strengthened wheel validation with a native SMElib radiative-transfer smoke
   test after installation.
+- The release workflow marks GitHub releases for pre-release tags (for
+  example `v1.3.0rc1`) as pre-releases. PyPI already treats these versions as
+  pre-releases, so `pip install pysme-astro` installs them only with `--pre`.
 
 ### Added
 

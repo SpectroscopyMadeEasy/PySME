@@ -515,10 +515,19 @@ jobs:
           set -euo pipefail
           TAG="${{ github.ref_name }}"
           REPO="${{ github.repository }}"
+          # Pre-release tags (PEP 440: a, b, rc, dev), e.g. v1.3.0rc1, become GitHub pre-releases;
+          # PyPI already treats these versions as pre-releases.
+          PRERELEASE=()
+          if [[ "$TAG" =~ ^v[0-9]+(\.[0-9]+)*[-._]?(a|alpha|b|beta|rc|c|pre|preview|dev)[0-9]*$ ]]; then
+            PRERELEASE=(--prerelease)
+          fi
           if gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1; then
             gh release upload "$TAG" dist/* --repo "$REPO" --clobber
+            if [[ ${#PRERELEASE[@]} -gt 0 ]]; then
+              gh release edit "$TAG" --repo "$REPO" --prerelease
+            fi
           else
-            gh release create "$TAG" dist/* --repo "$REPO" --title "$TAG"
+            gh release create "$TAG" dist/* --repo "$REPO" --title "$TAG" "${PRERELEASE[@]}"
           fi
         env:
           GH_TOKEN: ${{ github.token }}
