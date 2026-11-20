@@ -55,6 +55,10 @@ set(SMELIB_SOURCES
 )
 
 add_library(sme SHARED ${SMELIB_SOURCES})
+string(REGEX REPLACE "^v" "" SMELIB_VERSION "${SMELIB_VERSION_ID}")
+target_compile_definitions(sme PRIVATE
+    "SMELIB_VERSION=\"${SMELIB_VERSION}\""
+)
 target_include_directories(sme PRIVATE
     ${CMAKE_CURRENT_BINARY_DIR}
     ${SMELIB_DIR}/src/sme

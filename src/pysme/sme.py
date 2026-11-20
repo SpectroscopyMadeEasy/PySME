@@ -3,6 +3,7 @@ import logging
 import os.path
 import platform
 import sys
+import warnings
 from datetime import datetime as dt
 from enum import Enum, IntEnum, IntFlag
 
@@ -20,6 +21,18 @@ from .linelist.linelist import LineList
 from .nlte import NLTE
 
 logger = logging.getLogger(__name__)
+
+
+def _as_continuum_scattering_mode(self, value):
+    if (
+        isinstance(value, (bool, np.bool_))
+        or not isinstance(value, (int, np.integer))
+        or int(value) not in (0, 1, 2)
+    ):
+        raise ValueError(
+            "continuum_scattering_mode must be an integer with value 0, 1, or 2"
+        )
+    return int(value)
 
 
 class MASK_VALUES(IntFlag):
@@ -289,9 +302,10 @@ class SME_Structure(Parameters):
         ("cscale_gtol", 1e-8, asfloat, this, "float: tolerance for the continuum least squares fit"),
         ("normalize_by_continuum", True, asbool, this,
             "bool: Whether to normalize the synthetic spectrum by the synthetic continuum spectrum or not"),
-        ("continuum_scattering_source", False, asbool, this,
-            "bool: Whether to include coherent continuum scattering "
-            "in the continuum source function"),
+        ("continuum_scattering_mode", 0, _as_continuum_scattering_mode, this,
+            "int: Continuum source mode: 0 uses the Planck source, 1 uses the "
+            "deprecated continuum-only scattering source, and 2 uses the "
+            "line-inclusive scattering source"),
         ("specific_intensities_only", False, asbool, this,
             "bool: Whether to keep the specific intensities or integrate them together"),
         ("gam6", 1, asfloat, this, "float: van der Waals scaling factor"),
@@ -362,6 +376,10 @@ class SME_Structure(Parameters):
 
     def __init__(self, **kwargs):
         wind = kwargs.get("wind", None)
+        has_scattering_mode = "continuum_scattering_mode" in kwargs
+        legacy_scattering_source = kwargs.pop(
+            "continuum_scattering_source", None
+        )
         self.__dict__["_wave_invalidation_enabled"] = False
 
         atmo = kwargs.pop("atmo", {})
@@ -371,6 +389,8 @@ class SME_Structure(Parameters):
         self.wave = None
         self.wran = None
         super().__init__(**kwargs)
+        if legacy_scattering_source is not None and not has_scattering_mode:
+            self.continuum_scattering_source = legacy_scattering_source
 
         if wind is not None and self.wave is not None:
             wind = wind + 1
@@ -644,6 +664,23 @@ class SME_Structure(Parameters):
                 "Wavelength grid changed; cleared wave-dependent fields "
                 "(spec/uncs/mask/synth/cont/telluric/sint/cint and rv/continuum fit state)."
             )
+
+    @property
+    def continuum_scattering_source(self):
+        """Deprecated boolean alias for :attr:`continuum_scattering_mode`."""
+        return self.continuum_scattering_mode != 0
+
+    @continuum_scattering_source.setter
+    def continuum_scattering_source(self, value):
+        enabled = bool(value)
+        if enabled:
+            warnings.warn(
+                "continuum_scattering_source is deprecated; use "
+                "continuum_scattering_mode = 2 instead",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+        self.continuum_scattering_mode = 1 if enabled else 0
 
     @property
     def _wran(self):

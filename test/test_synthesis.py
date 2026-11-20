@@ -1048,3 +1048,91 @@ def test_flag_strong_lines_by_bins_valid_mask_matches_sliced_call():
     ref[valid_mask] = ref_sub
 
     assert np.array_equal(got, ref)
+
+
+# Continuum-scattering mode 0/1/2 (continuum_scattering_mode).
+def _continuum_scattering_sme_blue(cwd):
+    """Plane-parallel case in a blue window where scattering matters."""
+    sme = _continuum_scattering_sme(cwd, spherical=False)
+    sme.linelist = LineList()
+    sme.linelist.add("Fe 1", 3700.0, 0.9582, -3.047, 7.19, -6.22, 239.249)
+    sme.linelist.add("Cr 2", 3720.0, 4.1682, -2.117, 8.37, -6.49, 195.248)
+    sme.wran = [[3650.0, 3750.0]]
+    sme.wint = [np.linspace(3650.0, 3750.0, 41)]
+    return sme
+
+
+def _synthesize_intensities_with_mode(synth, sme, mode, use_alias=False):
+    one = deepcopy(sme)
+    if use_alias:
+        one.continuum_scattering_source = bool(mode)
+    else:
+        one.continuum_scattering_mode = int(mode)
+    out = synth.synthesize_spectrum(one, passNLTE=False)
+    return (
+        np.asarray(out.wint[0]),
+        np.asarray(out.sint[0]),
+        np.asarray(out.cint[0]),
+    )
+
+
+def test_synthesize_spectrum_passes_integer_scattering_mode():
+    dll = _DummyDLL(transf_wave=np.linspace(5000.0, 5001.0, 5))
+    synth = Synthesizer(dll=dll)
+    sme = _minimal_sme()
+
+    for mode in (0, 1, 2, 0):
+        sme.continuum_scattering_mode = mode
+        synth.synthesize_spectrum(
+            sme,
+            segments=[0],
+            passAtmosphere=False,
+            passNLTE=False,
+        )
+
+    assert dll.continuum_scattering_source_modes == [0, 1, 2, 0]
+
+
+@skipif_smelib
+def test_continuum_scattering_mode_aliases_are_bitwise_identical():
+    sme = _continuum_scattering_sme_blue(os.path.dirname(__file__))
+    synth = Synthesizer()
+
+    default = _synthesize_intensities_with_mode(synth, sme, 0)
+    alias_off = _synthesize_intensities_with_mode(synth, sme, 0, use_alias=True)
+    mode_one = _synthesize_intensities_with_mode(synth, sme, 1)
+    with pytest.warns(DeprecationWarning, match="continuum_scattering_mode = 2"):
+        alias_on = _synthesize_intensities_with_mode(synth, sme, 1, use_alias=True)
+
+    assert all(np.array_equal(left, right) for left, right in zip(default, alias_off))
+    assert all(np.array_equal(left, right) for left, right in zip(mode_one, alias_on))
+
+
+@skipif_smelib
+def test_continuum_scattering_mode_two_runs_and_changes_blue_spectrum():
+    sme = _continuum_scattering_sme_blue(os.path.dirname(__file__))
+    synth = Synthesizer()
+
+    wave_zero, line_zero, cont_zero = _synthesize_intensities_with_mode(synth, sme, 0)
+    wave_two, line_two, cont_two = _synthesize_intensities_with_mode(synth, sme, 2)
+
+    assert np.array_equal(wave_two, wave_zero)
+    assert np.all(np.isfinite(line_two))
+    assert np.all(np.isfinite(cont_two))
+    assert not np.allclose(line_two / cont_two, line_zero / cont_zero, rtol=1e-8, atol=0)
+
+
+def test_mode_two_reports_clear_error_for_old_smelib(monkeypatch):
+    import pysme.sme_synth as sme_synth_module
+
+    class OldSMElib:
+        @staticmethod
+        def SetContinuumScatteringSourceMode(mode):
+            raise RuntimeError("continuum scattering mode must be 0 or 1")
+
+    monkeypatch.setattr(sme_synth_module, "_smelib", OldSMElib())
+    dll = sme_synth_module.SME_DLL.__new__(sme_synth_module.SME_DLL)
+
+    with pytest.raises(RuntimeError, match=r"mode 2 requires SMElib >= 6\.13\.21"):
+        dll.SetContinuumScatteringSourceMode(2)
+
