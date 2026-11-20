@@ -71,3 +71,7 @@ A GUI for PySME is available in its own repository [PySME-GUI](https://github.co
 # Windows
 
 PySME is supported on Windows via WSL2 (install and run PySME inside the Linux subsystem).
+
+# Contributing
+
+Contributions are very welcome. Please open pull requests against the `develop` branch (`master` only receives releases); see [CONTRIBUTING.md](CONTRIBUTING.md).
