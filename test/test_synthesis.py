@@ -929,6 +929,37 @@ def test_resolve_mu_num_rejects_invalid_input(mu_num):
         _resolve_mu_num(mu_num)
 
 
+def test_resolve_mu_num_accepts_exactly_musize_rays():
+    assert _resolve_mu_num([38, 39]) == (38, 39)
+
+
+@pytest.mark.parametrize("mu_num", [[40, 40], [77, 1], [1, 77]])
+def test_resolve_mu_num_rejects_more_than_musize_rays(mu_num):
+    with pytest.raises(ValueError, match="at most 77"):
+        _resolve_mu_num(mu_num)
+
+
+def test_dynamically_update_mu_rejects_more_than_musize_rays():
+    sme = _minimal_sme()
+    sme.atmo = _make_dynamic_mu_atmo()
+    sme.mu_num = [40, 40]
+    synth = Synthesizer(dll=_DummyDLL())
+
+    with pytest.raises(ValueError, match="at most 77"):
+        synth.dynamically_update_mu(sme)
+
+
+@skipif_smelib
+def test_mu_dynamic_ray_limit_raises_before_transf():
+    # Without the check, [40, 40] reached SMElib's Transf and failed there.
+    sme = _continuum_scattering_sme(os.path.dirname(__file__), spherical=True)
+    sme.mu_dynamic = True
+    sme.mu_num = [40, 40]
+
+    with pytest.raises(ValueError, match="at most 77"):
+        Synthesizer().synthesize_spectrum(sme, passNLTE=False)
+
+
 def test_dynamically_update_mu_requires_spherical_geometry():
     sme = _minimal_sme()
     sme.atmo = _make_dynamic_mu_atmo()

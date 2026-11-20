@@ -19,6 +19,7 @@ from scipy.spatial.distance import cdist
 from . import broadening
 from .atmosphere.atmosphere import AtmosphereError
 from .atmosphere.interpolation import AtmosphereInterpolator
+from .cwrapper import MUSIZE
 from .continuum_and_radial_velocity import (
     apply_radial_velocity_and_continuum,
     match_rv_continuum,
@@ -316,7 +317,11 @@ def _same_path(a, b):
 
 
 def _resolve_mu_num(mu_num):
-    """Validate mu_num and return (non_grazing_number, grazing_number)."""
+    """Validate mu_num and return (non_grazing_number, grazing_number).
+
+    Both counts must be positive integers, and their sum may not exceed
+    MUSIZE, the maximum number of rays SMElib's Transf accepts.
+    """
     try:
         arr = np.asarray(mu_num, dtype=float).reshape(2)
     except (TypeError, ValueError):
@@ -329,7 +334,15 @@ def _resolve_mu_num(mu_num):
             f"sme.mu_num must be two positive integers when mu_dynamic=True, "
             f"got {mu_num!r}."
         )
-    return int(arr[0]), int(arr[1])
+    non_grazing_number, grazing_number = int(arr[0]), int(arr[1])
+    total = non_grazing_number + grazing_number
+    if total > MUSIZE:
+        raise ValueError(
+            f"sme.mu_num={mu_num!r} requests {total} rays in total, but SMElib "
+            f"supports at most {MUSIZE} (MUSIZE). Reduce the number of "
+            f"non-grazing or grazing rays."
+        )
+    return non_grazing_number, grazing_number
 
 
 def _iter_exception_chain(exc):
@@ -2267,8 +2280,8 @@ class Synthesizer:
         AtmosphereError
             If the atmosphere is not spherical, or is missing height/radius.
         ValueError
-            If sme.mu_num does not resolve to two positive integers
-            (see _resolve_mu_num).
+            If sme.mu_num does not resolve to two positive integers, or
+            asks for more than MUSIZE rays in total (see _resolve_mu_num).
         """
         if sme._atmo.geom != "SPH":
             raise AtmosphereError(

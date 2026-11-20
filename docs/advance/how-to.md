@@ -36,7 +36,10 @@ sme = synthesize_spectrum(sme)
 
 This option requires a spherical (SPH) atmosphere; it raises an error at
 synthesis time for plane-parallel (PP) models. `mu_num` is ignored (and
-never validated) whenever `mu_dynamic` is `False`.
+never validated) whenever `mu_dynamic` is `False`. When it is used, the
+total number of rays, `n_non_grazing + n_grazing`, may not exceed 77, the
+maximum SMElib's radiative transfer accepts (`MUSIZE`); larger requests
+raise a `ValueError` before synthesis starts.
 
 Setting `sme.nmu` afterwards silently regenerates `sme.mu` via the old
 static formula, since `nmu` is unaware of `mu_dynamic` -- set `mu_dynamic`

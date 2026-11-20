@@ -346,7 +346,8 @@ class SME_Structure(Parameters):
             "Note: setting sme.nmu afterwards silently regenerates sme.mu via the old static formula, since nmu is unaware of mu_dynamic."),
         ("mu_num", [10, 10], this, this,
             "array of size (2,): [n_non_grazing, n_grazing] ray counts used when mu_dynamic is True; ignored otherwise. "
-            "Validated only when actually used (must be two positive integers), not at assignment time."),
+            "Validated only when actually used (must be two positive integers "
+            "summing to at most 77, SMElib's MUSIZE), not at assignment time."),
         ("wran", None, this, this,
             "array of size (nseg, 2): beginning and end wavelength points of each segment"),
         ("wint", None, vector, this,
