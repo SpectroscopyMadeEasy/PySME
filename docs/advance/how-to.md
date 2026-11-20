@@ -30,12 +30,12 @@ the opt-in switch before synthesis:
 from pysme.synthesize import synthesize_spectrum
 
 sme.mu_dynamic = True
-sme.mu_num = [15, 15]  # optional: [n_non_grazing, n_grazing] ray counts, default [15, 15]
+sme.nmu_dyn = [15, 15]  # optional: [n_non_grazing, n_grazing], default [15, 15]
 sme = synthesize_spectrum(sme)
 ```
 
 This option requires a spherical (SPH) atmosphere; it raises an error at
-synthesis time for plane-parallel (PP) models. `mu_num` is ignored (and
+synthesis time for plane-parallel (PP) models. `nmu_dyn` is ignored (and
 never validated) whenever `mu_dynamic` is `False`. When it is used, the
 total number of rays, `n_non_grazing + n_grazing`, may not exceed 77, the
 maximum SMElib's radiative transfer accepts (`MUSIZE`), and `n_grazing`
@@ -52,7 +52,7 @@ you need higher accuracy.
 
 Setting `sme.nmu` afterwards silently regenerates `sme.mu` via the old
 static formula, since `nmu` is unaware of `mu_dynamic` -- set `mu_dynamic`
-and `mu_num` last, or avoid setting `nmu` at all once `mu_dynamic` is in use.
+and `nmu_dyn` last, or avoid setting `nmu` at all once `mu_dynamic` is in use.
 
 ### Worked example
 
@@ -80,7 +80,7 @@ sme.mu_dynamic = True
 Synthesizer().dynamically_update_mu(sme)
 ```
 
-`sme.mu` (30 values, since `mu_num` defaults to `[15, 15]`) now reads:
+`sme.mu` (30 values, since `nmu_dyn` defaults to `[15, 15]`) now reads:
 
 ```py
 array([0.9887, 0.9658, 0.9423, 0.9183, 0.8936, 0.8681, 0.8419, 0.8149,
@@ -107,7 +107,7 @@ the stellar radius at the tip. This has two consequences for a *static* set
 of mu angles:
 
 1. The number of rays that fall into the "grazing" regime (rays whose line
-   of sight never reaches the bottom of the atmosphere; see `mu_num`)
+   of sight never reaches the bottom of the atmosphere; see `nmu_dyn`)
    changes with surface gravity, so spectra computed at nearby `logg` values
    can end up sampled by a different mix of grazing and non-grazing rays.
 2. Where only a few rays are grazing, each grazing ray's

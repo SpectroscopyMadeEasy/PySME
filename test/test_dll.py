@@ -880,7 +880,7 @@ def test_dynamic_mu_list_is_invariant_to_order(
 
     sme = SME_Struct()
     sme.atmo = model_atmo
-    sme.mu_num = [4, 3]
+    sme.nmu_dyn = [4, 3]
     Synthesizer(dll=libsme).dynamically_update_mu(sme)
     mu_forward = np.asarray(sme.mu)
     mu_reverse = mu_forward[::-1].copy()

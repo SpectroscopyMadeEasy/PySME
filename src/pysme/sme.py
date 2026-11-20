@@ -344,7 +344,7 @@ class SME_Structure(Parameters):
             "bool: Whether to recompute sme.mu from the atmosphere's depth grid every time the atmosphere is (re)computed. "
             "Requires spherical (SPH) atmosphere geometry; raises at synthesis time otherwise. "
             "Note: setting sme.nmu afterwards silently regenerates sme.mu via the old static formula, since nmu is unaware of mu_dynamic."),
-        ("mu_num", [15, 15], this, this,
+        ("nmu_dyn", [15, 15], this, this,
             "array of size (2,): [n_non_grazing, n_grazing] ray counts used when mu_dynamic is True; ignored otherwise. "
             "Validated only when actually used (must be two positive integers "
             "summing to at most 77, SMElib's MUSIZE, with n_grazing at most "

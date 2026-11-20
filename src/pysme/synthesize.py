@@ -316,29 +316,29 @@ def _same_path(a, b):
     )
 
 
-def _resolve_mu_num(mu_num):
-    """Validate mu_num and return (non_grazing_number, grazing_number).
+def _resolve_nmu_dyn(nmu_dyn):
+    """Validate nmu_dyn and return (non_grazing_number, grazing_number).
 
     Both counts must be positive integers, and their sum may not exceed
     MUSIZE, the maximum number of rays SMElib's Transf accepts.
     """
     try:
-        arr = np.asarray(mu_num, dtype=float).reshape(2)
+        arr = np.asarray(nmu_dyn, dtype=float).reshape(2)
     except (TypeError, ValueError):
         raise ValueError(
-            f"sme.mu_num must be two positive integers when mu_dynamic=True, "
-            f"got {mu_num!r}."
+            f"sme.nmu_dyn must be two positive integers when mu_dynamic=True, "
+            f"got {nmu_dyn!r}."
         )
     if np.any(arr <= 0) or np.any(arr != np.floor(arr)):
         raise ValueError(
-            f"sme.mu_num must be two positive integers when mu_dynamic=True, "
-            f"got {mu_num!r}."
+            f"sme.nmu_dyn must be two positive integers when mu_dynamic=True, "
+            f"got {nmu_dyn!r}."
         )
     non_grazing_number, grazing_number = int(arr[0]), int(arr[1])
     total = non_grazing_number + grazing_number
     if total > MUSIZE:
         raise ValueError(
-            f"sme.mu_num={mu_num!r} requests {total} rays in total, but SMElib "
+            f"sme.nmu_dyn={nmu_dyn!r} requests {total} rays in total, but SMElib "
             f"supports at most {MUSIZE} (MUSIZE). Reduce the number of "
             f"non-grazing or grazing rays."
         )
@@ -2264,8 +2264,8 @@ class Synthesizer:
           the ray's tangent point falls midway between that depth point and
           the next deeper one.
 
-        The number of rays in each group is controlled by sme.mu_num
-        (see _resolve_mu_num). This mutates sme.mu in place; it does not
+        The number of rays in each group is controlled by sme.nmu_dyn
+        (see _resolve_nmu_dyn). This mutates sme.mu in place; it does not
         return a value.
 
         Parameters
@@ -2280,8 +2280,8 @@ class Synthesizer:
         AtmosphereError
             If the atmosphere is not spherical, or is missing height/radius.
         ValueError
-            If sme.mu_num does not resolve to two positive integers, asks
-            for more than MUSIZE rays in total (see _resolve_mu_num), or
+            If sme.nmu_dyn does not resolve to two positive integers, asks
+            for more than MUSIZE rays in total (see _resolve_nmu_dyn), or
             asks for more grazing rays than the ndep - 2 depth intervals
             usable as tangent points.
         """
@@ -2297,14 +2297,14 @@ class Synthesizer:
                 "set without providing them)."
             )
 
-        non_grazing_number, grazing_number = _resolve_mu_num(sme.mu_num)
+        non_grazing_number, grazing_number = _resolve_nmu_dyn(sme.nmu_dyn)
 
         # Grazing tangent points sit in depth intervals 1 to ndep-2 (see below)
         nr_of_depthpoints = sme._atmo.ndep
         max_grazing_number = nr_of_depthpoints - 2
         if grazing_number > max_grazing_number:
             raise ValueError(
-                f"sme.mu_num requests {grazing_number} grazing rays, but the "
+                f"sme.nmu_dyn requests {grazing_number} grazing rays, but the "
                 f"atmosphere has {nr_of_depthpoints} depth points, which allows at "
                 f"most {max_grazing_number} (one per usable depth interval)."
             )

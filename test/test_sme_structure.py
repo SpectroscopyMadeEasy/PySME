@@ -158,28 +158,28 @@ def test_mu_dynamic_field(filename):
     assert loaded.mu_dynamic is True
 
 
-def test_mu_num_field_is_unvalidated_at_assignment(filename):
-    """mu_num is only validated inside dynamically_update_mu, the first time
+def test_nmu_dyn_field_is_unvalidated_at_assignment(filename):
+    """nmu_dyn is only validated inside dynamically_update_mu, the first time
     it's actually used with mu_dynamic=True -- see test_synthesis.py for
     that validation. At assignment time, any value is accepted."""
     sme = SME_Struct()
 
-    assert np.array_equal(sme.mu_num, [15, 15])
+    assert np.array_equal(sme.nmu_dyn, [15, 15])
 
-    sme.mu_num = [5, 4]
-    assert np.array_equal(sme.mu_num, [5, 4])
+    sme.nmu_dyn = [5, 4]
+    assert np.array_equal(sme.nmu_dyn, [5, 4])
 
-    # Malformed values are accepted with no error, since mu_num is ignored
+    # Malformed values are accepted with no error, since nmu_dyn is ignored
     # entirely while mu_dynamic is False (the default).
-    sme.mu_num = "not a valid mu_num"
-    assert sme.mu_num == "not a valid mu_num"
-    sme.mu_num = None
-    assert sme.mu_num is None
+    sme.nmu_dyn = "not a valid nmu_dyn"
+    assert sme.nmu_dyn == "not a valid nmu_dyn"
+    sme.nmu_dyn = None
+    assert sme.nmu_dyn is None
 
-    sme.mu_num = [5, 4]
+    sme.nmu_dyn = [5, 4]
     sme.save(filename)
     loaded = SME_Struct.load(filename)
-    assert np.array_equal(loaded.mu_num, [5, 4])
+    assert np.array_equal(loaded.nmu_dyn, [5, 4])
 
 
 def test_load_idl_savefile(cwd):

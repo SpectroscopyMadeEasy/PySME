@@ -19,7 +19,7 @@ from pysme.synthesize import (
     _compute_linelist_hash,
     _compute_almax_lineinfo_for_sme,
     _load_lineinfo_cache_file,
-    _resolve_mu_num,
+    _resolve_nmu_dyn,
     _temporary_brackett_convolution_env,
     synthesize_spectrum,
 )
@@ -862,7 +862,7 @@ def test_high_level_continuum_scattering_source_spherical_on():
 def test_mu_dynamic_updates_mu_during_real_synthesis():
     sme = _continuum_scattering_sme(os.path.dirname(__file__), spherical=True)
     sme.mu_dynamic = True
-    sme.mu_num = [4, 3]
+    sme.nmu_dyn = [4, 3]
     synth = Synthesizer()
 
     result = synth.synthesize_spectrum(sme, passNLTE=False)
@@ -899,7 +899,7 @@ def _make_dynamic_mu_atmo(ndep=11, radius=10.0):
 
 
 @pytest.mark.parametrize(
-    "mu_num,expected",
+    "nmu_dyn,expected",
     [
         ((10, 10), (10, 10)),
         ([10, 10], (10, 10)),
@@ -907,12 +907,12 @@ def _make_dynamic_mu_atmo(ndep=11, radius=10.0):
         (["10", "10"], (10, 10)),
     ],
 )
-def test_resolve_mu_num_accepts_valid_input(mu_num, expected):
-    assert _resolve_mu_num(mu_num) == expected
+def test_resolve_nmu_dyn_accepts_valid_input(nmu_dyn, expected):
+    assert _resolve_nmu_dyn(nmu_dyn) == expected
 
 
 @pytest.mark.parametrize(
-    "mu_num",
+    "nmu_dyn",
     [
         [0, 10],
         [-1, 10],
@@ -924,25 +924,25 @@ def test_resolve_mu_num_accepts_valid_input(mu_num, expected):
         ["10.5", "10"],
     ],
 )
-def test_resolve_mu_num_rejects_invalid_input(mu_num):
+def test_resolve_nmu_dyn_rejects_invalid_input(nmu_dyn):
     with pytest.raises(ValueError):
-        _resolve_mu_num(mu_num)
+        _resolve_nmu_dyn(nmu_dyn)
 
 
-def test_resolve_mu_num_accepts_exactly_musize_rays():
-    assert _resolve_mu_num([38, 39]) == (38, 39)
+def test_resolve_nmu_dyn_accepts_exactly_musize_rays():
+    assert _resolve_nmu_dyn([38, 39]) == (38, 39)
 
 
-@pytest.mark.parametrize("mu_num", [[40, 40], [77, 1], [1, 77]])
-def test_resolve_mu_num_rejects_more_than_musize_rays(mu_num):
+@pytest.mark.parametrize("nmu_dyn", [[40, 40], [77, 1], [1, 77]])
+def test_resolve_nmu_dyn_rejects_more_than_musize_rays(nmu_dyn):
     with pytest.raises(ValueError, match="at most 77"):
-        _resolve_mu_num(mu_num)
+        _resolve_nmu_dyn(nmu_dyn)
 
 
 def test_dynamically_update_mu_rejects_more_than_musize_rays():
     sme = _minimal_sme()
     sme.atmo = _make_dynamic_mu_atmo()
-    sme.mu_num = [40, 40]
+    sme.nmu_dyn = [40, 40]
     synth = Synthesizer(dll=_DummyDLL())
 
     with pytest.raises(ValueError, match="at most 77"):
@@ -954,25 +954,25 @@ def test_mu_dynamic_ray_limit_raises_before_transf():
     # Without the check, [40, 40] reached SMElib's Transf and failed there.
     sme = _continuum_scattering_sme(os.path.dirname(__file__), spherical=True)
     sme.mu_dynamic = True
-    sme.mu_num = [40, 40]
+    sme.nmu_dyn = [40, 40]
 
     with pytest.raises(ValueError, match="at most 77"):
         Synthesizer().synthesize_spectrum(sme, passNLTE=False)
 
 
-@pytest.mark.parametrize("mu_num", [[1, 1], [10, 10], [38, 39], [23, 54]])
-def test_dynamically_update_mu_matches_smelib_grazing_classification(mu_num):
+@pytest.mark.parametrize("nmu_dyn", [[1, 1], [10, 10], [38, 39], [23, 54]])
+def test_dynamically_update_mu_matches_smelib_grazing_classification(nmu_dyn):
     # SMElib calls a ray grazing when its impact parameter
     # P = R_top * sqrt(1 - mu^2) is larger than the radius of the deepest layer.
     sme = _minimal_sme()
     sme.atmo = _make_dynamic_mu_atmo(ndep=56, radius=1e11)
-    sme.mu_num = mu_num
+    sme.nmu_dyn = nmu_dyn
     Synthesizer(dll=_DummyDLL()).dynamically_update_mu(sme)
 
     height = np.asarray(sme.atmo.height)
     radius = sme.atmo.radius
     impact = (radius + height[0]) * np.sqrt(1 - np.asarray(sme.mu) ** 2)
-    n_non_grazing, n_grazing = mu_num
+    n_non_grazing, n_grazing = nmu_dyn
     assert np.count_nonzero(impact < radius + height[-1]) == n_non_grazing
     assert np.count_nonzero(impact > radius + height[-1]) == n_grazing
     # No ray turns in the top interval, where SMElib returns zero intensity
@@ -982,7 +982,7 @@ def test_dynamically_update_mu_matches_smelib_grazing_classification(mu_num):
 def test_dynamically_update_mu_accepts_one_grazing_ray_per_interval():
     sme = _minimal_sme()
     sme.atmo = _make_dynamic_mu_atmo(ndep=11)
-    sme.mu_num = [1, 9]
+    sme.nmu_dyn = [1, 9]
     Synthesizer(dll=_DummyDLL()).dynamically_update_mu(sme)
 
     mu = np.asarray(sme.mu)
@@ -993,7 +993,7 @@ def test_dynamically_update_mu_accepts_one_grazing_ray_per_interval():
 def test_dynamically_update_mu_rejects_more_grazing_rays_than_intervals():
     sme = _minimal_sme()
     sme.atmo = _make_dynamic_mu_atmo(ndep=11)
-    sme.mu_num = [1, 10]
+    sme.nmu_dyn = [1, 10]
     synth = Synthesizer(dll=_DummyDLL())
 
     with pytest.raises(ValueError, match="at most 9"):
@@ -1023,7 +1023,7 @@ def test_dynamically_update_mu_requires_height_and_radius():
 def test_dynamically_update_mu_computes_valid_mu_list():
     sme = _minimal_sme()
     sme.atmo = _make_dynamic_mu_atmo(ndep=21)
-    sme.mu_num = [5, 4]
+    sme.nmu_dyn = [5, 4]
     synth = Synthesizer(dll=_DummyDLL())
 
     synth.dynamically_update_mu(sme)
@@ -1035,10 +1035,10 @@ def test_dynamically_update_mu_computes_valid_mu_list():
     assert np.all(np.diff(mu) <= 0)
 
 
-def test_dynamically_update_mu_propagates_invalid_mu_num():
+def test_dynamically_update_mu_propagates_invalid_nmu_dyn():
     sme = _minimal_sme()
     sme.atmo = _make_dynamic_mu_atmo()
-    sme.mu_num = [0, 10]
+    sme.nmu_dyn = [0, 10]
     synth = Synthesizer(dll=_DummyDLL())
 
     with pytest.raises(ValueError):
