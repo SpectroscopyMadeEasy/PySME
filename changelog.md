@@ -16,6 +16,11 @@
 
 ### Fixed
 
+- Guard against silently re-interpolating a populated grid atmosphere when an
+  absolute abundance pattern changes `sme.monh`; PySME records the
+  interpolation metallicity and freezes the existing structure when the
+  abundance object is replaced, while raising a clear error for ambiguous
+  in-place metallicity mutations.
 - Add physical H/He acceptance tests using small real MARCS 2012/2014 grid
   samples, plus mandatory full-grid checks after CI prefetch on Linux/macOS.
   Cover direct extraction, interpolation and SME-file persistence.

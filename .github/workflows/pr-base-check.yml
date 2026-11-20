@@ -1,0 +1,36 @@
+name: PR base check
+
+# Pull requests opened against master by mistake are retargeted to develop, with a comment.
+# Release merges (develop -> master) and hotfix/* or release/* branches from this repository are left alone.
+# The workflow never checks out or runs code from the pull request, so pull_request_target is safe here.
+
+on:
+  pull_request_target:
+    types: [opened, reopened]
+    branches: [master]
+
+permissions:
+  pull-requests: write
+
+jobs:
+  retarget:
+    runs-on: ubuntu-latest
+    if: >-
+      !(github.event.pull_request.head.repo.full_name == github.repository &&
+        (github.event.pull_request.head.ref == 'develop' ||
+         startsWith(github.event.pull_request.head.ref, 'release/') ||
+         startsWith(github.event.pull_request.head.ref, 'hotfix/')))
+    steps:
+      - uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b  # v7.1.0 (pinned)
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            await github.rest.pulls.update({
+              owner: context.repo.owner, repo: context.repo.repo,
+              pull_number: pr.number, base: 'develop'
+            });
+            await github.rest.issues.createComment({
+              owner: context.repo.owner, repo: context.repo.repo,
+              issue_number: pr.number,
+              body: `Thanks for the contribution! Pull requests go to \`develop\`; \`master\` only receives release merges, so the base branch has been changed to \`develop\` automatically. See [CONTRIBUTING.md](https://github.com/${context.repo.owner}/${context.repo.repo}/blob/master/CONTRIBUTING.md).`
+            });
