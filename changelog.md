@@ -64,7 +64,7 @@
 
 Already incorrectly decoded atmosphere files are not repaired automatically;
 reload them from their source grids. The separate MARCS text-reader H/He
-metallicity correction is deferred. The pinned SMElib dependency is unchanged.
+metallicity correction is deferred.
 
 ## v1.2.0 - 2026-09-24
 
