@@ -567,11 +567,23 @@ class Grid:
         lineindices: array (nlines,)
             indices of the used lines in the linelist
         """
-        # find the n nearest parameter values in the grid (n == subgrid_size)
-        x = np.argsort(np.abs(rabund - self._xfe))[: self.subgrid_size[0]]
-        t = np.argsort(np.abs(teff - self._teff))[: self.subgrid_size[1]]
-        g = np.argsort(np.abs(logg - self._grav))[: self.subgrid_size[2]]
-        f = np.argsort(np.abs(monh - self._feh))[: self.subgrid_size[3]]
+        # find the n nearest parameter values in the grid (n == subgrid_size),
+        # always including the two values that bracket the target (the two edge
+        # values outside the grid), so that interpolate() works between neighbours
+        def nearest(values, target, n):
+            values = np.asarray(values)
+            idx = np.argsort(np.abs(target - values))[:n]
+            if values.size > 1:
+                order = np.argsort(values)
+                k = np.searchsorted(values[order], target, side="right") - 1
+                k = min(max(k, 0), values.size - 2)
+                idx = np.union1d(idx, order[[k, k + 1]])
+            return idx
+
+        x = nearest(self._xfe, rabund, self.subgrid_size[0])
+        t = nearest(self._teff, teff, self.subgrid_size[1])
+        g = nearest(self._grav, logg, self.subgrid_size[2])
+        f = nearest(self._feh, monh, self.subgrid_size[3])
 
         x = x[np.argsort(self._xfe[x])]
         t = t[np.argsort(self._teff[t])]
@@ -907,14 +919,12 @@ class Grid:
         ntarget = len(target_depth)
 
         param = [rabund, teff, logg, monh]
-        right = [
-            (self._points[i][-1] == p) and len(self._points[i] > 1)
-            for i, p in enumerate(param)
+        # index of the lower node of the interval containing the target, clipped to
+        # the first/last interval outside the cached nodes (linear extrapolation);
+        iabund, iteff, ilogg, imonh = [
+            min(max(int(np.searchsorted(pts, p, side="right")) - 1, 0), max(len(pts) - 2, 0))
+            for pts, p in zip(self._points, param)
         ]
-        iabund = np.digitize(rabund, self._points[0], right=right[0]) - 1
-        iteff = np.digitize(teff, self._points[1], right=right[1]) - 1
-        ilogg = np.digitize(logg, self._points[2], right=right[2]) - 1
-        imonh = np.digitize(monh, self._points[3], right=right[3]) - 1
 
         # Interpolate on the grid
         # We only interpolate on the 2**4 points around the requested values
