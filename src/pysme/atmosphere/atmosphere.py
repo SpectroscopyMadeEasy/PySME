@@ -45,6 +45,8 @@ class Atmosphere(Collection):
         ("source", "marcs2012.sav", this, this, "str: datafile name of this data, or atmosphere grid/file"),
         ("method", "grid", lowercase(oneof("grid", "routine", "embedded")), this,
             "str: whether the data source is a grid or a fixed atmosphere"),
+        ("interpolation_monh", None, this, this,
+            "float or None: [M/H] used for the most recent grid interpolation"),
         ("geom", "PP", uppercase(oneof("PP", "SPH", None)), this,
             "str: the geometry of the atmopshere model"),
         ("radius", 0, asfloat, this, "float: radius of the spherical model"),
@@ -117,7 +119,7 @@ class Atmosphere(Collection):
         ext2 = self.abund._save()
         header = ext2.header
         data["abund"] = ext2.data
-        header["abund_format"] = header["type"]
+        header["abund_format"] = header["type_internal"]
         del header["type"]
 
         for name in self._names:
@@ -137,7 +139,10 @@ class Atmosphere(Collection):
 
     @classmethod
     def _load(cls, ext):
-        header = ext.header
+        header = dict(ext.header)
+        # Old files labelled the internal H=12 array with the input format.
+        if "type_internal" in header:
+            header["abund_format"] = header["type_internal"]
         header.update(ext.data)
         obj = cls(**header)
         return obj
@@ -256,6 +261,7 @@ class AtmosphereGrid(np.recarray):
 
         if isinstance(value, (np.record, np.void)):
             kwargs = {s: value[s] for s in value.dtype.names}
+            kwargs["abund_format"] = self.abund_format
             value = Atmosphere(**kwargs)
         if isinstance(value, (Atmosphere, cls)):
             for name in self._names:
@@ -276,7 +282,7 @@ class AtmosphereGrid(np.recarray):
 
     @property
     def ndep(self):
-        return self.shape[1]
+        return self.dtype["temp"].shape[0]
 
     def save(self, filename):
         """Save the Atmopshere grid to a file using a numpy save format"""

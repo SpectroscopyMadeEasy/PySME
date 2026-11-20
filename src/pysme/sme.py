@@ -90,7 +90,7 @@ class Parameters(Collection):
     @_abund.setter
     def _abund(self, value):
         if isinstance(value, Abund):
-            self.__abund = value
+            new_abund = value
         else:
             logger.warning(
                 "Abundance set using just a pattern, assuming that "
@@ -98,7 +98,34 @@ class Parameters(Collection):
                 "If that is incorrect, try changing the format first.",
                 self.__abund.type,
             )
-            self.__abund = Abund(monh=self.monh, pattern=value, type=self.__abund.type)
+            new_abund = Abund(
+                monh=self.monh, pattern=value, type=self.__abund.type
+            )
+
+        self.__abund = new_abund
+
+        # Replacing the abundance object is the common way to install an
+        # absolute pattern after a grid atmosphere has already been
+        # interpolated.  Keep that first structure fixed when the replacement
+        # changes [M/H]; otherwise the next synthesis would silently perform a
+        # second grid interpolation at the abundance pattern's coordinate.
+        atmo = getattr(self, "_atmo", None)
+        interpolation_monh = getattr(atmo, "interpolation_monh", None)
+        if (
+            atmo is not None
+            and getattr(atmo, "method", None) == "grid"
+            and interpolation_monh is not None
+            and not np.isclose(
+                float(new_abund.monh), float(interpolation_monh), rtol=0.0, atol=1e-12
+            )
+        ):
+            atmo.method = "embedded"
+            logger.info(
+                "Freezing the atmosphere interpolated at [M/H]=%.6g after "
+                "replacing the abundance pattern at [M/H]=%.6g.",
+                float(interpolation_monh),
+                float(new_abund.monh),
+            )
 
     @property
     def monh(self):
@@ -108,6 +135,21 @@ class Parameters(Collection):
     @monh.setter
     def monh(self, value):
         self.abund.monh = value
+        # The public SME metallicity setter is an explicit request to move the
+        # grid coordinate.  Mark any populated grid atmosphere for a fresh
+        # interpolation; this keeps the long-standing ``sme.monh = value``
+        # workflow distinct from an ambiguous direct ``sme.abund.monh`` edit.
+        atmo = getattr(self, "_atmo", None)
+        interpolation_monh = getattr(atmo, "interpolation_monh", None)
+        if (
+            atmo is not None
+            and getattr(atmo, "method", None) == "grid"
+            and interpolation_monh is not None
+            and not np.isclose(
+                float(value), float(interpolation_monh), rtol=0.0, atol=1e-12
+            )
+        ):
+            atmo.interpolation_monh = None
 
     def citation(self, format="string"):
         return self.abund.citation()
