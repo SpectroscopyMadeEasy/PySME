@@ -164,7 +164,7 @@ def test_mu_num_field_is_unvalidated_at_assignment(filename):
     that validation. At assignment time, any value is accepted."""
     sme = SME_Struct()
 
-    assert np.array_equal(sme.mu_num, [10, 10])
+    assert np.array_equal(sme.mu_num, [15, 15])
 
     sme.mu_num = [5, 4]
     assert np.array_equal(sme.mu_num, [5, 4])

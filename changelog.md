@@ -31,7 +31,9 @@
   the atmosphere's own depth grid at each synthesis call instead of a fixed
   external mu grid. This removes `logg`-dependent $\chi^2$ discontinuities
   seen with a static mu grid, most noticeably along the red giant branch
-  where atmospheric extent varies strongly with surface gravity. The total
+  where atmospheric extent varies strongly with surface gravity. The default
+  `sme.mu_num = [15, 15]` keeps normalized spectra within about 0.1% of a
+  converged calculation across the red giant branch. The total
   ray count in `sme.mu_num` is checked against SMElib's limit of 77, and the
   number of grazing rays against the `ndep - 2` usable depth intervals.
 
