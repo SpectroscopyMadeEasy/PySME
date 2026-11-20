@@ -89,10 +89,14 @@ from IDL SME. It is recommend however to use the new variables.
 :cint:
     Continuum specific intensities on `wint`, stored per segment when
     `specific_intensities_only=True`.
+:continuum_scattering_mode:
+    Integer selecting the continuum source used during synthesis for plane-parallel and spherical atmospheres.
+    Mode `0` (the default) uses the Planck source and keeps the historical PySME behavior.
+    Mode `1` uses the deprecated continuum-only scattering source.
+    Mode `2` is the recommended scattering treatment and includes line opacity and emissivity in the source iteration.
 :continuum_scattering_source:
-    Boolean flag controlling whether coherent continuum scattering is included in the continuum source function during synthesis.
-    The default is `False`, which keeps the historical PySME behavior.
-    Set this to `True` to use the opt-in continuum-scattering source treatment for plane-parallel and spherical atmospheres.
+    Deprecated Boolean alias. Setting it to `False` selects mode `0`; setting it to `True` selects mode `1` and emits a deprecation warning.
+    New code should set `continuum_scattering_mode`, normally to `2` when scattering is required.
 
 
 ## Abundance

@@ -1824,9 +1824,7 @@ class Synthesizer:
         dll.SetLibraryPath()
         _configure_continuum_opacity_grid(dll, sme)
         _configure_adaptive_transfer_grid(dll, sme)
-        dll.SetContinuumScatteringSourceMode(
-            int(sme.continuum_scattering_source)
-        )
+        dll.SetContinuumScatteringSourceMode(sme.continuum_scattering_mode)
         if passLineList:
             line_selection_mask = np.ones(len(sme.linelist), dtype=bool)
             linelist_for_smelib = sme.linelist
