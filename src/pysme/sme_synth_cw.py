@@ -233,10 +233,18 @@ class SME_DLL:
         self.h2broad = False
 
     def SetContinuumScatteringSourceMode(self, mode):
-        """Enable or disable the continuum scattering source for plane-parallel and spherical transfer."""
-        self.lib.SetContinuumScatteringSourceMode(
-            int(bool(mode)), type="int", state=self.state
-        )
+        """Select the continuum source mode for plane-parallel and spherical transfer."""
+        mode = int(mode)
+        try:
+            self.lib.SetContinuumScatteringSourceMode(
+                mode, type="int", state=self.state
+            )
+        except (RuntimeError, ValueError) as exc:
+            if mode == 2 and "mode must be 0 or 1" in str(exc).lower():
+                raise RuntimeError(
+                    "Continuum-scattering mode 2 requires SMElib >= 6.13.21"
+                ) from exc
+            raise
 
     def SetContinuumOpacityGrid(
         self, mode="exact", base_step=1.0, rtol=1e-3, min_step=1e-3

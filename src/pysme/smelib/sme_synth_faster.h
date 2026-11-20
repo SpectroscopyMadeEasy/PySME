@@ -14,7 +14,8 @@
 /* Datafile locations */
 // DATA_DIR is defined in platform.h
 
-#define DATAFILE_FE "Fe1_Bautista2017.dat.INTEL"
+// #define DATAFILE_FE "Fe1_Bautista2017.dat.INTEL"
+#define DATAFILE_FE "Fe1_Zatsarinny2019.dat.INTEL"
 #define DATAFILE_NH "NH_Stancil2018.dat.INTEL"
 #define DATAFILE_STEHLE "stehle_long.dat.INTEL"
 #define DATAFILE_BPO "bpo_self.grid.INTEL"
@@ -51,7 +52,8 @@ extern "C" const char *SME_DLL SetHlinopWarningMode(int n, void *arg[]); /* Set 
 extern "C" const char *SME_DLL GetHlinopWarnings(int n, void *arg[]);    /* Return and clear HLINOP fallback warning summary */
 extern "C" const char *SME_DLL SetLineInfoMode(int n, void *arg[]);   /* Set handling mode for precomputed line info */
 extern "C" const char *SME_DLL SetAdaptiveTransferGridMode(int n, void *arg[]); /* Select batched/legacy adaptive transfer */
-extern "C" const char *SME_DLL SetContinuumScatteringSourceMode(int n, void *arg[]); /* Enable continuum scattering source */
+extern "C" const char *SME_DLL SetContinuumScatteringSourceMode(int n, void *arg[]); /* 0=Planck, 1=continuum J, 2=line-inclusive J */
+extern "C" int SME_DLL ScatteringFeautrierGreyTest(double epsilon, double tau_max, int ndepth, double *surface_j, double *surface_source);
 extern "C" const char *SME_DLL SetContinuumOpacityGrid(int n, void *arg[]); /* Configure exact/adaptive continuum opacity */
 extern "C" const char *SME_DLL GetContinuumOpacityGridStats(int n, void *arg[]); /* Return continuum-grid counters */
 extern "C" const char *SME_DLL SetEosWarmStartMode(int n, void *arg[]); /* Scope exact EOS history reuse */
@@ -69,9 +71,9 @@ extern "C" const char *SME_DLL InputAbund(int n, void *arg[]);                 /
 extern "C" const char *SME_DLL Opacity(int n, void *arg[]);                    /* Calculate opacities */
 extern "C" const char *SME_DLL GetOpacity(int n, void *arg[]);                 /* Returns specific cont. opacity */
 extern "C" const char *SME_DLL GetContinuumOpacityComponents(int n, void *arg[]); /* Returns true absorption, scattering, and total continuum opacity */
-extern "C" const char *SME_DLL GetContinuumScatteringSource(int n, void *arg[]); /* Returns continuum scattering mean intensity and source */
-extern "C" const char *SME_DLL GetFraction(int n, void *arg[]);                /* Returns fraction or partition function */
+extern "C" const char *SME_DLL GetContinuumScatteringSource(int n, void *arg[]); /* Returns PP continuum scattering mean intensity and source */
 extern "C" const char *SME_DLL Ionization(int n, void *arg[]);                 /* Perfrom EOS calculations */
+extern "C" const char *SME_DLL GetFraction(int n, void *arg[]);                /* Returns species fractions/densities */
 extern "C" const char *SME_DLL GetDensity(int n, void *arg[]);                 /* Returns density in g/cm^3 */
 extern "C" const char *SME_DLL GetNatom(int n, void *arg[]);                   /* Returns atomic number density */
 extern "C" const char *SME_DLL GetNelec(int n, void *arg[]);                   /* Returns electron number density */
@@ -80,4 +82,4 @@ extern "C" const char *SME_DLL CentralDepth(int n, void *arg[]);               /
 extern "C" const char *SME_DLL ALMAXRange(int n, void *arg[]);                 /* Compute preselection ALMAX and range */
 extern "C" const char *SME_DLL GetLineOpacity(int n, void *arg[]);             /* Returns specific line opacity */
 extern "C" const char *SME_DLL GetLineRange(int n, void *arg[]);               /* Get validity range for every line */
-extern "C" const char *SME_DLL Contribution_functions(int n, void *arg[]);     /* Get contribution functions */
+extern "C" const char *SME_DLL Contribution_functions(int n, void *arg[]); /*Compute the contribution functions */
