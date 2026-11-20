@@ -38,8 +38,9 @@ This option requires a spherical (SPH) atmosphere; it raises an error at
 synthesis time for plane-parallel (PP) models. `mu_num` is ignored (and
 never validated) whenever `mu_dynamic` is `False`. When it is used, the
 total number of rays, `n_non_grazing + n_grazing`, may not exceed 77, the
-maximum SMElib's radiative transfer accepts (`MUSIZE`); larger requests
-raise a `ValueError` before synthesis starts.
+maximum SMElib's radiative transfer accepts (`MUSIZE`), and `n_grazing`
+may not exceed `ndep - 2` for an atmosphere with `ndep` depth points;
+larger requests raise a `ValueError` before synthesis starts.
 
 Setting `sme.nmu` afterwards silently regenerates `sme.mu` via the old
 static formula, since `nmu` is unaware of `mu_dynamic` -- set `mu_dynamic`
@@ -74,15 +75,19 @@ Synthesizer().dynamically_update_mu(sme)
 `sme.mu` (20 values, since `mu_num` defaults to `[10, 10]`) now reads:
 
 ```py
-array([0.9835, 0.9496, 0.9144, 0.8778, 0.8396, 0.7996, 0.7575, 0.713 ,
-       0.6654, 0.6142, 0.5701, 0.5414, 0.5104, 0.4766, 0.4393, 0.3977,
-       0.3502, 0.2938, 0.2219, 0.1382])
+array([0.9831, 0.9483, 0.9122, 0.8746, 0.8353, 0.794 , 0.7505, 0.7043,
+       0.6549, 0.6014, 0.5701, 0.5414, 0.5104, 0.4766, 0.4393, 0.3977,
+       0.3502, 0.2938, 0.2219, 0.1071])
 ```
 
 The first 10 values (non-grazing rays) are spaced by equal projected area
-down to the edge of the stellar core; the last 10 (grazing rays) are each
-anchored to a depth point in `atmo`, so their exact values depend on this
-atmosphere's own height grid rather than a fixed external formula.
+down to the edge of the stellar core; the last 10 (grazing rays) each turn
+around midway between two depth points in `atmo`, so their exact values
+depend on this atmosphere's own height grid rather than a fixed external
+formula. The outermost depth interval is never used as a tangent point,
+since SMElib returns zero intensity for a ray that crosses only the top
+layer. An atmosphere with `ndep` depth points therefore allows at most
+`ndep - 2` grazing rays.
 
 ### Why this matters
 

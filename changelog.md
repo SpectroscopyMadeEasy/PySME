@@ -32,7 +32,8 @@
   external mu grid. This removes `logg`-dependent $\chi^2$ discontinuities
   seen with a static mu grid, most noticeably along the red giant branch
   where atmospheric extent varies strongly with surface gravity. The total
-  ray count in `sme.mu_num` is checked against SMElib's limit of 77.
+  ray count in `sme.mu_num` is checked against SMElib's limit of 77, and the
+  number of grazing rays against the `ndep - 2` usable depth intervals.
 
 ### Deprecated
 

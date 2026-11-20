@@ -960,6 +960,46 @@ def test_mu_dynamic_ray_limit_raises_before_transf():
         Synthesizer().synthesize_spectrum(sme, passNLTE=False)
 
 
+@pytest.mark.parametrize("mu_num", [[1, 1], [10, 10], [38, 39], [23, 54]])
+def test_dynamically_update_mu_matches_smelib_grazing_classification(mu_num):
+    # SMElib calls a ray grazing when its impact parameter
+    # P = R_top * sqrt(1 - mu^2) is larger than the radius of the deepest layer.
+    sme = _minimal_sme()
+    sme.atmo = _make_dynamic_mu_atmo(ndep=56, radius=1e11)
+    sme.mu_num = mu_num
+    Synthesizer(dll=_DummyDLL()).dynamically_update_mu(sme)
+
+    height = np.asarray(sme.atmo.height)
+    radius = sme.atmo.radius
+    impact = (radius + height[0]) * np.sqrt(1 - np.asarray(sme.mu) ** 2)
+    n_non_grazing, n_grazing = mu_num
+    assert np.count_nonzero(impact < radius + height[-1]) == n_non_grazing
+    assert np.count_nonzero(impact > radius + height[-1]) == n_grazing
+    # No ray turns in the top interval, where SMElib returns zero intensity
+    assert np.all(impact < radius + height[1])
+
+
+def test_dynamically_update_mu_accepts_one_grazing_ray_per_interval():
+    sme = _minimal_sme()
+    sme.atmo = _make_dynamic_mu_atmo(ndep=11)
+    sme.mu_num = [1, 9]
+    Synthesizer(dll=_DummyDLL()).dynamically_update_mu(sme)
+
+    mu = np.asarray(sme.mu)
+    assert mu.shape == (10,)
+    assert np.unique(mu).size == 10
+
+
+def test_dynamically_update_mu_rejects_more_grazing_rays_than_intervals():
+    sme = _minimal_sme()
+    sme.atmo = _make_dynamic_mu_atmo(ndep=11)
+    sme.mu_num = [1, 10]
+    synth = Synthesizer(dll=_DummyDLL())
+
+    with pytest.raises(ValueError, match="at most 9"):
+        synth.dynamically_update_mu(sme)
+
+
 def test_dynamically_update_mu_requires_spherical_geometry():
     sme = _minimal_sme()
     sme.atmo = _make_dynamic_mu_atmo()
