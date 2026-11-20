@@ -11,6 +11,8 @@
 - The release workflow marks GitHub releases for pre-release tags (for
   example `v1.3.0rc1`) as pre-releases. PyPI already treats these versions as
   pre-releases, so `pip install pysme-astro` installs them only with `--pre`.
+- After a successful release, the release workflow opens a pull request that
+  merges `master` back into `develop`, labelled `ignore-for-release`.
 
 ### Added
 
