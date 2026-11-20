@@ -13,6 +13,20 @@
 
 - Added a manually dispatched wheel-build path that uploads artifacts for
   validation without publishing to PyPI or creating a GitHub release.
+- Optional radial basis function (RBF) interpolation of model atmospheres
+  (`sme.atmo.interp = "RBF"`), as an alternative to the default corner-model
+  interpolation. Each query is fit to its 64 nearest grid models (more when
+  distances tie) instead of the 8 bracketing corner models. The structure is
+  interpolated in log space, and the abundance pattern together with it.
+- RBF neighbors are chosen in grid-step units, so an axis with uneven steps
+  (e.g. 1 dex [M/H] steps at the metal-poor end of MARCS) still contributes
+  several values to each fit. Axes with a single value are left out of the fit.
+- RBF queries outside the grid range are reported at INFO level and
+  extrapolated; `interp_atmo_grid(..., interpolation_policy="error")` raises
+  instead. Queries in a grid cell with missing models are reported at INFO
+  level, once per cell. Grid models with non-positive values are reported and
+  left out, and grids with several models at one (Teff, log g, [M/H]) point
+  are rejected.
 
 ### Fixed
 
