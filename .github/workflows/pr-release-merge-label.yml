@@ -1,0 +1,28 @@
+name: Label release merges
+
+# Adds "ignore-for-release" to release merges (develop -> master) and back-merges (master -> develop)
+# opened from this repository, so they stay out of generated release notes.
+# PRs from forks are never labelled, even if their branch is called develop or master.
+# The workflow only reads PR metadata and never runs PR code.
+
+on:
+  pull_request_target:
+    types: [opened, reopened]
+
+permissions:
+  pull-requests: write
+
+jobs:
+  label:
+    runs-on: ubuntu-latest
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      (github.event.pull_request.head.ref == 'develop' || github.event.pull_request.head.ref == 'master')
+    steps:
+      - uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b  # v7.1.0 (pinned)
+        with:
+          script: |
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner, repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number, labels: ['ignore-for-release']
+            });
