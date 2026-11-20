@@ -171,6 +171,12 @@ jobs:
           storage.get("marcs2014.sav")
           PY
 
+      - name: Validate official MARCS grid abundances
+        env:
+          PYSME_TEST_OFFICIAL_MARCS: "1"
+        run: |
+          pytest -q test/test_official_marcs_abundances.py
+
       - name: Build checked-out SMElib
         if: steps.smelib-cache.outputs.cache-hit != 'true'
         run: |
@@ -315,6 +321,12 @@ jobs:
           storage.get("marcs2014.sav")
           PY
 
+      - name: Validate official MARCS grid abundances
+        env:
+          PYSME_TEST_OFFICIAL_MARCS: "1"
+        run: |
+          pytest -q test/test_official_marcs_abundances.py
+
       - name: Build checked-out SMElib
         if: steps.smelib-cache.outputs.cache-hit != 'true'
         run: |
@@ -387,12 +399,17 @@ jobs:
   build_wheels:
     name: Build wheels on ${{ matrix.os }}
     needs: [tag_gate]
-    if: needs.tag_gate.outputs.allow == 'true' && github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    # Manual dispatches build and upload release artifacts for validation, but
+    # the publish/release jobs below remain restricted to v* tags on master.
+    if: >-
+      needs.tag_gate.outputs.allow == 'true' &&
+      (github.event_name == 'workflow_dispatch' ||
+       (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')))
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-14]
+        os: [ubuntu-latest, macos-15]
 
     steps:
       - uses: actions/checkout@v5
@@ -408,16 +425,16 @@ jobs:
         run: python -m pip install "cibuildwheel==2.22"
 
       - name: Cache cibuildwheel downloads (macOS)
-        if: matrix.os == 'macos-14'
+        if: runner.os == 'macOS'
         uses: actions/cache@v5
         with:
           path: ~/Library/Caches/cibuildwheel
-          key: cibw-${{ runner.os }}-${{ hashFiles('pyproject.toml') }}
+          key: cibw-${{ matrix.os }}-${{ hashFiles('pyproject.toml') }}
           restore-keys: |
-            cibw-${{ runner.os }}-
+            cibw-${{ matrix.os }}-
 
       - name: Seed cibuildwheel virtualenv (macOS)
-        if: matrix.os == 'macos-14'
+        if: runner.os == 'macOS'
         run: |
           set -euo pipefail
           mkdir -p ~/Library/Caches/cibuildwheel
@@ -425,13 +442,13 @@ jobs:
              ~/Library/Caches/cibuildwheel/virtualenv-20.27.1.pyz
 
       - name: Build wheels (Linux)
-        if: matrix.os != 'macos-14'
+        if: runner.os == 'Linux'
         run: python -m cibuildwheel --output-dir wheelhouse
         env:
           CIBW_BUILD_VERBOSITY: 1
 
       - name: Build wheels (macOS, first attempt)
-        if: matrix.os == 'macos-14'
+        if: runner.os == 'macOS'
         id: cibw_macos_first
         continue-on-error: true
         run: python -m cibuildwheel --output-dir wheelhouse
@@ -439,7 +456,7 @@ jobs:
           CIBW_BUILD_VERBOSITY: 1
 
       - name: Build wheels (macOS, retry once)
-        if: matrix.os == 'macos-14' && steps.cibw_macos_first.outcome == 'failure'
+        if: runner.os == 'macOS' && steps.cibw_macos_first.outcome == 'failure'
         run: python -m cibuildwheel --output-dir wheelhouse
         env:
           CIBW_BUILD_VERBOSITY: 1
@@ -498,10 +515,19 @@ jobs:
           set -euo pipefail
           TAG="${{ github.ref_name }}"
           REPO="${{ github.repository }}"
+          # Pre-release tags (PEP 440: a, b, rc, dev), e.g. v1.3.0rc1, become GitHub pre-releases;
+          # PyPI already treats these versions as pre-releases.
+          PRERELEASE=()
+          if [[ "$TAG" =~ ^v[0-9]+(\.[0-9]+)*[-._]?(a|alpha|b|beta|rc|c|pre|preview|dev)[0-9]*$ ]]; then
+            PRERELEASE=(--prerelease)
+          fi
           if gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1; then
             gh release upload "$TAG" dist/* --repo "$REPO" --clobber
+            if [[ ${#PRERELEASE[@]} -gt 0 ]]; then
+              gh release edit "$TAG" --repo "$REPO" --prerelease
+            fi
           else
-            gh release create "$TAG" dist/* --repo "$REPO" --title "$TAG"
+            gh release create "$TAG" dist/* --repo "$REPO" --title "$TAG" "${PRERELEASE[@]}"
           fi
         env:
           GH_TOKEN: ${{ github.token }}
@@ -581,3 +607,46 @@ jobs:
             --request POST \
             --header "Authorization: Token ${READTHEDOCS_API_TOKEN}" \
             "${RTD_API_ROOT}/versions/latest/builds/"
+
+  backmerge_pr:
+    name: Open master-to-develop pull request
+    needs: [tag_gate, publish, release]
+    runs-on: ubuntu-latest
+    if: >-
+      needs.tag_gate.outputs.allow == 'true' && github.event_name == 'push' &&
+      startsWith(github.ref, 'refs/tags/v') &&
+      needs.publish.result == 'success' && needs.release.result == 'success'
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    steps:
+      # After a successful release, open a pull request that merges master back into develop,
+      # so that develop contains the release merge commit and the tag. A maintainer merges it.
+      - uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b  # v7.1.0 (pinned)
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const tag = context.ref.replace('refs/tags/', '');
+            const cmp = await github.rest.repos.compareCommits({ owner, repo, base: 'develop', head: 'master' });
+            if (cmp.data.ahead_by === 0) {
+              core.info('develop already contains master; nothing to do.');
+              return;
+            }
+            const open = await github.rest.pulls.list({
+              owner, repo, state: 'open', base: 'develop', head: `${owner}:master`
+            });
+            let number;
+            if (open.data.length > 0) {
+              number = open.data[0].number;
+              core.info(`Back-merge pull request #${number} is already open.`);
+            } else {
+              const pr = await github.rest.pulls.create({
+                owner, repo, base: 'develop', head: 'master',
+                title: `Merge master into develop after ${tag}`,
+                body: `Merges \`master\` back into \`develop\` after the ${tag} release, so that \`develop\` contains the release merge commit and the tag. Opened automatically by the release workflow.`
+              });
+              number = pr.data.number;
+              core.info(`Opened back-merge pull request #${number}.`);
+            }
+            await github.rest.issues.addLabels({ owner, repo, issue_number: number, labels: ['ignore-for-release'] });

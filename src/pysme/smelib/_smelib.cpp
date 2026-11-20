@@ -326,7 +326,7 @@ fail:
     return NULL;
 }
 
-static char smelib_SetContinuumScatteringSourceMode_docstring[] = "Enable continuum scattering source for plane-parallel and spherical transfer";
+static char smelib_SetContinuumScatteringSourceMode_docstring[] = "Select continuum source mode 0, 1, or 2 for plane-parallel and spherical transfer";
 static PyObject *smelib_SetContinuumScatteringSourceMode(PyObject *self, PyObject *args)
 {
     const int n = 1;

@@ -3,6 +3,7 @@ import logging
 import os.path
 import platform
 import sys
+import warnings
 from datetime import datetime as dt
 from enum import Enum, IntEnum, IntFlag
 
@@ -20,6 +21,18 @@ from .linelist.linelist import LineList
 from .nlte import NLTE
 
 logger = logging.getLogger(__name__)
+
+
+def _as_continuum_scattering_mode(self, value):
+    if (
+        isinstance(value, (bool, np.bool_))
+        or not isinstance(value, (int, np.integer))
+        or int(value) not in (0, 1, 2)
+    ):
+        raise ValueError(
+            "continuum_scattering_mode must be an integer with value 0, 1, or 2"
+        )
+    return int(value)
 
 
 class MASK_VALUES(IntFlag):
@@ -90,7 +103,7 @@ class Parameters(Collection):
     @_abund.setter
     def _abund(self, value):
         if isinstance(value, Abund):
-            self.__abund = value
+            new_abund = value
         else:
             logger.warning(
                 "Abundance set using just a pattern, assuming that "
@@ -98,7 +111,34 @@ class Parameters(Collection):
                 "If that is incorrect, try changing the format first.",
                 self.__abund.type,
             )
-            self.__abund = Abund(monh=self.monh, pattern=value, type=self.__abund.type)
+            new_abund = Abund(
+                monh=self.monh, pattern=value, type=self.__abund.type
+            )
+
+        self.__abund = new_abund
+
+        # Replacing the abundance object is the common way to install an
+        # absolute pattern after a grid atmosphere has already been
+        # interpolated.  Keep that first structure fixed when the replacement
+        # changes [M/H]; otherwise the next synthesis would silently perform a
+        # second grid interpolation at the abundance pattern's coordinate.
+        atmo = getattr(self, "_atmo", None)
+        interpolation_monh = getattr(atmo, "interpolation_monh", None)
+        if (
+            atmo is not None
+            and getattr(atmo, "method", None) == "grid"
+            and interpolation_monh is not None
+            and not np.isclose(
+                float(new_abund.monh), float(interpolation_monh), rtol=0.0, atol=1e-12
+            )
+        ):
+            atmo.method = "embedded"
+            logger.info(
+                "Freezing the atmosphere interpolated at [M/H]=%.6g after "
+                "replacing the abundance pattern at [M/H]=%.6g.",
+                float(interpolation_monh),
+                float(new_abund.monh),
+            )
 
     @property
     def monh(self):
@@ -108,6 +148,21 @@ class Parameters(Collection):
     @monh.setter
     def monh(self, value):
         self.abund.monh = value
+        # The public SME metallicity setter is an explicit request to move the
+        # grid coordinate.  Mark any populated grid atmosphere for a fresh
+        # interpolation; this keeps the long-standing ``sme.monh = value``
+        # workflow distinct from an ambiguous direct ``sme.abund.monh`` edit.
+        atmo = getattr(self, "_atmo", None)
+        interpolation_monh = getattr(atmo, "interpolation_monh", None)
+        if (
+            atmo is not None
+            and getattr(atmo, "method", None) == "grid"
+            and interpolation_monh is not None
+            and not np.isclose(
+                float(value), float(interpolation_monh), rtol=0.0, atol=1e-12
+            )
+        ):
+            atmo.interpolation_monh = None
 
     def citation(self, format="string"):
         return self.abund.citation()
@@ -247,9 +302,10 @@ class SME_Structure(Parameters):
         ("cscale_gtol", 1e-8, asfloat, this, "float: tolerance for the continuum least squares fit"),
         ("normalize_by_continuum", True, asbool, this,
             "bool: Whether to normalize the synthetic spectrum by the synthetic continuum spectrum or not"),
-        ("continuum_scattering_source", False, asbool, this,
-            "bool: Whether to include coherent continuum scattering "
-            "in the continuum source function"),
+        ("continuum_scattering_mode", 0, _as_continuum_scattering_mode, this,
+            "int: Continuum source mode: 0 uses the Planck source, 1 uses the "
+            "deprecated continuum-only scattering source, and 2 uses the "
+            "line-inclusive scattering source"),
         ("specific_intensities_only", False, asbool, this,
             "bool: Whether to keep the specific intensities or integrate them together"),
         ("gam6", 1, asfloat, this, "float: van der Waals scaling factor"),
@@ -327,6 +383,10 @@ class SME_Structure(Parameters):
 
     def __init__(self, **kwargs):
         wind = kwargs.get("wind", None)
+        has_scattering_mode = "continuum_scattering_mode" in kwargs
+        legacy_scattering_source = kwargs.pop(
+            "continuum_scattering_source", None
+        )
         self.__dict__["_wave_invalidation_enabled"] = False
 
         atmo = kwargs.pop("atmo", {})
@@ -336,6 +396,8 @@ class SME_Structure(Parameters):
         self.wave = None
         self.wran = None
         super().__init__(**kwargs)
+        if legacy_scattering_source is not None and not has_scattering_mode:
+            self.continuum_scattering_source = legacy_scattering_source
 
         if wind is not None and self.wave is not None:
             wind = wind + 1
@@ -609,6 +671,23 @@ class SME_Structure(Parameters):
                 "Wavelength grid changed; cleared wave-dependent fields "
                 "(spec/uncs/mask/synth/cont/telluric/sint/cint and rv/continuum fit state)."
             )
+
+    @property
+    def continuum_scattering_source(self):
+        """Deprecated boolean alias for :attr:`continuum_scattering_mode`."""
+        return self.continuum_scattering_mode != 0
+
+    @continuum_scattering_source.setter
+    def continuum_scattering_source(self, value):
+        enabled = bool(value)
+        if enabled:
+            warnings.warn(
+                "continuum_scattering_source is deprecated; use "
+                "continuum_scattering_mode = 2 instead",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+        self.continuum_scattering_mode = 1 if enabled else 0
 
     @property
     def _wran(self):

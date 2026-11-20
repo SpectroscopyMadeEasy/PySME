@@ -4,17 +4,20 @@ This page describes some new (and in testing) function of PySME.
 
 ## How to include coherent continuum scattering in the continuum source
 
-By default, PySME keeps the historical continuum-source treatment.
-To include coherent continuum scattering in the continuum source function, enable the opt-in switch before synthesis:
+By default, PySME keeps the historical Planck continuum-source treatment (mode `0`).
+To include coherent continuum scattering, select the line-inclusive mode `2` before synthesis:
 
 ```py
 from pysme.synthesize import synthesize_spectrum
 
-sme.continuum_scattering_source = True
+sme.continuum_scattering_mode = 2
 sme = synthesize_spectrum(sme)
 ```
 
-This option supports plane-parallel and spherical atmospheres.
+This option supports plane-parallel and spherical atmospheres. Mode `1`, the
+older continuum-only scattering approximation, is deprecated. The Boolean
+`continuum_scattering_source` name is retained only as an alias: `False`
+selects mode `0`, while `True` selects deprecated mode `1` and warns.
 
 ## How to enable dynamical mu-spacing
 

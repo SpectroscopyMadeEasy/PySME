@@ -27,6 +27,7 @@ The atmopshere object has the following fields:
 |`interp`|The depth scale to use for interpolation.|`RHOX` or `TAU`|
 |`geom`|The geometry of the atmosphere.|Plane Parallel `'PP'` or Spherical `'SPH'`|
 |`method`|The method to use for interpolation|`'grid'` for a model grid or `'embedded'` if only a single atmosphere is given|
+|`interpolation_monh`|The `[M/H]` coordinate used for the most recent grid interpolation|Float or `None`|
 |`rhox`|Mass column at each tabulated depth in the atmosphere|[$\mathrm{g~cm^{-2}}$]|
 |`tau`|Continuum optical depth at each tabulated depth in the atmosphere||
 |`temp`|Temperature at each tabulated depth in the atmosphere|[K]|
@@ -39,6 +40,15 @@ The atmopshere object has the following fields:
 |`lonh`|Ratio of mixing length to pressure scale height (`/H) used to generate the atmosphere.||
 |`wlstd`|Wavelength for continuum optical depth scale.|Å, Default value: 5000Å|
 |`opflag`|Flags that indicate whether to enable various opacity packages during the radiative transfer calculation||
+
+When a grid atmosphere has already been interpolated, PySME records the
+metallicity used for that interpolation. If an absolute `sme.abund` object is
+then installed with a different `monh` while `atmo.method == "grid"`, assigning
+the new `Abund` object freezes the existing structure as `"embedded"` instead
+of silently replacing it with a second interpolation. Direct in-place changes
+such as `sme.abund.monh = ...` are rejected as ambiguous. Use the public
+`sme.monh = ...` setter to explicitly request a new grid interpolation, or
+construct a fresh grid atmosphere.
 
 ## Atmosphere grids:
 

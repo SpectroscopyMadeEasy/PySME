@@ -2,14 +2,75 @@
 
 ## Unreleased
 
+### Changed
+
+- Updated the bundled SMElib to v6.13.21. The corrected Stehlé NALPHA table
+  padding changes affected rows of the default H8--H30 profiles and removes
+  narrow spurious spikes in H22, H26, H27, and H30. The STARK1 cache key now
+  includes the line-center wavelength, so results no longer depend on the
+  order of calls for lines with the same lower/upper levels. Continuum-
+  scattering mode 1 is deprecated in SMElib.
+- Changed the minimum supported version for pre-built macOS arm64 wheels from
+  macOS 14 to macOS 15. PySME 1.2.x remains available for macOS 14 users.
+- Strengthened wheel validation with a native SMElib radiative-transfer smoke
+  test after installation.
+- The release workflow marks GitHub releases for pre-release tags (for
+  example `v1.3.0rc1`) as pre-releases. PyPI already treats these versions as
+  pre-releases, so `pip install pysme-astro` installs them only with `--pre`.
+- After a successful release, the release workflow opens a pull request that
+  merges `master` back into `develop`, labelled `ignore-for-release`.
+
 ### Added
 
+- Added `continuum_scattering_mode` with values `0` (Planck source), `1`
+  (deprecated continuum-only scattering), and `2` (line-inclusive scattering).
+- Added a manually dispatched wheel-build path that uploads artifacts for
+  validation without publishing to PyPI or creating a GitHub release.
 - Added opt-in dynamical mu-spacing for spherical atmospheres
   (`sme.mu_dynamic`, `sme.mu_num`), recomputing grazing-ray limb angles from
   the atmosphere's own depth grid at each synthesis call instead of a fixed
   external mu grid. This removes `logg`-dependent $\chi^2$ discontinuities
   seen with a static mu grid, most noticeably along the red giant branch
   where atmospheric extent varies strongly with surface gravity.
+
+### Deprecated
+
+- Deprecated `continuum_scattering_source` in favor of
+  `continuum_scattering_mode`, and deprecated continuum-scattering mode `1` in
+  favor of mode `2`.
+
+### Fixed
+
+- Fix NLTE grid interpolation at and near grid edges (#39). Below the lowest
+  node the coefficients were taken from the highest node; above the highest
+  node they were held at the edge value instead of extrapolated; on
+  non-uniform axes the bracketing node could be missing from the cache, so
+  values inside the grid were extrapolated. Results at interior points with
+  both bracketing nodes cached are unchanged. Added regression tests.
+- Guard against silently re-interpolating a populated grid atmosphere when an
+  absolute abundance pattern changes `sme.monh`; PySME records the
+  interpolation metallicity and freezes the existing structure when the
+  abundance object is replaced, while raising a clear error for ambiguous
+  in-place metallicity mutations.
+- Add physical H/He acceptance tests using small real MARCS 2012/2014 grid
+  samples, plus mandatory full-grid checks after CI prefetch on Linux/macOS.
+  Cover direct extraction, interpolation and SME-file persistence.
+- Distinguish legacy atmosphere-grid abundances (linear H and He) from
+  modern SME abundances (linear H, logarithmic He), including previously
+  converted NumPy caches. Preserve the format when extracting grid models.
+- Preserve internal abundance values when copying, saving and reloading
+  objects with a non-default display/input format; correct Kurucz output
+  normalization for metals.
+- Keep the atmosphere-file cache keyed by filename and report the grid's
+  stored depth count correctly.
+- Preserve logarithmic He in MARCS `.krz` input; accept signed/decimal header
+  values and scientific-notation ATLAS abundances. Reconstruct ATLAS atomic
+  density after subtracting electron pressure, using the effective metallicity
+  and atomic mass unit. This remains an atomic-gas approximation.
+
+Already incorrectly decoded atmosphere files are not repaired automatically;
+reload them from their source grids. The separate MARCS text-reader H/He
+metallicity correction is deferred.
 
 ## v1.2.0 - 2026-09-24
 

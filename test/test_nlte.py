@@ -525,3 +525,77 @@ def test_metal_scaled_rel_abund_is_unchanged():
     expected = grid.solar_rel_abund(abund, "Mg") - grid.solar_rel_abund(abund, "Fe")
 
     assert grid.scaled_rel_abund(abund) == pytest.approx(expected)
+
+
+# Regression tests for NLTE grid interpolation at and near grid edges (PR #39).
+# A synthetic grid with a non-uniform Teff axis; departure coefficients depend only
+# on Teff and are piecewise linear between the nodes, so the expected values are exact.
+_EDGE_TEFF = np.array([3800.0, 3900.0, 4000.0, 4250.0])
+_EDGE_B = np.array([1.0, 1.2, 1.3, 2.0])
+_EDGE_DEPTH = 10.0 ** np.linspace(-4.0, 1.0, 6)
+
+
+def _make_grid_for_edge_test(subgrid_teff=3):
+    nlevel = 2
+    teff, b = _EDGE_TEFF, _EDGE_B
+    grid = Grid.__new__(Grid)
+    grid.elem = "Fe"
+    grid.first_warning = True
+    grid.depth_name = "rhox"
+    grid.iused = np.arange(nlevel)
+    grid.subgrid_size = [1, subgrid_teff, 1, 1]
+    grid._xfe = np.array([0.0])
+    grid._teff = teff
+    grid._grav = np.array([4.0])
+    grid._feh = np.array([0.0])
+    # keys are indexed [feh, grav, teff, abund]; each model is (level, depth)
+    grid._keys = np.array([[[[f"m{i}"] for i in range(teff.size)]]])
+    grid.directory = {
+        f"m{i}": np.tile([[1.0], [2.0]], (1, _EDGE_DEPTH.size)) * b[i]
+        for i in range(teff.size)
+    }
+    grid._depth = np.broadcast_to(_EDGE_DEPTH, (1, 1, teff.size, _EDGE_DEPTH.size)).copy()
+    return grid
+
+
+def _edge_coefficients(teff, subgrid_teff=3):
+    grid = _make_grid_for_edge_test(subgrid_teff)
+    grid.read_grid(0.0, teff, 4.0, 0.0)
+    subgrid = grid.interpolate(0.0, teff, 4.0, 0.0, {"rhox": _EDGE_DEPTH})
+    return grid, np.asarray(subgrid)
+
+
+@pytest.mark.parametrize(
+    "teff, expected",
+    [
+        (3850.0, 1.1),  # uniform interior interval, unchanged by the fix
+        (4010.0, 1.3 + 0.7 * 10 / 250),  # non-uniform interval: bracket is 4000/4250
+        (3700.0, 0.8),  # below the lowest node: extrapolate from 3800/3900
+        (4400.0, 2.0 + 0.7 * 150 / 250),  # above the highest node: extrapolate from 4000/4250
+    ],
+)
+def test_nlte_grid_interpolation_near_edges(teff, expected):
+    grid, subgrid = _edge_coefficients(teff)
+
+    assert subgrid.shape == (_EDGE_DEPTH.size, 2)
+    np.testing.assert_allclose(subgrid[:, 0], expected, rtol=1e-12)
+    np.testing.assert_allclose(subgrid[:, 1], 2 * expected, rtol=1e-12)
+
+
+def test_nlte_grid_cache_includes_bracketing_nodes():
+    # The three nearest nodes to 4010 K are 3800/3900/4000; 4250 must be added
+    grid = _make_grid_for_edge_test(subgrid_teff=3)
+    grid.read_grid(0.0, 4010.0, 4.0, 0.0)
+
+    assert 4000.0 in grid._points[1]
+    assert 4250.0 in grid._points[1]
+
+
+def test_nlte_grid_warns_only_outside_grid(caplog):
+    with caplog.at_level("WARNING"):
+        _edge_coefficients(4010.0)
+    assert "Extrapolate on Fe NLTE grid" not in caplog.text
+
+    with caplog.at_level("WARNING"):
+        _edge_coefficients(4400.0)
+    assert "Extrapolate on Fe NLTE grid" in caplog.text

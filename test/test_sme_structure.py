@@ -297,3 +297,66 @@ def test_wave_reassignment_invalidates_wave_dependent_state():
     assert np.allclose(sme.cscale, [[0.0, 1.0]])
     assert sme.vrad_unc is None
     assert sme.cscale_unc is None
+
+
+# Continuum-scattering mode 0/1/2 and the deprecated boolean alias.
+@pytest.mark.parametrize("value", [-1, 3, True, 1.0, "2", None])
+def test_continuum_scattering_mode_rejects_invalid_values(value):
+    sme = SME_Struct()
+
+    with pytest.raises(ValueError, match="0, 1, or 2"):
+        sme.continuum_scattering_mode = value
+
+
+def test_continuum_scattering_source_alias_warning_and_mapping():
+    import warnings
+
+    sme = SME_Struct()
+    assert sme.continuum_scattering_mode == 0
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        sme.continuum_scattering_source = False
+    assert caught == []
+    assert sme.continuum_scattering_mode == 0
+
+    with pytest.warns(DeprecationWarning, match="continuum_scattering_mode = 2"):
+        sme.continuum_scattering_source = True
+    assert sme.continuum_scattering_mode == 1
+
+    sme.continuum_scattering_mode = 2
+    assert sme.continuum_scattering_source is True
+
+    with pytest.warns(DeprecationWarning, match="continuum_scattering_mode = 2"):
+        constructed = SME_Struct(continuum_scattering_source=True)
+    assert constructed.continuum_scattering_mode == 1
+
+
+def test_continuum_scattering_mode_save_round_trip_uses_new_field(filename):
+    from flex.flex import FlexFile
+
+    sme = SME_Struct()
+    sme.continuum_scattering_mode = 2
+    sme.save(filename)
+
+    ff = FlexFile.read(filename)
+    try:
+        assert ff.header["continuum_scattering_mode"] == 2
+        assert "continuum_scattering_source" not in ff.header
+    finally:
+        ff.close()
+
+    loaded = SME_Struct.load(filename)
+    assert loaded.continuum_scattering_mode == 2
+
+
+def test_old_continuum_scattering_source_file_loads_as_mode_one(filename):
+    from flex.flex import FlexFile
+
+    ff = FlexFile({"continuum_scattering_source": True}, {})
+    ff.write(filename)
+
+    loaded = SME_Struct.load(filename)
+    assert loaded.continuum_scattering_mode == 1
+    assert loaded.continuum_scattering_source is True
+

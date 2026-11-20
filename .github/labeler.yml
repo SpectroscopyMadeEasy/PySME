@@ -1,0 +1,9 @@
+# Type labels added automatically from the branch name (actions/labeler v5).
+bug:
+  - head-branch: ['^fix/', '^bugfix/', '^hotfix/']
+enhancement:
+  - head-branch: ['^feature/', '^feat/']
+documentation:
+  - head-branch: ['^docs/']
+maintenance:
+  - head-branch: ['^ci/', '^build/', '^refactor/', '^chore/']

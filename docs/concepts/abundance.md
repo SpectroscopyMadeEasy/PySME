@@ -42,6 +42,21 @@ nuclei of each element in any form relative to the total for
 all elements in any form. For the Sun, the abundance values
 of H, He, and Li are approximately 0.92, -1.11, and -11.0.
 
+### sme_legacy
+
+Older atmosphere grids store both H and He as linear fractions of all
+nuclei, while metals remain log10 fractions of all nuclei. For example,
+H = 0.922 and He = 0.078 correspond to A(He) = 10.92736 on the `H=12`
+scale. This storage format is called `sme_legacy`; the modern `sme`
+interface continues to require logarithmic He.
+
+`SavFile` identifies this legacy convention when reading IDL grids and
+previously converted NumPy caches, and retains the distinction in saved
+grid metadata. Grid records use that metadata when constructing an
+`Atmosphere`. This does not repair already decoded, incorrect `H=12`
+abundances whose original format has been lost; reload those atmospheres
+from their source data.
+
 ### Fe=12
 Abundance values are log10 of the fraction of nuclei of
 each element in any form relative to the number of iron
