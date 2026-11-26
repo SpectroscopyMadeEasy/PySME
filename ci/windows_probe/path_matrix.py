@@ -16,7 +16,6 @@ from annotations import emit
 
 
 CASES = ("solar_fixed", "hydrogen_fixed")
-SHORT_PATH_ENV = "PYSME_SMELIB_WINDOWS_SHORT_PATH"
 UTF8_LOCALE_ENV = "PYSME_SMELIB_WINDOWS_UTF8_LOCALE"
 FAILED_OPEN_RE = re.compile(
     r"(?:tables?\s+not\s+found|did\s+not\s+find[^\r\n]*\bfile\b|"
@@ -148,12 +147,8 @@ def row_main(args: argparse.Namespace) -> int:
     env["USERPROFILE"] = str(args.profile)
     env["PYTHONIOENCODING"] = "utf-8"
     env["GFORTRAN_UNBUFFERED_ALL"] = "y"
-    if args.short_path:
-        env[SHORT_PATH_ENV] = "1"
-    else:
-        env.pop(SHORT_PATH_ENV, None)
-    if args.utf8_locale:
-        env[UTF8_LOCALE_ENV] = "1"
+    if args.disable_utf8_locale:
+        env[UTF8_LOCALE_ENV] = "0"
     else:
         env.pop(UTF8_LOCALE_ENV, None)
 
@@ -201,6 +196,34 @@ def row_main(args: argparse.Namespace) -> int:
         result["tail"] = output_tail(completed)
         outcomes.append(result)
 
+    if args.expect_failed_open:
+        unexpected = [
+            value
+            for value in outcomes
+            if value.get("exception") != "NativeFileOpenFailure"
+        ]
+        if not unexpected:
+            detail = "; ".join(
+                f"{value['case']} expected {value['exception']}: "
+                f"{compact(value['message'])}"
+                for value in outcomes
+            )
+            emit("notice", f"Path matrix {args.label} EXPECTED FAIL", detail)
+            return 0
+
+        parts = []
+        for value in outcomes:
+            if value.get("exception") == "NativeFileOpenFailure":
+                parts.append(f"{value['case']} expected failed-open diagnostic")
+            else:
+                parts.append(
+                    f"{value['case']} unexpected {value['status']} "
+                    f"{value.get('exception', 'no exception')}: "
+                    f"{compact(value.get('message', value.get('tail', '')))}"
+                )
+        emit("notice", f"Path matrix {args.label} CONTROL FAIL", "; ".join(parts))
+        return 1
+
     failed = [value for value in outcomes if value["status"] != "PASS"]
     if not failed:
         detail = "; ".join(
@@ -246,26 +269,22 @@ def controller_main(args: argparse.Namespace) -> int:
             args.chinese_python, args.chinese_profile, False, False,
         ),
         (
-            "d-both-chinese-short-path",
-            args.chinese_python, args.chinese_profile, True, False,
-        ),
-        (
-            "d-both-chinese-utf8-locale",
-            args.chinese_python, args.chinese_profile, False, True,
+            "control-both-chinese-locale-opt-out",
+            args.chinese_python, args.chinese_profile, True, True,
         ),
     )
     failed = False
-    for label, python, profile, short_path, utf8_locale in rows:
+    for label, python, profile, disable_utf8_locale, expect_failed_open in rows:
         command = [
             str(python), "-u", str(Path(__file__).resolve()), "--row",
             "--label", label, "--profile", str(profile),
             "--baseline", str(args.baseline), "--repo", str(args.repo),
             "--work", str(args.work),
         ]
-        if short_path:
-            command.append("--short-path")
-        if utf8_locale:
-            command.append("--utf8-locale")
+        if disable_utf8_locale:
+            command.append("--disable-utf8-locale")
+        if expect_failed_open:
+            command.append("--expect-failed-open")
         completed = subprocess.run(
             command, capture_output=True, text=True, encoding="utf-8", errors="replace"
         )
@@ -294,8 +313,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--repo", type=Path, required=True)
     parser.add_argument("--work", type=Path)
     parser.add_argument("--result", type=Path)
-    parser.add_argument("--short-path", action="store_true")
-    parser.add_argument("--utf8-locale", action="store_true")
+    parser.add_argument("--disable-utf8-locale", action="store_true")
+    parser.add_argument("--expect-failed-open", action="store_true")
     parser.add_argument("--source-profile", type=Path)
     parser.add_argument("--ascii-profile", type=Path)
     parser.add_argument("--chinese-profile", type=Path)

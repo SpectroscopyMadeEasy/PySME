@@ -167,6 +167,7 @@ jobs:
         shell: pwsh
         run: |
           $venv = Join-Path $env:RUNNER_TEMP "pysme-ascii-venv"
+          Remove-Item Env:PYSME_SMELIB_WINDOWS_UTF8_LOCALE -ErrorAction SilentlyContinue
           & "$venv\Scripts\python.exe" ci/windows_probe/reference_calculation.py --output results/windows.npz --platform windows --annotations 2>&1 | Tee-Object -FilePath reference-windows.log
           if ($LASTEXITCODE -ne 0) { throw "Windows references failed" }
 
@@ -184,6 +185,7 @@ jobs:
           $venv = Join-Path $env:RUNNER_TEMP "pysme-ascii-venv"
           $python = "$venv\Scripts\python.exe"
           $failed = $false
+          Remove-Item Env:PYSME_SMELIB_WINDOWS_UTF8_LOCALE -ErrorAction SilentlyContinue
           $env:PYSME_TEST_OFFICIAL_MARCS = "1"
           & $python -m pytest -q test/test_official_marcs_abundances.py --junitxml=results/pytest-official-windows.xml 2>&1 | Tee-Object -FilePath pytest-windows.log
           if ($LASTEXITCODE -ne 0) { $failed = $true }
@@ -268,7 +270,7 @@ jobs:
           if ("${{ steps.runtime.outcome }}" -ne "success") { $bad += "compiler-free load" }
           if ("${{ steps.data.outcome }}" -ne "success") { $bad += "data" }
           if ("${{ steps.reference.outcome }}" -ne "success") { $bad += "references" }
-          if ("${{ steps.unicode.outcome }}" -ne "success") { $bad += "path matrix (including unswitched row d)" }
+          if ("${{ steps.unicode.outcome }}" -ne "success") { $bad += "path matrix (default rows a-d and opt-out control)" }
           if ($bad.Count) {
             Write-Output "::error title=Windows probe incomplete::$($bad -join ', ')"
             exit 1
