@@ -89,7 +89,7 @@ def test_string_citation_lists_code_papers_newest_first():
     assert_in_order(text, CODE_DOIS)
     # The code papers come ahead of the data references
     assert text.startswith("[1] ")
-    assert_in_order(text, [CODE_TITLES[-1], "Atomic weights"])
+    assert_in_order(text, [CODE_TITLES[-1], "The Solar Chemical Composition"])
 
 
 @pytest.mark.parametrize("extension", ["sme", "npy"])
