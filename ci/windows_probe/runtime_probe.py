@@ -40,15 +40,25 @@ def windows_modules() -> list[str]:
     ):
         raise ctypes.WinError(ctypes.get_last_error())
     count = min(needed.value // ctypes.sizeof(ctypes.c_void_p), len(modules))
-    result = []
+    result: dict[str, str] = {}
     for module in modules[:count]:
         buffer = ctypes.create_unicode_buffer(32768)
         if psapi.GetModuleFileNameExW(process, module, buffer, len(buffer)):
             name = buffer.value
             lowered = Path(name).name.lower()
-            if any(token in lowered for token in ("sme", "gfortran", "gcc_s", "quadmath", "winpthread")):
-                result.append(name)
-    return sorted(set(result))
+            if any(
+                token in lowered
+                for token in (
+                    "libsme-5",
+                    "_smelib",
+                    "libgfortran",
+                    "libgcc_s",
+                    "libquadmath",
+                    "libwinpthread",
+                )
+            ):
+                result.setdefault(os.path.normcase(name), name)
+    return sorted(result.values(), key=str.casefold)
 
 
 def main() -> int:
@@ -62,11 +72,23 @@ def main() -> int:
     modules = windows_modules()
     for module in modules:
         print(f"loaded module={module}")
+    sme_modules = [
+        module
+        for module in modules
+        if Path(module).name.lower().startswith("libsme-5")
+        and Path(module).suffix.lower() == ".dll"
+    ]
+    if os.name == "nt" and len(sme_modules) != 1:
+        raise RuntimeError(
+            f"expected exactly one loaded libsme module, found {len(sme_modules)}: "
+            f"{sme_modules}"
+        )
     emit(
         "notice",
         "Native load",
         f"python={sys.version.split()[0]} arch={platform.machine()} version={native.LibraryVersion()} "
-        f"library={get_full_libfile()} loaded_modules={modules or ['reported only on Windows']}",
+        f"library={get_full_libfile()} libsme_modules={sme_modules or ['reported only on Windows']} "
+        f"loaded_modules={modules or ['reported only on Windows']}",
     )
     return 0
 

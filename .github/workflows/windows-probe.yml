@@ -54,14 +54,14 @@ jobs:
           $env:FC = "$ucrtPosix/gfortran.exe"
           $env:CMAKE_GENERATOR = "Ninja"
           $env:PATH = "$ucrt;$env:PATH"
-          python -m pip install --upgrade pip build delvewheel 2>&1 | Tee-Object -FilePath build-windows.log
+          python -m pip install --upgrade pip build "delvewheel==1.13.3" 2>&1 | Tee-Object -FilePath build-windows.log
           if ($LASTEXITCODE -ne 0) { throw "build dependency installation failed" }
           python -m build --wheel 2>&1 | Tee-Object -FilePath build-windows.log -Append
           if ($LASTEXITCODE -ne 0) { throw "wheel build failed" }
           $rawWheel = (Get-ChildItem dist\*.whl | Select-Object -First 1).FullName
-          python -m delvewheel show --add-path $ucrt $rawWheel 2>&1 | Tee-Object -FilePath build-windows.log -Append
+          python -m delvewheel show --add-path $ucrt --ignore-existing $rawWheel 2>&1 | Tee-Object -FilePath build-windows.log -Append
           if ($LASTEXITCODE -ne 0) { throw "delvewheel inspection failed" }
-          python -m delvewheel repair --add-path $ucrt --wheel-dir wheelhouse $rawWheel 2>&1 | Tee-Object -FilePath build-windows.log -Append
+          python -m delvewheel repair --add-path $ucrt --ignore-existing --wheel-dir wheelhouse $rawWheel 2>&1 | Tee-Object -FilePath build-windows.log -Append
           if ($LASTEXITCODE -ne 0) { throw "delvewheel repair failed" }
           $wheel = (Get-ChildItem wheelhouse\*.whl | Select-Object -First 1).FullName
           Write-Output "::notice title=Windows wheel::$(Split-Path $wheel -Leaf) repaired with delvewheel"
@@ -247,12 +247,10 @@ jobs:
         run: |
           set -euo pipefail
           exec > >(tee build-linux.log) 2>&1
-          sudo apt-get update
-          sudo apt-get install -y gfortran
-          python -m pip install --upgrade pip build auditwheel
-          python -m build --wheel
-          python -m auditwheel repair --wheel-dir wheelhouse dist/*.whl
-          echo "::notice title=Linux wheel::$(basename wheelhouse/*.whl) repaired with auditwheel"
+          python -m pip install --upgrade pip "cibuildwheel==2.22"
+          CIBW_BUILD=cp312-manylinux_x86_64 CIBW_BUILD_VERBOSITY=1 \
+            python -m cibuildwheel --output-dir wheelhouse
+          echo "::notice title=Linux wheel::$(basename wheelhouse/*.whl) built by the release cibuildwheel route"
 
       - name: Annotate Linux build failure
         if: always() && steps.build.outcome == 'failure'

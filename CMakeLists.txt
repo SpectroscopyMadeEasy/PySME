@@ -125,15 +125,9 @@ install(TARGETS sme
     RUNTIME DESTINATION ${SKBUILD_PLATLIB_DIR}/pysme/lib
 )
 
-if(WIN32)
-    install(TARGETS _smelib
-        RUNTIME DESTINATION ${SKBUILD_PLATLIB_DIR}/pysme/smelib
-    )
-else()
-    install(TARGETS _smelib
-        LIBRARY DESTINATION ${SKBUILD_PLATLIB_DIR}/pysme/smelib
-    )
-endif()
+install(TARGETS _smelib
+    LIBRARY DESTINATION ${SKBUILD_PLATLIB_DIR}/pysme/smelib
+)
 
 install(DIRECTORY ${SMELIB_DIR}/src/data/
     DESTINATION ${SKBUILD_PLATLIB_DIR}/pysme/share/libsme
