@@ -27,6 +27,10 @@
 
 ### Added
 
+- Native Windows x64 wheels (Python 3.12), built and tested in CI and attached
+  to GitHub releases. They are not published to PyPI. On Windows, PySME sets the
+  C runtime's `LC_CTYPE` to UTF-8 before SMElib opens files, so paths with
+  non-ASCII characters work; `PYSME_SMELIB_WINDOWS_UTF8_LOCALE=0` turns this off.
 - Added the two PySME papers, Jian et al. (2026) and Wehrhahn et al. (2023), to
   `sme.citation()`.
 - Added `continuum_scattering_mode` with values `0` (Planck source), `1`
