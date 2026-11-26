@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Added
+- Experimental `contribution_function(sme, kind="intensity" | "line_depression")`
+  prepares a locked native session and returns depth-resolved contributions;
+  the legacy `GetContributionfunction` remains unchanged.
+
+### Fixed
+- Native CFLD tests discover the linked library automatically; no-line checks
+  allow floating-point residuals (absolute tolerance 1e-10 in prescribed-test
+  units).
+
 ### Changed
 
 - Changed the minimum supported version for pre-built macOS arm64 wheels from

@@ -153,3 +153,24 @@ For a minimal prescribed-field check that bypasses those unrelated fixtures,
 use ``python -m pytest --noconftest -q test/test_line_depression.py`` with
 ``CFLD_LIBRARY`` set as above. This restricted run does not validate integration
 with the shared test fixtures.
+
+Experimental common entry point
+-------------------------------
+
+This interface is experimental and may change before release::
+
+    from pysme.contribution_function import contribution_function
+    segments = contribution_function(sme, kind="line_depression")
+    emission = contribution_function(sme, kind="intensity")
+
+The function prepares a private copy of the SME structure under one native
+session lock. Each segment returns wavelength, depth, mu and contributions.
+Spherical arrays have shape (wavelength, ray, radial interval); depth_edges
+identifies their integration bins. They are shell integrals, not per-dex
+densities. Line depression additionally returns L, Q, N and boundary terms.
+Native wavelength and intensity units are retained, before broadening or RV
+alignment. The input SME structure is not modified. Spherical intensity uses
+the same native emission recurrence with safe radial-shell folding; the legacy
+GetContributionfunction method is unchanged. Plane-parallel intensity retains
+its native depth-node representation; plane-parallel line depression is not
+supported by the atmospheric diagnostic.

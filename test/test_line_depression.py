@@ -1,6 +1,8 @@
-"""No EOS or stellar synthesis; requires CFLD_LIBRARY pointing to isolated build."""
+"""Prescribed-field CFLD tests; use the linked library or CFLD_LIBRARY override."""
 import importlib.util
 import os
+import subprocess
+import sys
 from pathlib import Path
 import numpy as np
 import pytest
@@ -10,7 +12,9 @@ api=importlib.util.module_from_spec(spec);spec.loader.exec_module(api)
 @pytest.fixture
 def native():
     path=os.environ.get('CFLD_LIBRARY')
-    if not path:pytest.skip('Set CFLD_LIBRARY to isolated diagnostic library')
+    if not path:
+        from pysme.sme_synth import ensure_smelib_ready
+        path = ensure_smelib_ready().__file__
     return api.NativeLineDepression(path)
 
 @pytest.mark.parametrize('tangent',[False,True])
@@ -29,8 +33,8 @@ def test_closure(native,tangent):
 def test_no_line(native):
     m=np.geomspace(.001,20,56);b=1+m;k=np.ones(56)
     r=native.prescribed_path(m,k,k,b,b,b)
-    np.testing.assert_array_equal(r.total,0)
-    assert r.boundary==0
+    np.testing.assert_allclose(r.total, 0, rtol=0, atol=1e-10)
+    assert abs(r.boundary) <= 1e-10
 
 @pytest.mark.parametrize('bad',[np.nan,np.inf,-1.,0.])
 def test_bad_opacity(native,bad):
@@ -39,8 +43,21 @@ def test_bad_opacity(native,bad):
 
 
 def test_unprepared_state(native):
-    with pytest.raises(RuntimeError,match='status 10'):
-        native.spherical_state([5000.],[1.],56)
+    # Other integration tests may already have populated process-global SMElib.
+    code = """
+import importlib.util, sys
+spec = importlib.util.spec_from_file_location('cfld_api', sys.argv[1])
+api = importlib.util.module_from_spec(spec); spec.loader.exec_module(api)
+native = api.NativeLineDepression(sys.argv[2])
+try:
+    native.spherical_state([5000.], [1.], 56)
+except RuntimeError as exc:
+    assert 'status 10' in str(exc)
+else:
+    raise AssertionError('Unprepared state accepted')
+"""
+    subprocess.run([sys.executable, '-c', code, api.__file__,
+                    native.library._name], check=True)
 
 
 def test_global_weights_not_chunk_normalised():

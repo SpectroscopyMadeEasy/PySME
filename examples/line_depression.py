@@ -41,8 +41,8 @@ def main():
 
     no_line = native.prescribed_path(tau, continuum_opacity, continuum_opacity,
                                      planck, planck, planck, quadrature=24)
-    np.testing.assert_array_equal(no_line.total, 0.0)
-    np.testing.assert_equal(no_line.boundary, 0.0)
+    np.testing.assert_allclose(no_line.total, 0.0, rtol=0, atol=1e-10)
+    np.testing.assert_allclose(no_line.boundary, 0.0, rtol=0, atol=1e-10)
     print(json.dumps(dict(status='PASS_PRESCRIBED_DEMO',
                          native_intensity_depression=float(depression),
                          integrated_cfld_plus_boundary=float(reconstructed),
