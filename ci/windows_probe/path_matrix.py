@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -16,6 +17,14 @@ from annotations import emit
 
 CASES = ("solar_fixed", "hydrogen_fixed")
 SHORT_PATH_ENV = "PYSME_SMELIB_WINDOWS_SHORT_PATH"
+UTF8_LOCALE_ENV = "PYSME_SMELIB_WINDOWS_UTF8_LOCALE"
+FAILED_OPEN_RE = re.compile(
+    r"(?:tables?\s+not\s+found|did\s+not\s+find[^\r\n]*\bfile\b|"
+    r"(?:cannot|can't|could\s+not|unable\s+to|failed\s+to)\s+open|"
+    r"error\s+(?:reading|opening|open)[^\r\n]*\bfile\b|"
+    r"eof\s+found\s+while\s+reading[^\r\n]*\bfile\b)",
+    re.IGNORECASE,
+)
 PROFILE_PATHS = {
     "data.hlineprof": "~/.sme/hlineprof",
     "data.atmospheres": "~/.sme/atmospheres",
@@ -28,6 +37,20 @@ PROFILE_PATHS = {
 def compact(value: object, limit: int = 260) -> str:
     text = " ".join(str(value).split())
     return text if len(text) <= limit else text[: limit - 3] + "..."
+
+
+def current_ucrt_lc_ctype() -> str | None:
+    if sys.platform != "win32":
+        return None
+    import ctypes
+    import locale
+
+    ucrt = ctypes.CDLL("ucrtbase.dll")
+    setlocale = ucrt.setlocale
+    setlocale.argtypes = (ctypes.c_int, ctypes.c_char_p)
+    setlocale.restype = ctypes.c_char_p
+    value = setlocale(locale.LC_CTYPE, None)
+    return None if value is None else value.decode("ascii", errors="replace")
 
 
 def copy_profile(source_profile: Path, target_profile: Path) -> None:
@@ -103,6 +126,7 @@ def case_main(args: argparse.Namespace) -> int:
             status="PASS",
             max_abs=max_abs,
             rms=rms,
+            ucrt_lc_ctype=current_ucrt_lc_ctype(),
         )
     except BaseException as exc:
         result.update(status="FAIL", exception=type(exc).__name__, message=str(exc))
@@ -128,6 +152,10 @@ def row_main(args: argparse.Namespace) -> int:
         env[SHORT_PATH_ENV] = "1"
     else:
         env.pop(SHORT_PATH_ENV, None)
+    if args.utf8_locale:
+        env[UTF8_LOCALE_ENV] = "1"
+    else:
+        env.pop(UTF8_LOCALE_ENV, None)
 
     outcomes = []
     for case in CASES:
@@ -153,6 +181,7 @@ def row_main(args: argparse.Namespace) -> int:
         log_path.write_text(
             completed.stdout + completed.stderr, encoding="utf-8", errors="replace"
         )
+        captured = completed.stdout + completed.stderr
         if result_path.exists():
             result = json.loads(result_path.read_text(encoding="utf-8"))
         else:
@@ -162,6 +191,13 @@ def row_main(args: argparse.Namespace) -> int:
                 "exception": "ProcessExit",
                 "message": f"return code {completed.returncode}",
             }
+        failed_open = FAILED_OPEN_RE.search(captured)
+        if failed_open is not None:
+            result.update(
+                status="FAIL",
+                exception="NativeFileOpenFailure",
+                message=f"captured native failed-open diagnostic: {failed_open.group(0)}",
+            )
         result["tail"] = output_tail(completed)
         outcomes.append(result)
 
@@ -170,6 +206,9 @@ def row_main(args: argparse.Namespace) -> int:
         detail = "; ".join(
             f"{value['case']} max|dflux|={value['max_abs']:.9g}" for value in outcomes
         )
+        locales = {value.get("ucrt_lc_ctype") for value in outcomes}
+        if locales != {None}:
+            detail += f"; UCRT_LC_CTYPE={compact(sorted(locales, key=str))}"
         emit("notice", f"Path matrix {args.label} PASS", detail)
         return 0
 
@@ -190,14 +229,33 @@ def controller_main(args: argparse.Namespace) -> int:
     copy_profile(args.source_profile, args.ascii_profile)
     copy_profile(args.source_profile, args.chinese_profile)
     rows = (
-        ("a-install-ascii-profile-ascii", args.ascii_python, args.ascii_profile, False),
-        ("b-install-ascii-profile-chinese", args.ascii_python, args.chinese_profile, False),
-        ("c-install-chinese-profile-ascii", args.chinese_python, args.ascii_profile, False),
-        ("d-both-chinese", args.chinese_python, args.chinese_profile, False),
-        ("d-both-chinese-short-path", args.chinese_python, args.chinese_profile, True),
+        (
+            "a-install-ascii-profile-ascii",
+            args.ascii_python, args.ascii_profile, False, False,
+        ),
+        (
+            "b-install-ascii-profile-chinese",
+            args.ascii_python, args.chinese_profile, False, False,
+        ),
+        (
+            "c-install-chinese-profile-ascii",
+            args.chinese_python, args.ascii_profile, False, False,
+        ),
+        (
+            "d-both-chinese",
+            args.chinese_python, args.chinese_profile, False, False,
+        ),
+        (
+            "d-both-chinese-short-path",
+            args.chinese_python, args.chinese_profile, True, False,
+        ),
+        (
+            "d-both-chinese-utf8-locale",
+            args.chinese_python, args.chinese_profile, False, True,
+        ),
     )
     failed = False
-    for label, python, profile, short_path in rows:
+    for label, python, profile, short_path, utf8_locale in rows:
         command = [
             str(python), "-u", str(Path(__file__).resolve()), "--row",
             "--label", label, "--profile", str(profile),
@@ -206,6 +264,8 @@ def controller_main(args: argparse.Namespace) -> int:
         ]
         if short_path:
             command.append("--short-path")
+        if utf8_locale:
+            command.append("--utf8-locale")
         completed = subprocess.run(
             command, capture_output=True, text=True, encoding="utf-8", errors="replace"
         )
@@ -235,6 +295,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--work", type=Path)
     parser.add_argument("--result", type=Path)
     parser.add_argument("--short-path", action="store_true")
+    parser.add_argument("--utf8-locale", action="store_true")
     parser.add_argument("--source-profile", type=Path)
     parser.add_argument("--ascii-profile", type=Path)
     parser.add_argument("--chinese-profile", type=Path)

@@ -20,12 +20,44 @@ _smelib = None
 CURRENT_LIB = None
 _SMELIB_PROCESS_LOCK = RLock()
 _WINDOWS_SHORT_PATH_ENV = "PYSME_SMELIB_WINDOWS_SHORT_PATH"
+_WINDOWS_UTF8_LOCALE_ENV = "PYSME_SMELIB_WINDOWS_UTF8_LOCALE"
+
+
+def _env_switch_enabled(name):
+    return os.environ.get(name, "").strip().lower() not in (
+        "", "0", "false", "no", "off"
+    )
+
+
+def _windows_enable_utf8_locale():
+    """Opt in to UTF-8 narrow filenames in the shared Windows UCRT."""
+    if (
+        sys.platform != "win32"
+        or not _env_switch_enabled(_WINDOWS_UTF8_LOCALE_ENV)
+    ):
+        return
+
+    import ctypes
+    import locale
+
+    # Target the UCRT directly: this probe builds libsme and libgfortran with
+    # MSYS2 UCRT64. CI separately verifies that libgfortran's narrow OPEN path
+    # observes this application-wide locale state.
+    ucrt = ctypes.CDLL("ucrtbase.dll")
+    setlocale = ucrt.setlocale
+    setlocale.argtypes = (ctypes.c_int, ctypes.c_char_p)
+    setlocale.restype = ctypes.c_char_p
+    result = setlocale(locale.LC_CTYPE, b".UTF-8")
+    if result is None:
+        raise RuntimeError(
+            f'{_WINDOWS_UTF8_LOCALE_ENV}=1 could not set the UCRT '
+            'LC_CTYPE locale to ".UTF-8"'
+        )
 
 
 def _windows_short_ascii_path(path):
     """Return an ASCII 8.3 path when the opt-in Windows workaround is enabled."""
-    enabled = os.environ.get(_WINDOWS_SHORT_PATH_ENV, "").strip().lower()
-    if sys.platform != "win32" or enabled in ("", "0", "false", "no", "off"):
+    if sys.platform != "win32" or not _env_switch_enabled(_WINDOWS_SHORT_PATH_ENV):
         return path
 
     import ctypes
@@ -197,6 +229,7 @@ class SME_DLL:
         """Set the path to the library"""
         if libpath is None:
             libpath = get_full_datadir()
+        _windows_enable_utf8_locale()
         libpath = _windows_short_ascii_path(normpath(libpath)) + os.sep
         _smelib.SetLibraryPath(libpath)
 

@@ -15,6 +15,44 @@ env:
   VECLIB_MAXIMUM_THREADS: "1"
 
 jobs:
+  path-mechanism:
+    name: UCRT path mechanism
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up CPython 3.12 x64
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          architecture: x64
+
+      - name: Probe narrow and wide UCRT file opens
+        id: mechanism
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          python ci/windows_probe/path_mechanism.py 2>&1 | Tee-Object -FilePath path-mechanism.log
+          if ($LASTEXITCODE -ne 0) { throw "UCRT path mechanism probe failed" }
+
+      - name: Annotate path mechanism failure
+        if: always() && steps.mechanism.outcome == 'failure'
+        shell: pwsh
+        run: python ci/windows_probe/annotations.py path-mechanism.log --title "UCRT path mechanism" --level error
+
+      - name: Upload path mechanism log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: path-mechanism
+          path: path-mechanism.log
+          if-no-files-found: warn
+
+      - name: Fail path mechanism job
+        if: always() && steps.mechanism.outcome != 'success'
+        shell: pwsh
+        run: exit 1
+
   windows:
     name: Windows x64 wheel, tests, and paths
     runs-on: windows-latest
