@@ -235,14 +235,17 @@ class Collection(persistence.IPersist):
     def __repr__(self):
         return self.__str__()
 
-    def create_citation(self, citation_info, output="string"):
+    def create_citation(self, citation_info, output="string", sorting_style=None):
         if output == "bibtex":
             return citation_info
         elif output == "string":
             output = "plaintext"
 
         return pybtex.format_from_string(
-            citation_info, style="plain", output_backend=output
+            citation_info,
+            style="plain",
+            output_backend=output,
+            sorting_style=sorting_style,
         )
 
     def citation(self, output="string"):

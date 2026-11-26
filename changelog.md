@@ -4,6 +4,11 @@
 
 ### Changed
 
+- `sme.citation()` now lists the code papers first, newest first, followed by
+  the atmosphere, abundance, line list, and NLTE references. The formatted
+  output is no longer sorted by author. Loading a saved structure that holds the
+  old default code references replaces them with the new ones; edited
+  `citation_info` text is kept.
 - Updated the bundled SMElib to v6.13.21. The corrected Stehlé NALPHA table
   padding changes affected rows of the default H8--H30 profiles and removes
   narrow spurious spikes in H22, H26, H27, and H30. The STARK1 cache key now
@@ -22,6 +27,8 @@
 
 ### Added
 
+- Added the two PySME papers, Jian et al. (2026) and Wehrhahn et al. (2023), to
+  `sme.citation()`.
 - Added `continuum_scattering_mode` with values `0` (Planck source), `1`
   (deprecated continuum-only scattering), and `2` (line-inclusive scattering).
 - Added a manually dispatched wheel-build path that uploads artifacts for
