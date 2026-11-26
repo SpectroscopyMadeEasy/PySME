@@ -179,6 +179,9 @@ jobs:
           if (Test-Path "$HOME\.sme") { Copy-Item "$HOME\.sme" "$profile\.sme" -Recurse -Force }
           $env:HOME = $profile
           $env:USERPROFILE = $profile
+          # Only so that this log can print Chinese; it does not change how paths
+          # are passed to SMElib (PYTHONUTF8 would, so it is deliberately unset).
+          $env:PYTHONIOENCODING = "utf-8"
           $env:PATH = "$venv\Scripts;C:\Windows\System32;C:\Windows"
           & $basePython -m venv $venv 2>&1 | Tee-Object -FilePath unicode-windows.log
           if ($LASTEXITCODE -ne 0) { throw "Unicode venv creation failed" }

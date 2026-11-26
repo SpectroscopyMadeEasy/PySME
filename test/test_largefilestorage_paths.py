@@ -15,6 +15,8 @@ def test_lfs_storage_tilde_path_is_expanded(monkeypatch, tmp_path):
     fake_home = tmp_path / "home"
     fake_home.mkdir()
     monkeypatch.setenv("HOME", str(fake_home))
+    # On Windows, "~" is expanded from USERPROFILE rather than HOME.
+    monkeypatch.setenv("USERPROFILE", str(fake_home))
 
     lfs = LargeFileStorage(
         server="http://example.com",
