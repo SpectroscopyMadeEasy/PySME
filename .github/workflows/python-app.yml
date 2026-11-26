@@ -98,6 +98,16 @@ jobs:
         with:
           submodules: recursive
 
+      # Companion native API required by the experimental CFLD tests.
+      # Replace with the merged SMElib revision when SMElib#22 lands.
+      - name: Checkout companion CFLD native implementation
+        uses: actions/checkout@v5
+        with:
+          repository: SpectroscopyMadeEasy/SMElib
+          ref: refs/pull/22/head
+          path: smelib
+          submodules: recursive
+
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
@@ -219,6 +229,16 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
+          submodules: recursive
+
+      # Companion native API required by the experimental CFLD tests.
+      # Replace with the merged SMElib revision when SMElib#22 lands.
+      - name: Checkout companion CFLD native implementation
+        uses: actions/checkout@v5
+        with:
+          repository: SpectroscopyMadeEasy/SMElib
+          ref: refs/pull/22/head
+          path: smelib
           submodules: recursive
 
       - name: Set up Python
