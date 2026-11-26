@@ -216,6 +216,105 @@ def test_citation_includes_hyphenated_key_short_format(tmp_path):
     assert "Aspelund-Johansson" in sme.citation()
 
 
+@pytest.mark.parametrize(
+    "line, expected",
+    [
+        # Energies in eV: the entries start well before column 45
+        (
+            "'_          Kurucz Fe I 2014   1 wl:AA   2 gf:BB   3 CC   4 DD    Fe'",
+            {"AA", "BB", "CC", "DD"},
+        ),
+        # Several spaces between number, tag and key
+        (
+            "'N C        Kurucz Fe I 2014   1  wl:AA   2  gf:BB   3     CC   no-hfs Fe'",
+            {"AA", "BB", "CC"},
+        ),
+        # A single space between entries
+        (
+            "'NA         CNO, Na 1, Mg 1:   00 wl:AA 00 gf:BB 00 CC 665 DD 00 EE hfs:XX,YY Na'",
+            {"AA", "BB", "CC", "DD", "EE"},
+        ),
+        # Energies in cm^-1: wider description, with digits in it
+        (
+            "'N D        Kurucz Fe I 2014Fe               1 wl:AA   2 gf:BB   1 CC'",
+            {"AA", "BB", "CC"},
+        ),
+        # Several keys in one entry, with or without their own tag
+        (
+            "'_          Sc-Ni Wisconsin   53 wl:AA,iso:BB 41 iso:CC,DD  21 gf:EE,FF-G   4 HH    Ni'",
+            {"AA", "BB", "CC", "DD", "EE", "FF-G", "HH"},
+        ),
+        # Numbers followed by words in the description and the comment
+        (
+            "'_          La1 to Lu 2 Bell  19 wl:AA  19 gf:BB  19 CC    hfs:XX,YY Pr+'",
+            {"AA", "BB", "CC"},
+        ),
+        (
+            "'_          Kurucz MnI 2007 Mn    8 wl:AA   8 gf:BB   8 CC \\\\hfs XX XX'",
+            {"AA", "BB", "CC"},
+        ),
+        # Untagged wavelength entry in front of "gf:"
+        (
+            "'_          La1 to Lu 2 Bell  19 AA  19 gf:BB,CC  19 DD    La'",
+            {"AA", "BB", "CC", "DD"},
+        ),
+        (
+            "'_          Kurucz Fe I 2014   1 gf:AA   1 BB    Fe'",
+            {"AA", "BB"},
+        ),
+    ],
+)
+def test_extract_reference_keys_long_layouts(line, expected):
+    # Repeat the line to check that nothing is read across line breaks
+    keys = ValdFile._extract_reference_keys([line + "\n"] * 2, "long")
+
+    assert keys == expected
+
+
+@pytest.mark.parametrize("padding", [0, 40])
+def test_extract_reference_keys_short_layouts(padding):
+    data = "'Fe 1', 5000.0, 1.0, 1.0, -1.0, 8.0,-6.0, -7.0, 1.0, 0.5, ".ljust(
+        89 + padding - 4
+    )
+    line = data + "'   1 wl:AA   2 BB   3 gf:CC   4 DD Fe      '\n"
+
+    keys = ValdFile._extract_reference_keys([line], "short")
+
+    assert keys == {"AA", "BB", "CC", "DD"}
+
+
+def test_extract_reference_keys_without_tags():
+    # Without a tagged entry only the part behind the fixed column is searched
+    line = "'       K07            Kurucz FeI  Fe".ljust(50) + "1 AA   1 BB '\n"
+
+    keys = ValdFile._extract_reference_keys([line] * 2, "long")
+
+    assert keys == {"AA", "BB"}
+
+
+@pytest.mark.parametrize(
+    "filename, expected",
+    [
+        ("extract_element.lin", {"BPM", "FMW", "K14"}),
+        # "BSSc" and "LGWS" are cut to four characters in the file itself
+        (
+            "extract_stellar.lin",
+            {"BA-J", "BPM", "BSSc", "FMW", "K08", "K13", "K14", "K16"}
+            | {"LBS", "LGWS", "NWL", "TB"},
+        ),
+    ],
+)
+def test_reference_keys_of_compact_files(filename, expected):
+    with open(join(dirname(__file__), filename)) as file:
+        lines = file.readlines()
+    # Both files are in long format with four text lines per spectral line
+    references = [line for line in lines if " wl:" in line]
+
+    assert ValdFile._extract_reference_keys(references, "long") == expected
+    citation_info = ValdFile(join(dirname(__file__), filename)).citation_info
+    assert "@article{FMW," in citation_info
+
+
 def test_save_reload_long_subset_updates_header(tmp_path):
     linelist = ValdFile(join(dirname(__file__), "testcase3.lin"))
     subset = linelist[:5]

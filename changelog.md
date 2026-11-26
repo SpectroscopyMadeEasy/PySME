@@ -44,6 +44,11 @@
   skipped, so `linelist.citation_info` and `sme.citation()` left out the
   corresponding references. Line lists saved with the old citation text keep
   it until they are read again from the VALD file.
+- Read VALD reference keys whatever column they start in. PySME skipped the
+  first 45 (long format) or 90 (short format) characters of a reference
+  string, which dropped leading references, often the `wl:` and `gf:` ones, in
+  extracts with energies in eV. Entries separated by single spaces, preceded
+  by several spaces, or listing several keys (`gf:BWL,BK`) are now read too.
 - Fix NLTE grid interpolation at and near grid edges (#39). Below the lowest
   node the coefficients were taken from the highest node; above the highest
   node they were held at the edge value instead of extrapolated; on
