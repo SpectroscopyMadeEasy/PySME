@@ -56,6 +56,13 @@
   string, which dropped leading references, often the `wl:` and `gf:` ones, in
   extracts with energies in eV. Entries separated by single spaces, preceded
   by several spaces, or listing several keys (`gf:BWL,BK`) are now read too.
+- Fix the table of atomic weights in `pysme.abund`: a surplus value shifted the
+  entries from Ru to Bi by one element, Po had no entry of its own, and Au was
+  truncated. Synthetic spectra do not change, because SMElib uses its own
+  atomic masses.
+- Abundance citations no longer list Loss (2003), the source of that table,
+  since the calculation does not use it. Files saved earlier keep the citation
+  text stored in them.
 - Fix NLTE grid interpolation at and near grid edges (#39). Below the lowest
   node the coefficients were taken from the highest node; above the highest
   node they were held at the edge value instead of extrapolated; on

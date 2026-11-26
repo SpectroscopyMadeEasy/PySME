@@ -216,19 +216,6 @@ archivePrefix = {arXiv},
 }
 """
 
-_citation_atomic_weights = r"""
-@article{loss2003atomic,
-  title={Atomic weights of the elements 2001 (IUPAC Technical Report)},
-  author={Loss, RD},
-  journal={Pure and Applied Chemistry},
-  volume={75},
-  number={8},
-  pages={1107--1122},
-  year={2003},
-  publisher={De Gruyter}
-}
-"""
-
 # fmt: off
 elements = (
     "H", "He",
@@ -253,10 +240,12 @@ elements_dict = {el:i for i, el in enumerate(elements)}
 # From Loss, R. D. 2003, Pure Appl. Chem., 75, 1107, "Atomic Weights
 # of the Elements 2001". The isotopic composition of the Sun and stars
 # may differ from the terrestrial values listed here!
+# SMElib does not use this table (it has its own atomic masses), so it is
+# not part of the citation of an abundance pattern.
 # For radionuclides that appear only in Table 3, we have adopted the
 # atomic mass of the longest lived isotope, rounding to at most two
 # digits after the decimal point. These elements are: 43_Tc_98,
-# 61_Pm_145, 85_At_210, 86_Rn_222, 87_Fr_223, 88_Ra_226, 89_Ac_227,
+# 61_Pm_145, 84_Po_209, 85_At_210, 86_Rn_222, 87_Fr_223, 88_Ra_226, 89_Ac_227,
 # 93_Np_237, 94_Pu_244, 95_Am_243, 96_Cm_247, 97_Bk_247, 98_Cf_251,
 # 99_Es_252
 
@@ -266,15 +255,15 @@ _atom_weight = (
     22.989770, 24.3050, 26.981538, 28.0855, 30.973761, 32.065, 35.453, 39.948,
     39.0983, 40.078, 44.955910, 47.867, 50.9415, 51.9961, 54.938049, 55.845,
     58.933200, 58.6934, 63.546, 65.409, 69.723, 72.64, 74.92160, 78.96,
-    79.904, 83.798, 85.4678, 87.62, 88.90585, 91.224, 92.90638,
-    95.94, 97.91, 95.94, 101.07, 102.90550, 106.42, 107.8682, 112.411,
-    114.818, 118.710, 121.760, 127.60, 126.90447, 131.293, 132.90545, 137.327,
-    138.9055, 140.116, 140.90765, 144.24, 144.91, 150.36, 151.964, 157.25,
-    158.92534, 162.500, 164.93032, 167.259, 168.93421, 173.04, 174.967, 178.49,
-    180.9479, 183.84, 186.207, 190.23, 192.217, 195.078, 196.966, 200.59,
-    204.3833, 207.2, 208.98038, 209.99, 222.02, 223.02, 226.03, 227.03,
-    232.0381, 231.03588, 238.02891, 237.05, 244.06, 243.06, 247.07, 247.07,
-    251.08, 252.08,)
+    79.904, 83.798, 85.4678, 87.62, 88.90585, 91.224, 92.90638, 95.94,
+    97.91, 101.07, 102.90550, 106.42, 107.8682, 112.411, 114.818, 118.710,
+    121.760, 127.60, 126.90447, 131.293, 132.90545, 137.327, 138.9055, 140.116,
+    140.90765, 144.24, 144.91, 150.36, 151.964, 157.25, 158.92534, 162.500,
+    164.93032, 167.259, 168.93421, 173.04, 174.967, 178.49, 180.9479, 183.84,
+    186.207, 190.23, 192.217, 195.078, 196.96655, 200.59, 204.3833, 207.2,
+    208.98038, 208.98, 209.99, 222.02, 223.02, 226.03, 227.03, 232.0381,
+    231.03588, 238.02891, 237.05, 244.06, 243.06, 247.07, 247.07, 251.08,
+    252.08,)
 
 # Anders, Grevesse, 1989, GeCo Acta  53, 197
 _anders1989 = (
@@ -494,7 +483,7 @@ class Abund(IPersist):
         monh=0,
         pattern="solar",
         type="sme",
-        citation_info=_citation_atomic_weights,
+        citation_info="",
     ):
         self.monh = monh
         # The internal type is fixed to this value
@@ -893,7 +882,7 @@ class Abund(IPersist):
             If an undefined pattern_name was given
         """
         self.type = "H=12"
-        self.citation_info = _citation_atomic_weights + "\n"
+        self.citation_info = ""
         if pattern_name.lower() in ["anders1989"]:
             self._pattern = np.array(_anders1989, dtype=float)
             self.citation_info += _citation_anders1989
@@ -1092,7 +1081,7 @@ class Abund(IPersist):
 
                 abund_format = info["format"]
                 monh = info["monh"]
-                citation_info = info.get("citation_info", _citation_atomic_weights)
+                citation_info = info.get("citation_info", "")
 
             elif name.endswith("reference_pattern.npy"):
                 b = io.BytesIO(file.read(name))

@@ -5,7 +5,7 @@ import warnings
 import numpy as np
 import pytest
 
-from pysme.abund import Abund
+from pysme.abund import Abund, _atom_weight, elements
 from pysme.sme import SME_Structure
 
 pattern_names = ["Asplund2009", "Grevesse2007", "Empty"]
@@ -251,3 +251,99 @@ def test_abundance_reference_metadata_roundtrip():
     assert restored.reference["Ti"] == pytest.approx(abund.reference["Ti"])
     assert restored.pattern["Ti"] == pytest.approx(abund.pattern["Ti"])
     assert restored.A["Ti"] == pytest.approx(abund.A["Ti"])
+
+
+def test_atomic_weights_follow_element_order():
+    """Weights rise with atomic number, apart from the known inversions."""
+    assert len(_atom_weight) == len(elements)
+    inversions = {
+        (elements[i], elements[i + 1])
+        for i in range(len(elements) - 1)
+        if _atom_weight[i] > _atom_weight[i + 1]
+    }
+    assert inversions == {
+        ("Ar", "K"),
+        ("Co", "Ni"),
+        ("Te", "I"),
+        ("Bi", "Po"),  # Po-209, rounded to two decimals
+        ("Th", "Pa"),
+        ("U", "Np"),
+        ("Pu", "Am"),
+    }
+
+
+@pytest.mark.parametrize(
+    "element, weight",
+    # IUPAC 2001; the longest-lived isotope for Tc, Po and At.
+    [
+        ("H", 1.00794),
+        ("Fe", 55.845),
+        ("Mo", 95.94),
+        ("Tc", 97.91),
+        ("Ru", 101.07),
+        ("Ba", 137.327),
+        ("Eu", 151.964),
+        ("Au", 196.96655),
+        ("Pb", 207.2),
+        ("Bi", 208.98038),
+        ("Po", 208.98),
+        ("At", 209.99),
+        ("U", 238.02891),
+        ("Es", 252.08),
+    ],
+)
+def test_atomic_weight_values(element, weight):
+    assert _atom_weight[elements.index(element)] == pytest.approx(weight, abs=1e-6)
+
+
+@pytest.mark.parametrize(
+    "pattern, key",
+    [
+        ("anders1989", "1989GeCoA..53..197A"),
+        ("grevesse1996", "1996ASPC...99..117G"),
+        ("grevesse1998", "1998SSRv...85..161G"),
+        ("asplund2005", None),
+        ("grevesse2007", None),
+        ("solar", None),
+        ("asplund2009", None),
+        ("asplund2021", None),
+        ("amarsi2026", "2026arXiv260823155A"),
+        ("lodders2003", "2003ApJ...591.1220L"),
+        ("lodders2010", "2010ASSP...16..379L"),
+    ],
+)
+def test_pattern_citation_lists_only_the_pattern(pattern, key):
+    abund = Abund(pattern=pattern, monh=0)
+
+    assert abund.citation_info.count("@") == 1
+    assert "loss2003" not in abund.citation_info
+    if key is not None:
+        assert key in abund.citation_info
+
+
+def test_no_citation_without_a_named_pattern():
+    values = Abund(pattern="asplund2009", monh=0).get_pattern("H=12", raw=True)
+
+    for abund in (Abund(pattern="empty"), Abund(pattern=values, type="H=12")):
+        assert abund.citation_info == ""
+
+
+@pytest.mark.parametrize("pattern", ["asplund2021", "empty"])
+def test_sme_citation_renders_without_atomic_weights(pattern):
+    sme = SME_Structure()
+    sme.abund = Abund(pattern=pattern, monh=0)
+
+    text = sme.citation()
+
+    assert "Spectroscopy Made Easy" in text
+    assert "Atomic weights" not in text
+
+
+def test_saved_citation_text_is_kept():
+    data = _make_asplund2021_abund().to_dict()
+    data["citation_info"] = "@article{loss2003atomic, title={Saved text}}"
+
+    assert Abund.from_dict(data).citation_info == data["citation_info"]
+    assert Abund._load(Abund.from_dict(data)._save()).citation_info == (
+        data["citation_info"]
+    )
