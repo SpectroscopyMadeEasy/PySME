@@ -35,6 +35,11 @@
 
 ### Fixed
 
+- Fix `sme.citation()` failing with `FieldIsMissing` when a line list cites
+  `FTa`, `FTb`, `Wcor` or `OBK`. Repaired the damaged `OBK` entry. The other
+  three are reports with unknown titles and are now `@misc` entries. Citation
+  text already saved with a line list is not updated; read the list again from
+  the VALD file.
 - Fix NLTE grid interpolation at and near grid edges (#39). Below the lowest
   node the coefficients were taken from the highest node; above the highest
   node they were held at the edge value instead of extrapolated; on
