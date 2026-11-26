@@ -535,10 +535,19 @@ jobs:
           set -euo pipefail
           TAG="${{ github.ref_name }}"
           REPO="${{ github.repository }}"
+          # Pre-release tags (PEP 440: a, b, rc, dev), e.g. v1.3.0rc1, become GitHub pre-releases;
+          # PyPI already treats these versions as pre-releases.
+          PRERELEASE=()
+          if [[ "$TAG" =~ ^v[0-9]+(\.[0-9]+)*[-._]?(a|alpha|b|beta|rc|c|pre|preview|dev)[0-9]*$ ]]; then
+            PRERELEASE=(--prerelease)
+          fi
           if gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1; then
             gh release upload "$TAG" dist/* --repo "$REPO" --clobber
+            if [[ ${#PRERELEASE[@]} -gt 0 ]]; then
+              gh release edit "$TAG" --repo "$REPO" --prerelease
+            fi
           else
-            gh release create "$TAG" dist/* --repo "$REPO" --title "$TAG"
+            gh release create "$TAG" dist/* --repo "$REPO" --title "$TAG" "${PRERELEASE[@]}"
           fi
         env:
           GH_TOKEN: ${{ github.token }}
@@ -618,3 +627,46 @@ jobs:
             --request POST \
             --header "Authorization: Token ${READTHEDOCS_API_TOKEN}" \
             "${RTD_API_ROOT}/versions/latest/builds/"
+
+  backmerge_pr:
+    name: Open master-to-develop pull request
+    needs: [tag_gate, publish, release]
+    runs-on: ubuntu-latest
+    if: >-
+      needs.tag_gate.outputs.allow == 'true' && github.event_name == 'push' &&
+      startsWith(github.ref, 'refs/tags/v') &&
+      needs.publish.result == 'success' && needs.release.result == 'success'
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    steps:
+      # After a successful release, open a pull request that merges master back into develop,
+      # so that develop contains the release merge commit and the tag. A maintainer merges it.
+      - uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b  # v7.1.0 (pinned)
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const tag = context.ref.replace('refs/tags/', '');
+            const cmp = await github.rest.repos.compareCommits({ owner, repo, base: 'develop', head: 'master' });
+            if (cmp.data.ahead_by === 0) {
+              core.info('develop already contains master; nothing to do.');
+              return;
+            }
+            const open = await github.rest.pulls.list({
+              owner, repo, state: 'open', base: 'develop', head: `${owner}:master`
+            });
+            let number;
+            if (open.data.length > 0) {
+              number = open.data[0].number;
+              core.info(`Back-merge pull request #${number} is already open.`);
+            } else {
+              const pr = await github.rest.pulls.create({
+                owner, repo, base: 'develop', head: 'master',
+                title: `Merge master into develop after ${tag}`,
+                body: `Merges \`master\` back into \`develop\` after the ${tag} release, so that \`develop\` contains the release merge commit and the tag. Opened automatically by the release workflow.`
+              });
+              number = pr.data.number;
+              core.info(`Opened back-merge pull request #${number}.`);
+            }
+            await github.rest.issues.addLabels({ owner, repo, issue_number: number, labels: ['ignore-for-release'] });

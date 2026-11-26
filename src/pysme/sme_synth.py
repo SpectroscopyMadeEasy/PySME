@@ -280,8 +280,16 @@ class SME_DLL:
         return np.asarray(strong, dtype=bool)
 
     def SetContinuumScatteringSourceMode(self, mode):
-        """Enable or disable the continuum scattering source for plane-parallel and spherical transfer."""
-        _smelib.SetContinuumScatteringSourceMode(int(bool(mode)))
+        """Select the continuum source mode for plane-parallel and spherical transfer."""
+        mode = int(mode)
+        try:
+            _smelib.SetContinuumScatteringSourceMode(mode)
+        except (RuntimeError, ValueError) as exc:
+            if mode == 2 and "mode must be 0 or 1" in str(exc).lower():
+                raise RuntimeError(
+                    "Continuum-scattering mode 2 requires SMElib >= 6.13.21"
+                ) from exc
+            raise
 
     def SetContinuumOpacityGrid(
         self, mode="exact", base_step=1.0, rtol=1e-3, min_step=1e-3
