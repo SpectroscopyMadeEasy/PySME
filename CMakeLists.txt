@@ -63,6 +63,9 @@ string(REGEX REPLACE "^v" "" SMELIB_VERSION "${SMELIB_VERSION_ID}")
 target_compile_definitions(sme PRIVATE
     "SMELIB_VERSION=\"${SMELIB_VERSION}\""
 )
+if(WIN32)
+    target_compile_definitions(sme PRIVATE BUILDING_SME_WIN_DLL)
+endif()
 target_include_directories(sme PRIVATE
     ${CMAKE_CURRENT_BINARY_DIR}
     ${SMELIB_DIR}/src/sme

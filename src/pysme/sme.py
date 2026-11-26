@@ -22,6 +22,78 @@ from .nlte import NLTE
 
 logger = logging.getLogger(__name__)
 
+# BibTeX for the SME and PySME papers, newest first.
+_PYSME_CITATION_INFO = r"""
+@ARTICLE{2026A&A...711A.168J,
+    author = {{Jian}, Mingjie and {Piskunov}, Nikolai and {Valenti}, Jeff and {Xi Wang}, Ella and {Thorsbro}, Brian and {J{\"o}nsson}, Henrik and {Wehrhahn}, Ansgar},
+    title = "{PySME v1.0: Improved modelling of stellar spectra for survey-scale applications}",
+    journal = {\aap},
+    keywords = {line: formation, radiative transfer, methods: numerical, techniques: spectroscopic, stars: abundances, stars: atmospheres, Instrumentation and Methods for Astrophysics, Astrophysics of Galaxies, Solar and Stellar Astrophysics},
+    year = 2026,
+    month = jul,
+    volume = {711},
+    eid = {A168},
+    pages = {A168},
+    doi = {10.1051/0004-6361/202659986},
+    archivePrefix = {arXiv},
+    eprint = {2605.04007},
+    primaryClass = {astro-ph.IM},
+    adsurl = {https://ui.adsabs.harvard.edu/abs/2026A&A...711A.168J},
+    adsnote = {Provided by the SAO/NASA Astrophysics Data System}
+}
+@ARTICLE{2023A&A...671A.171W,
+    author = {{Wehrhahn}, A. and {Piskunov}, N. and {Ryabchikova}, T.},
+    title = "{PySME. Spectroscopy Made Easier}",
+    journal = {\aap},
+    keywords = {techniques: spectroscopic, methods: data analysis, methods: numerical, stars: fundamental parameters, stars: solar-type, Astrophysics - Solar and Stellar Astrophysics, Astrophysics - Earth and Planetary Astrophysics, Astrophysics - Instrumentation and Methods for Astrophysics},
+    year = 2023,
+    month = mar,
+    volume = {671},
+    eid = {A171},
+    pages = {A171},
+    doi = {10.1051/0004-6361/202244482},
+    archivePrefix = {arXiv},
+    eprint = {2210.04755},
+    primaryClass = {astro-ph.SR},
+    adsurl = {https://ui.adsabs.harvard.edu/abs/2023A&A...671A.171W},
+    adsnote = {Provided by the SAO/NASA Astrophysics Data System}
+}
+"""
+
+_SME_CITATION_INFO = r"""
+@ARTICLE{2017A&A...597A..16P,
+    author = {{Piskunov}, Nikolai and {Valenti}, Jeff A.},
+    title = "{Spectroscopy Made Easy: Evolution}",
+    journal = {\aap},
+    keywords = {stars: abundances, radiative transfer, stars: fundamental parameters, stars: atmospheres, techniques: spectroscopic, Astrophysics - Instrumentation and Methods for Astrophysics, Astrophysics - Solar and Stellar Astrophysics},
+    year = "2017",
+    month = "Jan",
+    volume = {597},
+    eid = {A16},
+    pages = {A16},
+    doi = {10.1051/0004-6361/201629124},
+    archivePrefix = {arXiv},
+    eprint = {1606.06073},
+    primaryClass = {astro-ph.IM},
+    adsurl = {https://ui.adsabs.harvard.edu/abs/2017A&A...597A..16P},
+    adsnote = {Provided by the SAO/NASA Astrophysics Data System}
+}
+@ARTICLE{1996A&AS..118..595V,
+    author = {{Valenti}, J.~A. and {Piskunov}, N.},
+    title = "{Spectroscopy made easy: A new tool for fitting observations with synthetic spectra.}",
+    journal = {\aaps},
+    keywords = {RADIATIVE TRANSFER, METHODS: NUMERICAL, TECHNIQUES: SPECTROSCOPIC, STARS: FUNDAMENTAL PARAMETERS, SUN: FUNDAMENTAL PARAMETERS, ATOMIC DATA},
+    year = "1996",
+    month = "Sep",
+    volume = {118},
+    pages = {595-603},
+    adsurl = {https://ui.adsabs.harvard.edu/abs/1996A&AS..118..595V},
+    adsnote = {Provided by the SAO/NASA Astrophysics Data System}
+}
+"""
+
+_CODE_CITATION_INFO = _PYSME_CITATION_INFO + _SME_CITATION_INFO
+
 
 def _as_continuum_scattering_mode(self, value):
     if (
@@ -525,37 +597,7 @@ class SME_Structure(Parameters):
         self.atmo = Atmosphere(**atmo, abund=atmo_abund, monh=atmo_monh)
         self.nlte = NLTE(**nlte)
 
-        self.citation_info = r"""
-            @ARTICLE{2017A&A...597A..16P,
-                author = {{Piskunov}, Nikolai and {Valenti}, Jeff A.},
-                title = "{Spectroscopy Made Easy: Evolution}",
-                journal = {\aap},
-                keywords = {stars: abundances, radiative transfer, stars: fundamental parameters, stars: atmospheres, techniques: spectroscopic, Astrophysics - Instrumentation and Methods for Astrophysics, Astrophysics - Solar and Stellar Astrophysics},
-                year = "2017",
-                month = "Jan",
-                volume = {597},
-                eid = {A16},
-                pages = {A16},
-                doi = {10.1051/0004-6361/201629124},
-                archivePrefix = {arXiv},
-                eprint = {1606.06073},
-                primaryClass = {astro-ph.IM},
-                adsurl = {https://ui.adsabs.harvard.edu/abs/2017A&A...597A..16P},
-                adsnote = {Provided by the SAO/NASA Astrophysics Data System}
-            }
-            @ARTICLE{1996A&AS..118..595V,
-                author = {{Valenti}, J.~A. and {Piskunov}, N.},
-                title = "{Spectroscopy made easy: A new tool for fitting observations with synthetic spectra.}",
-                journal = {\aaps},
-                keywords = {RADIATIVE TRANSFER, METHODS: NUMERICAL, TECHNIQUES: SPECTROSCOPIC, STARS: FUNDAMENTAL PARAMETERS, SUN: FUNDAMENTAL PARAMETERS, ATOMIC DATA},
-                year = "1996",
-                month = "Sep",
-                volume = {118},
-                pages = {595-603},
-                adsurl = {https://ui.adsabs.harvard.edu/abs/1996A&AS..118..595V},
-                adsnote = {Provided by the SAO/NASA Astrophysics Data System}
-            }
-            """
+        self.citation_info = _CODE_CITATION_INFO
 
         # Apply final conversions from IDL to Python version
         if "wave" in self:
@@ -1116,7 +1158,18 @@ class SME_Structure(Parameters):
         citation += [self.nlte.citation_info]
         citation = "\n".join(citation)
 
-        return self.create_citation(citation, output=output)
+        # Keep the order given above; the default style would sort by author.
+        return self.create_citation(citation, output=output, sorting_style="none")
+
+    def _update_stored_citation_info(self):
+        """Replace the old default citation text restored from a saved file.
+
+        Saved structures store ``citation_info``. Files written before the
+        PySME papers were added hold the two SME papers only. Text that
+        differs from that default (other than in whitespace) is kept.
+        """
+        if self.citation_info.split() == _SME_CITATION_INFO.split():
+            self.citation_info = _CODE_CITATION_INFO
 
     def save(self, filename, format="flex", _async=False):
         """Save the whole SME structure to disk.
@@ -1163,15 +1216,20 @@ class SME_Structure(Parameters):
         logger.info("Loading SME file %s", filename)
         ext = os.path.splitext(filename)[1]
         if ext == ".sme":
-            s = SME_Structure()
-            return persistence.load(filename, s)
+            s = persistence.load(filename, SME_Structure())
+            s._update_stored_citation_info()
+            return s
         elif ext == ".npy":
             # Numpy Save file
             s = np.load(filename, allow_pickle=True)
-            return np.atleast_1d(s)[0]
+            s = np.atleast_1d(s)[0]
+            s._update_stored_citation_info()
+            return s
         elif ext == ".npz":
             s = np.load(filename, allow_pickle=True)
-            return s["sme"][()]
+            s = s["sme"][()]
+            s._update_stored_citation_info()
+            return s
         elif ext in [".sav", ".out", ".inp"]:
             # IDL save file (from SME)
             s = readsav(filename)["sme"]

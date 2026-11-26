@@ -637,9 +637,13 @@ class ValdFile(LineList):
 
     @staticmethod
     def _extract_reference_keys(lines, fmt):
-        # Search the linelist data for this pattern, e.g:
-        # 1 gf:K14
-        # 4 KCN'
+        # A reference string holds entries made of a source number, an
+        # optional tag and a bibliography key, e.g:
+        # 1 wl:K14   1 gf:K14   1 K14   6 BA-J
+        # The column where it starts depends on the output (e.g. on the
+        # energy unit), so look for the first tagged entry and read the
+        # entries that directly follow it. The description before them and
+        # the comment after them are not searched.
         if fmt == "long":
             idiscard = 45
         elif fmt == "short":
@@ -647,14 +651,45 @@ class ValdFile(LineList):
         else:
             raise ValueError
 
-        pattern = r"\s\d+ (\w+:)?([\w+]+)[\s']"
-        pattern = re.compile(pattern)
-        # Discard the initial part of the line
-        lines = [l[idiscard:] for l in lines]
-        lines = "".join(lines)
-        references = [match.group(2) for match in re.finditer(pattern, lines)]
+        # A hyphen only counts between two key characters
+        key = r"[\w+]+(?:-[\w+]+)*"
+        # One entry may list several keys, e.g. "gf:BWL,BK" or "wl:LBT,iso:K08"
+        more = rf"(?:,(?:\w+:)?{key})*"
+        value = rf"(?:\w+:)?{key}{more}"
+        end = r"(?=[\s']|$)"
+        # The first entry is tagged "wl:" or "iso:". If it has no tag, the
+        # first tag is "gf:", with the wavelength entry (and in short format
+        # also the excitation entry) in front of it. Only there are untagged
+        # entries accepted, so that e.g. "Lu 2 Bell" in a description is not
+        # read as one. Their keys must contain a letter.
+        n_untagged = 1 if fmt == "long" else 2
+        untagged_key = rf"(?=[\d+-]*[^\W\d]){key}"
+        first = (
+            rf"(?:\d+\s+(?:wl|iso):"
+            rf"|(?:\d+\s+{untagged_key}\s+){{0,{n_untagged}}}\d+\s+gf:)"
+        )
+        block = re.compile(
+            rf"(?<![^\s']){first}{key}{more}{end}(?:\s+\d+\s+{value}{end})*"
+        )
+        entry = re.compile(rf"\d+\s+({value}){end}")
+        # For strings without any tagged entry, search behind a fixed column
+        fallback = re.compile(rf"\s\d+ (?:\w+:)?({key})(?=[\s'])")
+
+        references = set()
+        blocks = set()
+        for line in lines:
+            match = block.search(line)
+            if match is not None:
+                # Many lines share the same entries, so parse each set once
+                blocks.add(match.group())
+            else:
+                references.update(fallback.findall("\n" + line[idiscard:]))
+        for text in blocks:
+            for item in entry.findall(text):
+                # Drop the tags, e.g. "LBT,iso:K08" gives "LBT" and "K08"
+                references.update(k.rsplit(":", 1)[-1] for k in item.split(","))
         # We only need each reference ones
-        return set(references)
+        return references
 
     @staticmethod
     def _format_references(ref):

@@ -27,6 +27,10 @@ logger = logging.getLogger(__name__)
 # submodule); also downloaded when the bundled library is missing.
 SMELIB_RELEASE = "v6.13.23"
 
+# Python 3.8+ removes a DLL search directory when the returned handle is
+# destroyed.  Retain Windows handles for the lifetime of this module.
+_dll_directory_handles = []
+
 smelib_releases = {
     "default":  f"download/{SMELIB_RELEASE}",
     "0.6.23":   "download/v6.13.12",
@@ -351,13 +355,13 @@ def get_lib_name():
 
 def get_lib_directory():
     """
-    Get the directory name of the library. I.e. 'lib' on all systems
-    execpt windows, and 'bin' on windows
+    Get the package directory containing the SME shared library.
     """
-    if platform.system() in ["Windows"]:
-        dirpath = "bin"
+    if platform.system() == "Windows":
+        # CMake installs the Windows DLL into pysme/lib.
+        dirpath = "lib"
     else:
-        # For Linux/MacOS
+        # Preserve the existing Linux/macOS location.
         dirpath = "lib"
     return dirpath
 
@@ -403,7 +407,8 @@ def load_library(libfile=None):
     if libfile is None:
         libfile = get_full_libfile()
     try:
-        os.add_dll_directory(dirname(libfile))
+        handle = os.add_dll_directory(dirname(libfile))
+        _dll_directory_handles.append(handle)
     except AttributeError:
         newpath = dirname(libfile)
         if "PATH" in os.environ:

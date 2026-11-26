@@ -2,7 +2,7 @@
 
 For wide wavelength coverage (or many segments), using the full line list in
 every segment is expensive. PySME provides dynamic line filtering to keep only
-relevant lines per segment (see [Jian et al. (2026)](https://ui.adsabs.harvard.edu/abs/2026arXiv260504007J/abstract)).
+relevant lines per segment (see [Jian et al. (2026)](https://ui.adsabs.harvard.edu/abs/2026A&A...711A.168J/abstract)).
 
 ## Core Options
 
