@@ -398,6 +398,97 @@ static PyObject *smelib_GetContinuumOpacityGridStats(PyObject *self, PyObject *a
                          max_test_error);
 }
 
+static char smelib_SetHydrogenProfileMode_docstring[] = "Hydrogen line profiles: 1 convolved (default), 0 earlier";
+static PyObject *smelib_SetHydrogenProfileMode(PyObject *self, PyObject *args)
+{
+    int mode;
+    void *args_c[1];
+    const char *result = NULL;
+
+    if (!PyArg_ParseTuple(args, "i", &mode))
+        return NULL;
+
+    args_c[0] = &mode;
+    result = SetHydrogenProfileMode(1, args_c);
+    if (result != NULL && result[0] != OK_response)
+    {
+        PyErr_SetString(PyExc_RuntimeError, result);
+        return NULL;
+    }
+
+    Py_RETURN_NONE;
+}
+
+static char smelib_GetHydrogenProfileMode_docstring[] = "Current hydrogen line profile mode";
+static PyObject *smelib_GetHydrogenProfileMode(PyObject *self, PyObject *args)
+{
+    (void)self;
+    (void)args;
+    return Py_BuildValue("i", GetHydrogenProfileMode());
+}
+
+static char smelib_SetHydrogenOccupation_docstring[] = "H level occupation probabilities: mode (0 off, 1 on), neutral_scale";
+static PyObject *smelib_SetHydrogenOccupation(PyObject *self, PyObject *args)
+{
+    int mode;
+    double scale = 0.0;
+    void *args_c[2];
+    const char *result = NULL;
+
+    if (!PyArg_ParseTuple(args, "i|d", &mode, &scale))
+        return NULL;
+
+    args_c[0] = &mode;
+    args_c[1] = &scale;
+    result = SetHydrogenOccupation(2, args_c);
+    if (result != NULL && result[0] != OK_response)
+    {
+        PyErr_SetString(PyExc_RuntimeError, result);
+        return NULL;
+    }
+
+    Py_RETURN_NONE;
+}
+
+static char smelib_GetHydrogenOccupationMode_docstring[] = "Current occupation-probability mode";
+static PyObject *smelib_GetHydrogenOccupationMode(PyObject *self, PyObject *args)
+{
+    (void)self;
+    (void)args;
+    return Py_BuildValue("i", GetHydrogenOccupationMode());
+}
+
+static char smelib_SetWavelengthMedium_docstring[] = "Wavelength medium: air or vac";
+static PyObject *smelib_SetWavelengthMedium(PyObject *self, PyObject *args)
+{
+    char *medium;
+    IDL_STRING idl_medium;
+    const char *result = NULL;
+    void *args_c[1];
+
+    if (!PyArg_ParseTuple(args, "s", &medium))
+        return NULL;
+    idl_medium.slen = strlen(medium);
+    idl_medium.s = medium;
+    idl_medium.stype = 0;
+    args_c[0] = &idl_medium;
+    result = SetWavelengthMedium(1, args_c);
+    if (result != NULL && result[0] != OK_response)
+    {
+        PyErr_SetString(PyExc_RuntimeError, result);
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+static char smelib_GetWavelengthMedium_docstring[] = "Wavelength medium: air, vac or unset";
+static PyObject *smelib_GetWavelengthMedium(PyObject *self, PyObject *args)
+{
+    (void)self;
+    (void)args;
+    return Py_BuildValue("s", GetWavelengthMedium(0, NULL));
+}
+
 static char smelib_SetEosWarmStartMode_docstring[] = "Scope exact EOS history reuse to a fit lifecycle";
 static PyObject *smelib_SetEosWarmStartMode(PyObject *self, PyObject *args)
 {
@@ -1954,6 +2045,12 @@ static PyMethodDef module_methods[] = {
     {"GetLibraryPath", smelib_GetLibraryPath, METH_NOARGS, smelib_GetLibraryPath_docstring},
     {"SetLibraryPath", smelib_SetLibraryPath, METH_VARARGS, smelib_SetLibraryPath_docstring},
     {"SetHlinopWarningMode", smelib_SetHlinopWarningMode, METH_VARARGS, smelib_SetHlinopWarningMode_docstring},
+    {"SetHydrogenProfileMode", smelib_SetHydrogenProfileMode, METH_VARARGS, smelib_SetHydrogenProfileMode_docstring},
+    {"GetHydrogenProfileMode", smelib_GetHydrogenProfileMode, METH_NOARGS, smelib_GetHydrogenProfileMode_docstring},
+    {"SetHydrogenOccupation", smelib_SetHydrogenOccupation, METH_VARARGS, smelib_SetHydrogenOccupation_docstring},
+    {"GetHydrogenOccupationMode", smelib_GetHydrogenOccupationMode, METH_NOARGS, smelib_GetHydrogenOccupationMode_docstring},
+    {"SetWavelengthMedium", smelib_SetWavelengthMedium, METH_VARARGS, smelib_SetWavelengthMedium_docstring},
+    {"GetWavelengthMedium", smelib_GetWavelengthMedium, METH_NOARGS, smelib_GetWavelengthMedium_docstring},
     {"GetHlinopWarnings", smelib_GetHlinopWarnings, METH_NOARGS, smelib_GetHlinopWarnings_docstring},
     {"InputWaveRange", smelib_InputWaveRange, METH_VARARGS, smelib_InputWaveRange_docstring},
     {"SetVWscale", smelib_SetVWscale, METH_VARARGS, smelib_SetVWscale_docstring},

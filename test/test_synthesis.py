@@ -18,7 +18,8 @@ from pysme.synthesize import (
     _compute_linelist_hash,
     _compute_almax_lineinfo_for_sme,
     _load_lineinfo_cache_file,
-    _temporary_brackett_convolution_env,
+    _hydrogen_line_settings,
+    _hydrogen_line_state,
     synthesize_spectrum,
 )
 from .conftest import skipif_smelib
@@ -165,6 +166,16 @@ class _DummyDLL:
         self.events.append("InputLinePrecomputedInfo")
         return None
 
+    def SetHydrogenProfileMode(self, profile="convolved"):
+        self.h_settings = dict(getattr(self, "h_settings", {}), profile=profile)
+
+    def SetHydrogenOccupation(self, enabled=False, neutral_scale=0.0):
+        self.h_settings = dict(getattr(self, "h_settings", {}),
+                               occupation=(bool(enabled), float(neutral_scale)))
+
+    def SetWavelengthMedium(self, medium):
+        self.h_settings = dict(getattr(self, "h_settings", {}), medium=medium)
+
     def SetContinuumScatteringSourceMode(self, mode):
         self.continuum_scattering_source_modes.append(int(mode))
         return None
@@ -192,7 +203,7 @@ class _DummyDLL:
         self.events.append("Transf")
         self.last_wave = wave
         self.last_nwmax = nwmax
-        self.brackett_mode = os.environ.get("PYSME_H_STARK_CONVOLUTION")
+        self.transf_h_settings = dict(getattr(self, "h_settings", {}))
         if wave is None:
             if self.transf_wave is None:
                 wint = np.linspace(5000.0, 5001.0, 5)
@@ -205,7 +216,7 @@ class _DummyDLL:
         return len(wint), wint, sint, cint
 
     def CentralDepth(self, mu, accrt):
-        self.central_depth_mode = os.environ.get("PYSME_H_STARK_CONVOLUTION")
+        self.central_depth_h_settings = dict(getattr(self, "h_settings", {}))
         return np.zeros(0, dtype=float)
 
     def GetLineRange(self):
@@ -213,7 +224,7 @@ class _DummyDLL:
 
     def ALMAXRange(self, accrt):
         self.events.append("ALMAXRange")
-        self.almax_mode = os.environ.get("PYSME_H_STARK_CONVOLUTION")
+        self.almax_h_settings = dict(getattr(self, "h_settings", {}))
         return np.zeros(self._nlines), np.zeros((self._nlines, 2))
 
     def GetNLTEflags(self):
@@ -374,7 +385,7 @@ def test_dynamic_synthesis_maps_selected_and_discarded_lines(monkeypatch):
     sme.line_select_method = "cdr"
     sme.ipres = 1e9
     sme.linelist.cdr_paras = np.array([sme.teff, sme.logg, sme.monh, sme.vmic])
-    sme.linelist.cdr_paras_h_stark_convolution = "legacy"
+    sme.linelist.cdr_paras_h_line_state = _hydrogen_line_state(sme)
     sme.linelist.cdr_paras_thres["strong_depth"] = sme.strong_depth_thres
     sme.linelist.cdr_paras_thres["strong_bin_width"] = sme.strong_bin_width
     captured = {}
@@ -540,94 +551,97 @@ def test_contribution_function_uses_mu_area_integration_without_depth_resampling
     assert result.shape == (contribution.shape[1],)
 
 
-def test_brackett_mode_is_explicit_and_environment_is_restored(monkeypatch):
+def test_hydrogen_settings_are_set_for_native_calls(monkeypatch):
+    """The hydrogen-line settings are set in SMElib before the native synthesis
+    and line-info calls; the environment is not used."""
     dll = _DummyDLL()
     synth = Synthesizer(dll=dll)
     sme = _minimal_sme()
-    sme.h_stark_convolution = "legacy"
+    sme.h_line_profile = "legacy"
+    sme.h_occupation = True
+    sme.h_occupation_neutral_scale = 0.5
     monkeypatch.setenv("PYSME_H_STARK_CONVOLUTION", "convolution")
 
     synth.synthesize_segment(sme, 0)
 
-    assert dll.brackett_mode == "legacy"
-    assert dll.central_depth_mode == "legacy"
+    expected = {"profile": "legacy", "occupation": (True, 0.5), "medium": "air"}
+    assert dll.transf_h_settings == expected
+    assert dll.central_depth_h_settings == expected
     assert os.environ["PYSME_H_STARK_CONVOLUTION"] == "convolution"
 
 
-def test_brackett_environment_is_restored_after_exception(monkeypatch):
+def test_h_stark_convolution_is_deprecated(caplog):
+    """h_stark_convolution='convolution' only warns; it does not change the settings."""
+    dll = _DummyDLL()
     sme = _minimal_sme()
     sme.h_stark_convolution = "convolution"
-    monkeypatch.setenv("PYSME_H_STARK_CONVOLUTION", "legacy")
-
-    with pytest.raises(RuntimeError):
-        with _temporary_brackett_convolution_env(sme):
-            assert os.environ["PYSME_H_STARK_CONVOLUTION"] == "convolution"
-            raise RuntimeError("native synthesis failed")
-
-    assert os.environ["PYSME_H_STARK_CONVOLUTION"] == "legacy"
+    _hydrogen_line_settings.warned = False
+    with caplog.at_level("WARNING"):
+        with _hydrogen_line_settings(sme, dll):
+            pass
+    assert "no effect" in caplog.text
+    assert dll.h_settings == {"profile": "convolved", "occupation": (False, 0.0), "medium": "air"}
 
 
-@pytest.mark.parametrize(
-    "external_value,expected",
-    [("convolution", "convolution"), ("convolutionXYZ", "legacy")],
-)
-def test_brackett_none_uses_only_exact_external_mode(monkeypatch, external_value, expected):
-    sme = _minimal_sme()
-    sme.h_stark_convolution = None
-    monkeypatch.setenv("PYSME_H_STARK_CONVOLUTION", external_value)
-
-    with _temporary_brackett_convolution_env(sme):
-        assert os.environ["PYSME_H_STARK_CONVOLUTION"] == expected
-
-    assert os.environ["PYSME_H_STARK_CONVOLUTION"] == external_value
-
-
-def test_almax_worker_scopes_brackett_mode(monkeypatch):
+def test_almax_worker_sets_hydrogen_settings(monkeypatch):
     dll = _DummyDLL()
     monkeypatch.setattr(Synthesizer, "get_dll", lambda self, dll_id=None: dll)
     monkeypatch.setattr(Synthesizer, "get_atmosphere", lambda self, sme: sme)
     sme = _minimal_sme()
-    sme.h_stark_convolution = "convolution"
+    sme.h_occupation = True
     sme.atmo.method = "embedded"
     sme.linelist._lines = pd.DataFrame(
         {"species": ["H 1"], "wlcent": [5000.0]}
     )
-    monkeypatch.setenv("PYSME_H_STARK_CONVOLUTION", "legacy")
 
     _compute_almax_lineinfo_for_sme(sme)
 
-    assert dll.almax_mode == "convolution"
-    assert os.environ["PYSME_H_STARK_CONVOLUTION"] == "legacy"
+    assert dll.almax_h_settings["occupation"] == (True, 0.0)
 
 
-def test_convolution_lineinfo_cache_is_namespaced_and_mode_checked(tmp_path):
+def test_lineinfo_cache_follows_the_hydrogen_settings(tmp_path):
     sme = _minimal_sme()
     sme.linelist._lines = pd.DataFrame(
         {"species": ["H 1"], "wlcent": [5000.0], "atomic": [1.0]}
     )
-    legacy_hash = _compute_linelist_hash(sme.linelist, "legacy")
-    convolution_hash = _compute_linelist_hash(sme.linelist, "convolution")
-    assert legacy_hash == _compute_linelist_hash(sme.linelist)
-    assert convolution_hash != legacy_hash
+    default_state = _hydrogen_line_state(sme)
+    sme.h_occupation = True
+    occupation_state = _hydrogen_line_state(sme)
+    default_hash = _compute_linelist_hash(sme.linelist, default_state)
+    occupation_hash = _compute_linelist_hash(sme.linelist, occupation_state)
+    assert occupation_hash != default_hash
+    # caches from before the hydrogen-line state was part of the digest are not selected
+    assert default_hash != _compute_linelist_hash(sme.linelist)
 
     cache = tmp_path / "cdr_cache.npz"
     np.savez_compressed(
         cache,
         line_info=np.array([[0.0, 0.1, 4999.9, 5000.1]]),
         method=np.array("cdr"),
-        linelist_hash=np.array(legacy_hash),
+        linelist_hash=np.array(default_hash),
         n_lines_total=np.array(1),
-        h_stark_convolution=np.array("legacy"),
+        h_line_state=np.array(default_state),
     )
-    _load_lineinfo_cache_file(cache, "cdr", legacy_hash, 1, "legacy")
-    with pytest.raises(ValueError, match="h_stark_convolution mismatch"):
-        _load_lineinfo_cache_file(cache, "cdr", legacy_hash, 1, "convolution")
+    _load_lineinfo_cache_file(cache, "cdr", default_hash, 1, default_state)
+    with pytest.raises(ValueError, match="h_line_state mismatch"):
+        _load_lineinfo_cache_file(cache, "cdr", default_hash, 1, occupation_state)
+    old = tmp_path / "old_cache.npz"
+    np.savez_compressed(
+        old,
+        line_info=np.array([[0.0, 0.1, 4999.9, 5000.1]]),
+        method=np.array("cdr"),
+        linelist_hash=np.array(default_hash),
+        n_lines_total=np.array(1),
+    )
+    with pytest.raises(ValueError, match="no h_line_state"):
+        _load_lineinfo_cache_file(old, "cdr", default_hash, 1, default_state)
 
 
 @pytest.mark.parametrize("method,metric", [("cdr", "central_depth"), ("almax", "almax_ratio")])
-def test_switching_brackett_mode_invalidates_lineinfo(monkeypatch, method, metric):
+def test_switching_hydrogen_settings_invalidates_lineinfo(monkeypatch, method, metric):
     sme = _minimal_sme()
-    sme.h_stark_convolution = "convolution"
+    default_state = _hydrogen_line_state(sme)
+    sme.h_occupation = True
     sme.line_select_method = method
     sme.line_select_policy = "strict"
     sme.line_select_recompute = "if_stale"
@@ -643,23 +657,23 @@ def test_switching_brackett_mode_invalidates_lineinfo(monkeypatch, method, metri
     )
     if method == "cdr":
         sme.linelist.cdr_paras = np.array([sme.teff, sme.logg, sme.monh, sme.vmic])
-        sme.linelist.cdr_paras_h_stark_convolution = "legacy"
+        sme.linelist.cdr_paras_h_line_state = default_state
     else:
         sme.linelist.almax_paras = np.array(
             [sme.teff, sme.logg, sme.monh, sme.vmic, sme.accrt, sme.accrt, 0.0, 0.2]
         )
-        sme.linelist.almax_paras_h_stark_convolution = "legacy"
+        sme.linelist.almax_paras_h_line_state = default_state
 
     called = {"count": 0}
 
     def fail_if_not_invalidated(self, sme, **kwargs):
         called["count"] += 1
-        raise RuntimeError("mode switch invalidated line info")
+        raise RuntimeError("settings switch invalidated line info")
 
     monkeypatch.setattr(Synthesizer, f"update_{method}", fail_if_not_invalidated)
     synth = Synthesizer(dll=_DummyDLL())
 
-    with pytest.raises(RuntimeError, match="mode switch"):
+    with pytest.raises(RuntimeError, match="settings switch"):
         synth.synthesize_spectrum(
             sme,
             passLineList=False,

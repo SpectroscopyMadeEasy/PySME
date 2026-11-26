@@ -270,6 +270,7 @@ class LineList(IPersist):
                     medium=self.medium,
                 )
                 return_list.cdr_paras = self.cdr_paras
+                self._copy_lineinfo_state(return_list)
                 return return_list
             return self._lines[index].values
         else:
@@ -280,7 +281,14 @@ class LineList(IPersist):
                 self._lines.iloc[index], self.lineformat, medium=self.medium
             )
             return_list.cdr_paras = self.cdr_paras
+            self._copy_lineinfo_state(return_list)
             return return_list
+
+    def _copy_lineinfo_state(self, other):
+        # hydrogen-line settings of the stored line information (pysme.synthesize)
+        for name in ("cdr_paras_h_line_state", "almax_paras_h_line_state"):
+            if name in self.__dict__:
+                setattr(other, name, self.__dict__[name])
 
     def __getattribute__(self, name):
         if name[0] != "_" and name not in dir(self) and name in self._lines:

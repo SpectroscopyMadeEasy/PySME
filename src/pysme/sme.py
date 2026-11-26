@@ -310,10 +310,22 @@ class SME_Structure(Parameters):
             "bool: Whether to keep the specific intensities or integrate them together"),
         ("gam6", 1, asfloat, this, "float: van der Waals scaling factor"),
         ("h2broad", True, asbool, this, "bool: Whether to use H2 broadening or not"),
+        ("h_line_profile", "convolved", lowercase(oneof("convolved", "legacy")), this,
+            "str: hydrogen line profiles; 'convolved' (default) convolves the "
+            "broadening mechanisms (SMElib >= 6.13.22), 'legacy' adds them as "
+            "in earlier versions"),
+        ("h_occupation", False, asbool, this,
+            "bool: occupation probabilities of H I levels (Hummer & Mihalas "
+            "1988): hydrogen lines weakened by w(n_up), cut at the series limit, "
+            "and the dissolved-level (pseudo-continuum) absorption added; off by "
+            "default"),
+        ("h_occupation_neutral_scale", 0.0, asfloat, this,
+            "float: scale of the neutral-perturber (Hummer & Mihalas hard-sphere) "
+            "term of the occupation probabilities; 0 (default) = off, 1 = Hummer "
+            "& Mihalas"),
         ("h_stark_convolution", "legacy", lowercase(oneof(None, "legacy", "convolution")), this,
-            "str or None: Brackett Stark profile construction; 'legacy' keeps "
-            "the additive profile and 'convolution' enables the shared-support "
-            "convolution for Brackett lines with upper level m >= 10"),
+            "str or None: deprecated, no effect: SMElib >= 6.13.22 convolves the "
+            "Stark profiles of all lines computed with HLINOP (see h_line_profile)"),
         ("accwi", 3e-3, asfloat, this,
             "float: adaptive wavelength-grid refinement threshold; ignored when "
             "a fixed wavelength grid is supplied and not a global error bound."),

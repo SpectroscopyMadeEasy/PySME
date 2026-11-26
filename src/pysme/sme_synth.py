@@ -215,6 +215,53 @@ class SME_DLL:
         if msg:
             logger.warning("%s", msg)
 
+    def SetHydrogenProfileMode(self, profile="convolved"):
+        """Hydrogen line profiles: 'convolved' (default) or 'legacy' (or 1/0)."""
+        modes = {"convolved": 1, "legacy": 0}
+        mode = modes[str(profile).lower()] if isinstance(profile, str) else int(profile)
+        if not hasattr(_smelib, "SetHydrogenProfileMode"):
+            if mode != 1:
+                raise RuntimeError("h_line_profile='legacy' needs SMElib >= 6.13.22")
+            return
+        _smelib.SetHydrogenProfileMode(mode)
+
+    def GetHydrogenProfileMode(self):
+        """Hydrogen line profile mode (1 convolved, 0 legacy), None if not available."""
+        if hasattr(_smelib, "GetHydrogenProfileMode"):
+            return _smelib.GetHydrogenProfileMode()
+        return None
+
+    def SetHydrogenOccupation(self, enabled=False, neutral_scale=0.0):
+        """Occupation probabilities of H I levels (off by default); neutral_scale
+        scales the Hummer & Mihalas neutral-perturber term (0 = off)."""
+        if not hasattr(_smelib, "SetHydrogenOccupation"):
+            if enabled:
+                raise RuntimeError("h_occupation needs SMElib >= 6.13.22")
+            return
+        _smelib.SetHydrogenOccupation(int(bool(enabled)), float(neutral_scale))
+
+    def GetHydrogenOccupationMode(self):
+        """Occupation-probability mode (0 off, 1 on), None if not available."""
+        if hasattr(_smelib, "GetHydrogenOccupationMode"):
+            return _smelib.GetHydrogenOccupationMode()
+        return None
+
+    def SetWavelengthMedium(self, medium):
+        """Medium of the wavelengths given to SMElib: 'air' or 'vac'.  Ignored by
+        SMElib versions before 6.13.22 (which take the continuum in vacuum and
+        hydrogen lines in air)."""
+        medium = str(medium).lower()
+        if medium not in ("air", "vac"):
+            raise ValueError("wavelength medium must be 'air' or 'vac'")
+        if hasattr(_smelib, "SetWavelengthMedium"):
+            _smelib.SetWavelengthMedium(medium)
+
+    def GetWavelengthMedium(self):
+        """'air', 'vac', 'unset', or None if not available."""
+        if hasattr(_smelib, "GetWavelengthMedium"):
+            return _smelib.GetWavelengthMedium()
+        return None
+
     def SetLineInfoMode(self, mode):
         """Set handling mode for precomputed line info (0=internal, 1=use_if_valid, 2=trust)."""
         _smelib.SetLineInfoMode(int(mode))

@@ -69,6 +69,9 @@ CASES = {
 
 LINELIST = Path(__file__).with_name("halpha_window_cdr_union.lin")
 BASELINE = Path(__file__).with_name("halpha_regression.npz")
+# The baseline before SMElib 6.13.22 (earlier hydrogen line profiles); it must
+# still be reproduced with h_line_profile="legacy".
+BASELINE_LEGACY = Path(__file__).with_name("halpha_regression_legacy.npz")
 WRAN = [6561.0, 6564.2]
 MEAN_ABS_LIMIT = 1e-4
 MAX_ABS_LIMIT = 1e-3
@@ -122,12 +125,15 @@ def _make_structure(case):
     return sme
 
 
-def _synthesize_case(case):
+def _synthesize_case(case, h_line_profile=None):
     if CASES[case]["nlte"] and not _has_local_h_nlte_grid():
         pytest.skip("H NLTE grid not available in local cache")
 
+    sme = _make_structure(case)
+    if h_line_profile is not None:
+        sme.h_line_profile = h_line_profile
     try:
-        out = synthesize_spectrum(_make_structure(case))
+        out = synthesize_spectrum(sme)
     except (FileNotFoundError, URLError) as exc:
         pytest.skip(f"Halpha regression data unavailable: {exc}")
 
@@ -156,6 +162,19 @@ def test_halpha_regression(case):
     assert mean_abs < MEAN_ABS_LIMIT
     assert max_abs < MAX_ABS_LIMIT
     assert depth_diff < CORE_DEPTH_LIMIT
+
+
+@pytest.mark.parametrize("case", ["sun_lte", "arcturus_lte", "sun_nlte", "arcturus_nlte"])
+def test_halpha_regression_legacy_profiles(case):
+    """h_line_profile="legacy" reproduces the baseline from before SMElib 6.13.22."""
+    baseline = np.load(BASELINE_LEGACY)
+    wave, synth = _synthesize_case(case, h_line_profile="legacy")
+    ref = baseline[f"{case}_synth"]
+
+    assert np.allclose(wave, baseline[f"{case}_wave"], rtol=0.0, atol=1e-8)
+    assert float(np.nanmean(np.abs(synth - ref))) < MEAN_ABS_LIMIT
+    assert float(np.nanmax(np.abs(synth - ref))) < MAX_ABS_LIMIT
+    assert abs(_core_depth(synth) - _core_depth(ref)) < CORE_DEPTH_LIMIT
 
 
 @pytest.mark.parametrize(

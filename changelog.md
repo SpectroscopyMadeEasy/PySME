@@ -4,12 +4,37 @@
 
 ### Changed
 
-- Updated the bundled SMElib to v6.13.21. The corrected Stehlé NALPHA table
-  padding changes affected rows of the default H8--H30 profiles and removes
-  narrow spurious spikes in H22, H26, H27, and H30. The STARK1 cache key now
-  includes the line-center wavelength, so results no longer depend on the
-  order of calls for lines with the same lower/upper levels. Continuum-
-  scattering mode 1 is deprecated in SMElib.
+- Updated the bundled SMElib to v6.13.22 (via v6.13.21). Hydrogen lines now
+  come from Paul Barklem's HLINOP/HLINPROF code (SMElib submodule
+  `smelib/external/hlinop`; clone PySME with `--recursive`), with the
+  broadening mechanisms convolved instead of added. Default spectra change
+  for hydrogen lines: in the solar and Arcturus test models H alpha changes by
+  0.4-0.5% in normalized flux on average and by at most 2.4%; lines without
+  Stehlé tables (Brackett, Balmer n_up > 30) change much more (the equivalent
+  width of Br11 in the solar test model goes from 0.93 to 0.44 A, as the
+  earlier profiles had areas of 1.7-2.1). `sme.h_line_profile = "legacy"`
+  restores the earlier construction. SMElib v6.13.21 corrected the Stehlé
+  NALPHA table padding (narrow spurious spikes in H22, H26, H27 and H30) and
+  the STARK1 cache key; v6.13.22 also computes hydrogen lines as far from the
+  line centre as the other lines (the line-range scan used the deepest layer
+  only; default spectra change by at most 7e-4). Continuum-scattering mode 1
+  is deprecated in SMElib.
+- PySME passes the wavelength medium of the line list (`sme.linelist.medium`)
+  to SMElib, so that the hydrogen lines and the continuous opacities use the
+  same medium; line lists without a medium are taken as air, as for VALD. The
+  bound-free edges of the continuum move to their air wavelengths (the Balmer
+  edge from 3647.05 to 3645.96 A).
+- The line-information caches (CDR/ALMAX) include the hydrogen-line settings
+  in their key; caches written by earlier versions are recomputed.
+- The fallback download of SMElib (used only when the bundled library is
+  missing) takes the release that matches the `smelib` submodule (v6.13.22)
+  from the SpectroscopyMadeEasy/SMElib repository, instead of the latest
+  release.
+- Test references: the H alpha regression data and the solar and Arcturus
+  H alpha templates were regenerated with the new profiles; the previous files
+  are kept (`*_legacy*`) and tested with `h_line_profile = "legacy"`. The
+  Brackett test reference equivalent widths are 0.444 A (Br11) and 0.650 A
+  (Br10), and 0.926 and 1.213 A with the legacy profiles.
 - Changed the minimum supported version for pre-built macOS arm64 wheels from
   macOS 14 to macOS 15. PySME 1.2.x remains available for macOS 14 users.
 - Strengthened wheel validation with a native SMElib radiative-transfer smoke
@@ -22,6 +47,14 @@
 
 ### Added
 
+- Added `h_line_profile` (`"convolved"`, default, or `"legacy"`) for the
+  hydrogen line profiles.
+- Added `h_occupation` (off by default) for the occupation probabilities of
+  H I levels (Hummer & Mihalas 1988): hydrogen lines weakened by the
+  occupation probability of the upper level, cut at the series limit, and the
+  dissolved-level (pseudo-continuum) absorption added to the continuum; and
+  `h_occupation_neutral_scale` (default 0, i.e. charged perturbers only) for
+  the neutral-perturber term.
 - Added `continuum_scattering_mode` with values `0` (Planck source), `1`
   (deprecated continuum-only scattering), and `2` (line-inclusive scattering).
 - Added a manually dispatched wheel-build path that uploads artifacts for
@@ -29,6 +62,9 @@
 
 ### Deprecated
 
+- Deprecated `h_stark_convolution`; it has no effect, since SMElib v6.13.22
+  convolves the Stark profiles of all hydrogen lines computed with HLINOP.
+  Setting it to `"convolution"` logs a warning.
 - Deprecated `continuum_scattering_source` in favor of
   `continuum_scattering_mode`, and deprecated continuum-scattering mode `1` in
   favor of mode `2`.

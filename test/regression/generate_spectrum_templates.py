@@ -107,6 +107,7 @@ def synthesize_window(cfg: dict) -> tuple[np.ndarray, np.ndarray]:
     if "ipres" in cfg:
         sme.ipres = cfg["ipres"]
     sme.atmo.method = "grid"
+    sme.h_line_profile = cfg.get("h_line_profile", "convolved")
     sme.linelist = load_linelist(cfg)
     sme.wave = [wave]
     sme.normalize_by_continuum = True
@@ -132,6 +133,7 @@ def write_template(name: str, cfg: dict) -> Path:
         "linelist_path": cfg["linelist_path"],
         "nlte_elements": cfg["nlte_elements"],
         "nlte_grids": cfg.get("nlte_grids", {}),
+        "h_line_profile": cfg.get("h_line_profile", "convolved"),
         "atmo_source": "default",
         "pysme_commit": get_git_rev(ROOT),
         "smelib_commit": get_git_rev(ROOT / "smelib"),

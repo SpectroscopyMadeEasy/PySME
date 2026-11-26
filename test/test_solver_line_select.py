@@ -160,6 +160,7 @@ def _make_minimal_cdr_ready_linelist(sme):
     sme.linelist._lines["line_range_e"] = wl + 0.05
     sme.linelist._lines["strong"] = np.ones(nlines, dtype=bool)
     sme.linelist.cdr_paras = np.array([sme.teff, sme.logg, sme.monh, sme.vmic], dtype=float)
+    sme.linelist.cdr_paras_h_line_state = synth_mod._hydrogen_line_state(sme)
     sme.linelist.cdr_paras_thres["strong_depth"] = 0.001
     sme.linelist.cdr_paras_thres["strong_bin_width"] = 0.2
 

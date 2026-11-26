@@ -173,16 +173,35 @@ For more information see [system_info](../concepts/system_info.md).
 
 :gam6: van der Waals scaling factor (usually 1)
 :h2broad: flag determing whether to use H2 broadening or not (usually True)
-:h_stark_convolution:
-    Brackett Stark-profile construction.
-    The default `legacy` mode preserves previous results.
-    Enable the convolution for Br10 and higher with:
+:h_line_profile:
+    Hydrogen line profiles. The default `convolved` (SMElib >= 6.13.22)
+    convolves the broadening mechanisms (Doppler, Stark, radiative, resonance
+    and van der Waals) instead of adding them. `legacy` gives the earlier
+    construction of the profiles:
 
     ```python
-    sme.h_stark_convolution = "convolution"
+    sme.h_line_profile = "legacy"
     ```
 
-    See the [SMElib v6.13.18 Brackett documentation](https://github.com/SpectroscopyMadeEasy/SMElib/blob/v6.13.18/docs/brackett_stark_convolution.md) for its scope and validation.
+    The other corrections in SMElib 6.13.22 (for example the scaling of the
+    Stehlé profiles above their last tabulated density) apply in both modes.
+    The wavelength medium of the hydrogen lines and the hydrogen continuum is
+    taken from `sme.linelist.medium` (`"air"` or `"vac"`); line lists without
+    a medium are taken as air (above 2000 Å), as for VALD.
+:h_occupation:
+    Occupation probabilities of the H I levels (Hummer & Mihalas 1988), off by
+    default. When on, each hydrogen line is weakened by the occupation
+    probability of its upper level, the tabulated profiles are cut at the
+    series limit, and the absorption from dissolved levels (pseudo-continuum
+    below the Balmer, Paschen, ... edges) is added to the continuum.
+:h_occupation_neutral_scale:
+    Scale of the neutral-perturber (hard-sphere) term of the occupation
+    probabilities when `h_occupation` is on. `0` (default) keeps only the
+    charged-perturber term; `1` is the Hummer & Mihalas (1988) value.
+:h_stark_convolution:
+    Deprecated, no effect. SMElib >= 6.13.22 convolves the Stark profiles of
+    all lines computed with HLINOP; use `h_line_profile = "legacy"` for the
+    earlier profiles.
 :accrt:
     Default local line-to-continuum opacity-ratio threshold used to determine
     finite physical line-validity ranges.

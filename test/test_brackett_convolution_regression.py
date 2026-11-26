@@ -1,18 +1,17 @@
 # -*- coding: utf-8 -*-
-"""Regression test for the opt-in Brackett shared-support Stark convolution.
+"""Regression test for the Stark profiles of Brackett lines (lines without Stehle
+tables, computed with HLINOP).
 
-The convolution is OFF by default (legacy additive construction).  Setting
-PYSME_H_STARK_CONVOLUTION=convolution enables the shared-support convolution
-profile for Brackett lines with m>=10 (Br10 and above).
+Since SMElib 6.13.22 the broadening mechanisms are convolved for all such lines
+by default (h_line_profile="convolved"); h_line_profile="legacy" restores the
+earlier additive profiles, whose Stark areas were 1.7-2.1.  The earlier opt-in
+switch h_stark_convolution (Brackett m >= 10 only) no longer has an effect.
 
-Each mode runs in an isolated subprocess so process-global environment and
-native-library state cannot leak between the legacy and convolution cases.
-
-Reference EW values were validated against the analysis prototype and Korg
-(see analysis/h_occ_validation/).  The thresholds here only guard against
-silent regressions:
-  - convolution must differ from legacy (the whole point of the switch)
-  - convolution must reproduce the accepted reference EW within tolerance
+Each case runs in an isolated subprocess so native-library state cannot leak
+between cases.  The thresholds guard against silent regressions:
+  - legacy reproduces the earlier fixed reference EW
+  - the default (convolved) reproduces its reference EW and differs from legacy
+  - h_stark_convolution does not change the result
 """
 from __future__ import annotations
 
@@ -30,14 +29,14 @@ LINELIST = Path(__file__).with_name("brackett_br10_br11.lin")
 SUN = {"teff": 5772.0, "logg": 4.44, "monh": 0.0, "vmic": 1.0, "vmac": 2.5, "vsini": 1.8}
 
 LINES = {
-    # name: (center_air, half_window, reference_legacy_EW, reference_conv_EW)
-    "br11": (16806.538, 5.0, 0.92623631, 0.35522724),
-    "br10": (17362.112, 5.0, 1.21278839, 0.56173425),
+    # name: (center_air, half_window, reference_legacy_EW, reference_convolved_EW)
+    # legacy: the earlier fixed reference (unchanged); convolved: SMElib 6.13.22
+    "br11": (16806.538, 5.0, 0.92623631, 0.44376523),
+    "br10": (17362.112, 5.0, 1.21278839, 0.65029839),
 }
 
-# Convolution must be clearly different from legacy (well above numerical noise).
+# The convolved profiles must be clearly different from legacy.
 MIN_CONV_VS_LEGACY_DIFF = 0.05  # EW difference in Angstrom
-# Convolution EW must reproduce the accepted reference within this tolerance.
 CONV_EW_REL_TOL = 0.005  # 0.5%
 LEGACY_EW_REL_TOL = 0.005  # 0.5%
 
@@ -62,9 +61,11 @@ sme.wave = [wave]
 sme.normalize_by_continuum = True
 sme.vrad_flag = "none"
 sme.cscale_flag = "none"
-mode = {mode!r}
-if mode is not None:
-    sme.h_stark_convolution = mode
+profile, stark = {profile!r}, {stark!r}
+if profile is not None:
+    sme.h_line_profile = profile
+if stark is not None:
+    sme.h_stark_convolution = stark
 out = synthesize_spectrum(sme, linelist_mode="all")
 flux = np.asarray(out.synth[0], dtype=float)
 ew = float(np.trapezoid(1.0 - flux, wave))
@@ -72,18 +73,18 @@ print("{{:.8f}}".format(ew))
 '''
 
 
-def _synthesize_ew(mode: str, center: float, half: float) -> float:
-    # Explicit modes use the public API field.  None leaves the SME_Structure
-    # default untouched for the default-path test.
+def _synthesize_ew(profile, center: float, half: float, stark=None) -> float:
+    # None leaves the SME_Structure defaults untouched.
     script = WORKER.format(
-        mode=mode,
+        profile=profile,
+        stark=stark,
         sun=SUN,
         linelist=str(LINELIST),
         center=center,
         half=half,
     )
     env = os.environ.copy()
-    env.pop("PYSME_H_STARK_CONVOLUTION", None)  # rely on the API field, not env
+    env.pop("PYSME_H_STARK_CONVOLUTION", None)  # no longer read by SMElib
     proc = subprocess.run(
         [sys.executable, "-c", script],
         cwd=str(ROOT),
@@ -100,40 +101,31 @@ def _synthesize_ew(mode: str, center: float, half: float) -> float:
 
 
 @pytest.mark.parametrize("line", ["br11", "br10"])
-def test_brackett_convolution_switch(line):
+def test_brackett_profiles(line):
     center, half, ref_legacy_ew, ref_conv_ew = LINES[line]
 
     ew_legacy = _synthesize_ew("legacy", center, half)
-    ew_conv = _synthesize_ew("convolution", center, half)
+    ew_conv = _synthesize_ew(None, center, half)   # default: convolved
 
     legacy_rel = abs(ew_legacy - ref_legacy_ew) / ref_legacy_ew
     assert legacy_rel < LEGACY_EW_REL_TOL, (
         f"{line}: legacy EW {ew_legacy:.8f} deviates {legacy_rel*100:.2f}% "
         f"from fixed reference {ref_legacy_ew:.8f}"
     )
-
-    # The convolution must actually change the profile vs legacy.
     assert abs(ew_conv - ew_legacy) > MIN_CONV_VS_LEGACY_DIFF, (
-        f"{line}: convolution ({ew_conv:.4f}) should differ from legacy "
+        f"{line}: convolved ({ew_conv:.4f}) should differ from legacy "
         f"({ew_legacy:.4f})"
     )
-
-    # Convolution EW must match the accepted reference.
     rel = abs(ew_conv - ref_conv_ew) / ref_conv_ew
     assert rel < CONV_EW_REL_TOL, (
-        f"{line}: convolution EW {ew_conv:.4f} deviates {rel*100:.1f}% "
+        f"{line}: convolved EW {ew_conv:.4f} deviates {rel*100:.1f}% "
         f"from reference {ref_conv_ew:.4f}"
     )
 
 
-def test_brackett_convolution_default_is_legacy():
-    """Without the API field set (None), Br11 must match the legacy profile."""
+def test_h_stark_convolution_has_no_effect():
+    """The deprecated switch h_stark_convolution no longer changes Br11."""
     center, half, _, _ = LINES["br11"]
-
-    # mode=None leaves SME_Structure at its explicit PySME default (legacy).
     ew_default = _synthesize_ew(None, center, half)
-
-    ew_legacy = _synthesize_ew("legacy", center, half)
-    assert abs(ew_default - ew_legacy) < 1e-6, (
-        f"default EW {ew_default:.6f} must equal legacy EW {ew_legacy:.6f}"
-    )
+    ew_switch = _synthesize_ew(None, center, half, stark="convolution")
+    assert ew_switch == ew_default

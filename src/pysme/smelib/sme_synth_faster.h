@@ -50,6 +50,12 @@ extern "C" const char *SME_DLL SetH2broad(int n, void *arg[]);        /* Set fla
 extern "C" const char *SME_DLL ClearH2broad(int n, void *arg[]);      /* Clear flag for H2 molecule */
 extern "C" const char *SME_DLL SetHlinopWarningMode(int n, void *arg[]); /* Set HLINPROF->HLINOP warning mode */
 extern "C" const char *SME_DLL GetHlinopWarnings(int n, void *arg[]);    /* Return and clear HLINOP fallback warning summary */
+extern "C" const char *SME_DLL SetHydrogenProfileMode(int n, void *arg[]); /* Hydrogen line profiles: 1 convolved (default), 0 earlier */
+extern "C" int SME_DLL GetHydrogenProfileMode();                          /* Current hydrogen line profile mode */
+extern "C" const char *SME_DLL SetHydrogenOccupation(int n, void *arg[]); /* H level occupation probabilities: mode (0 off, 1 on), neutral scale */
+extern "C" int SME_DLL GetHydrogenOccupationMode();                        /* Current occupation-probability mode */
+extern "C" const char *SME_DLL SetWavelengthMedium(int n, void *arg[]);   /* Wavelength medium: "air" or "vac" */
+extern "C" const char *SME_DLL GetWavelengthMedium(int n, void *arg[]);   /* "air", "vac" or "unset" */
 extern "C" const char *SME_DLL SetLineInfoMode(int n, void *arg[]);   /* Set handling mode for precomputed line info */
 extern "C" const char *SME_DLL SetAdaptiveTransferGridMode(int n, void *arg[]); /* Select batched/legacy adaptive transfer */
 extern "C" const char *SME_DLL SetContinuumScatteringSourceMode(int n, void *arg[]); /* 0=Planck, 1=continuum J, 2=line-inclusive J */
