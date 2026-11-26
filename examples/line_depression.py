@@ -1,7 +1,8 @@
 """Minimal prescribed-field CFLD demo; no stellar atmosphere, EOS or line list.
 
 Requires the companion diagnostic-enabled SMElib and this PySME branch.
-Run: python examples/line_depression.py --library /path/to/libsme_cfld.so
+Run: python examples/line_depression.py
+Use --library to select an isolated diagnostic build explicitly.
 """
 import argparse
 import json
@@ -15,16 +16,18 @@ from pysme.line_depression import NativeLineDepression
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--library', default=os.environ.get('CFLD_LIBRARY'),
-                        help='Diagnostic native library (or set CFLD_LIBRARY)')
+                        help='Diagnostic native library; defaults to the linked PySME library')
     parser.add_argument('--output', type=Path,
                         help='Optional new NPZ file; existing files are refused')
     args = parser.parse_args()
-    if not args.library:
-        parser.error('Provide --library or set CFLD_LIBRARY')
     if args.output and args.output.exists():
         parser.error('Output already exists; choose a new filename')
 
-    native = NativeLineDepression(args.library)
+    library = args.library
+    if not library:
+        from pysme.sme_synth import ensure_smelib_ready
+        library = ensure_smelib_ready().__file__
+    native = NativeLineDepression(library)
     # Controlled dimensionless optical-depth problem, not a MARCS atmosphere.
     # Set continuum extinction to unity: m is also the reference continuum tau.
     tau = np.geomspace(1e-7, 50.0, 401)

@@ -10,7 +10,8 @@
 ### Fixed
 - Native CFLD tests discover the linked library automatically; no-line checks
   allow floating-point residuals (absolute tolerance 1e-10 in prescribed-test
-  units).
+  units). The prescribed example also uses the linked library by default while
+  retaining an explicit override.
 
 ### Changed
 

@@ -21,9 +21,12 @@ Minimal executable example
 After installing the modified Python package and building its companion native
 library, run from the PySME checkout::
 
-    python examples/line_depression.py --library /absolute/path/to/libsme_cfld.so
+    python examples/line_depression.py
 
-Alternatively set ``CFLD_LIBRARY``. Add ``--output demo_cfld.npz`` to save the
+The example uses PySME's linked native library by default. To select an
+isolated diagnostic build, pass ``--library /absolute/path/to/libsme_cfld.so``
+or set ``CFLD_LIBRARY``. A native library without the experimental CFLD symbols
+raises a clear error. Add ``--output demo_cfld.npz`` to save the
 six channels, boundary metadata, complete interval contributions and reference-
 optical-depth density. Existing output files are refused. Expected output is
 ``PASS_PRESCRIBED_DEMO``, a relative closure residual below 1e-6, and a passing
