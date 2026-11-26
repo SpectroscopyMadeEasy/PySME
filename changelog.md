@@ -40,6 +40,10 @@
   three are reports with unknown titles and are now `@misc` entries. Citation
   text already saved with a line list is not updated; read the list again from
   the VALD file.
+- Read VALD reference keys that contain a hyphen, such as `BA-J`. They were
+  skipped, so `linelist.citation_info` and `sme.citation()` left out the
+  corresponding references. Line lists saved with the old citation text keep
+  it until they are read again from the VALD file.
 - Fix NLTE grid interpolation at and near grid edges (#39). Below the lowest
   node the coefficients were taken from the highest node; above the highest
   node they were held at the edge value instead of extrapolated; on

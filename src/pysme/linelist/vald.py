@@ -640,6 +640,9 @@ class ValdFile(LineList):
         # Search the linelist data for this pattern, e.g:
         # 1 gf:K14
         # 4 KCN'
+        # 6 BA-J
+        # A hyphen only counts between two key characters, so loose dashes
+        # in free text are not read as part of a reference.
         if fmt == "long":
             idiscard = 45
         elif fmt == "short":
@@ -647,7 +650,7 @@ class ValdFile(LineList):
         else:
             raise ValueError
 
-        pattern = r"\s\d+ (\w+:)?([\w+]+)[\s']"
+        pattern = r"\s\d+ (\w+:)?([\w+]+(?:-[\w+]+)*)[\s']"
         pattern = re.compile(pattern)
         # Discard the initial part of the line
         lines = [l[idiscard:] for l in lines]

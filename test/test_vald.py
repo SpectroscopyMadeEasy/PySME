@@ -8,6 +8,7 @@ import pytest
 from pysme.abund import Abund
 from pysme.linelist.linelist import LineList
 from pysme.linelist.vald import ValdFile
+from pysme.sme import SME_Structure
 
 species = "Fe 1"
 wlcent = 5502.9931
@@ -162,6 +163,57 @@ def test_streaming_long_parser_matches_legacy_across_chunks():
     assert streaming.abund.monh == legacy.abund.monh
     assert streaming.abund.type == legacy.abund.type
     assert np.array_equal(streaming.abund._pattern, legacy.abund._pattern)
+
+
+@pytest.mark.parametrize("fmt, idiscard", [("long", 45), ("short", 90)])
+def test_extract_hyphenated_reference_keys(fmt, idiscard):
+    # The leading part of a line (data or description) is never searched
+    head = "x 1 NOT-A-KEY ".ljust(idiscard)
+    lines = [
+        head + "   9 wl:K13  10 gf:RU   6 BA-J   3 Si2-av1   3 gf:LD-HS'\n",
+        # Several keys joined by "+", and a hyphenated key before the quote
+        head + "   2 wl:S-G+K13   4 B-WPNP'\n",
+        # Dashes in free text must not produce keys
+        head + "   5 K14   no-hfs Fe 7 -x 7 y- 7 z--w '\n",
+    ]
+
+    keys = ValdFile._extract_reference_keys(lines, fmt)
+
+    assert keys == {
+        "K13",
+        "RU",
+        "BA-J",
+        "Si2-av1",
+        "LD-HS",
+        "S-G+K13",
+        "B-WPNP",
+        "K14",
+    }
+
+
+def test_citation_includes_hyphenated_key_long_format():
+    linelist = ValdFile(join(dirname(__file__), "testcase3.lin"))
+
+    assert "@article{BA-J," in linelist.citation_info
+    sme = SME_Structure()
+    sme.linelist = linelist
+    assert "Aspelund-Johansson" in sme.citation()
+
+
+def test_citation_includes_hyphenated_key_short_format(tmp_path):
+    with open(join(dirname(__file__), "testcase1.lin")) as file:
+        content = file.read()
+    assert "4 CB" in content
+    path = tmp_path / "hyphen_short.lin"
+    path.write_text(content.replace("4 CB", "4 BA-J", 1))
+
+    linelist = ValdFile(path)
+
+    assert linelist.lineformat == "short"
+    assert "@article{BA-J," in linelist.citation_info
+    sme = SME_Structure()
+    sme.linelist = linelist
+    assert "Aspelund-Johansson" in sme.citation()
 
 
 def test_save_reload_long_subset_updates_header(tmp_path):
