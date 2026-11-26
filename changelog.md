@@ -26,6 +26,17 @@
 
 ### Fixed
 
+- Fix NLTE grid interpolation at and near grid edges (#39). Below the lowest
+  node the coefficients were taken from the highest node; above the highest
+  node they were held at the edge value instead of extrapolated; on
+  non-uniform axes the bracketing node could be missing from the cache, so
+  values inside the grid were extrapolated. Results at interior points with
+  both bracketing nodes cached are unchanged. Added regression tests.
+- Guard against silently re-interpolating a populated grid atmosphere when an
+  absolute abundance pattern changes `sme.monh`; PySME records the
+  interpolation metallicity and freezes the existing structure when the
+  abundance object is replaced, while raising a clear error for ambiguous
+  in-place metallicity mutations.
 - Add physical H/He acceptance tests using small real MARCS 2012/2014 grid
   samples, plus mandatory full-grid checks after CI prefetch on Linux/macOS.
   Cover direct extraction, interpolation and SME-file persistence.

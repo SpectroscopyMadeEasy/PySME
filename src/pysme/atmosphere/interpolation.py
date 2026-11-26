@@ -121,6 +121,12 @@ class AtmosphereInterpolator:
             atmo.radius = radius
         atmo.source = self.source
         atmo.method = "grid"
+        # Keep the coordinate used to construct this structure.  A caller may
+        # subsequently install an absolute abundance pattern whose ``monh`` is
+        # zero; retaining this value lets the synthesis layer detect that
+        # changing the abundance coordinate would request a second, unintended
+        # grid interpolation.
+        atmo.interpolation_monh = float(monh)
 
         return atmo
 

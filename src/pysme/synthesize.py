@@ -17,6 +17,7 @@ from tqdm import tqdm
 from scipy.spatial.distance import cdist
 
 from . import broadening
+from .atmosphere.atmosphere import AtmosphereError
 from .atmosphere.interpolation import AtmosphereInterpolator
 from .continuum_and_radial_velocity import (
     apply_radial_velocity_and_continuum,
@@ -579,6 +580,29 @@ class Synthesizer:
         atmo = sme.atmo
 
         if atmo.method == "grid":
+            # ``interp_atmo_grid`` returns a populated Atmosphere while
+            # retaining ``method='grid'`` for backwards compatibility.  If a
+            # caller then replaces ``sme.abund`` with an absolute pattern,
+            # ``sme.monh`` can change even though the already-interpolated
+            # structure should remain fixed.  Refusing the ambiguous state is
+            # safer than silently interpolating the same model a second time at
+            # the abundance pattern's coordinate.  Callers that intentionally
+            # want a new grid model should reset ``atmo.interpolation_monh`` (or
+            # construct a fresh grid Atmosphere); callers that want to keep the
+            # existing structure should set ``atmo.method = 'embedded'``.
+            interpolation_monh = getattr(atmo, "interpolation_monh", None)
+            if interpolation_monh is not None and not np.isclose(
+                float(interpolation_monh), float(sme.monh), rtol=0.0, atol=1e-12
+            ):
+                raise AtmosphereError(
+                    "Atmosphere was already interpolated at [M/H]={:.6g}, but "
+                    "the SME abundance coordinate is [M/H]={:.6g} while "
+                    "atmo.method='grid'. Set atmo.method='embedded' to keep "
+                    "the existing structure, or reset interpolation_monh and "
+                    "explicitly request a new grid interpolation.".format(
+                        float(interpolation_monh), float(sme.monh)
+                    )
+                )
             if self.atmosphere_interpolator is None:
                 self.atmosphere_interpolator = AtmosphereInterpolator(
                     depth=atmo.depth,
