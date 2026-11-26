@@ -47,6 +47,13 @@
 
 ### Added
 
+- Added `h_tb09`, `h_tb09_window` and `h_tb09_file` (off by default; needs
+  SMElib >= 6.13.23 and SYNSPEC's `tremblay.dat`, which is not distributed;
+  see `h_tb09_file` in the documentation for where to get it):
+  the Balmer profiles H10–H22 are blended from Stehlé & Hutcheon to Tremblay
+  & Bergeron (2009) between `dlo` and `dhi` dex below each line's last
+  tabulated Stehlé density (default 2.0–1.5). The setting is part of the
+  line-information cache key.
 - Added `h_line_profile` (`"convolved"`, default, or `"legacy"`) for the
   hydrogen line profiles.
 - Added `h_occupation` (off by default) for the occupation probabilities of

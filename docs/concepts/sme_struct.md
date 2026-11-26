@@ -198,6 +198,32 @@ For more information see [system_info](../concepts/system_info.md).
     Scale of the neutral-perturber (hard-sphere) term of the occupation
     probabilities when `h_occupation` is on. `0` (default) keeps only the
     charged-perturber term; `1` is the Hummer & Mihalas (1988) value.
+:h_tb09:
+    Balmer lines H10–H22: blend the Stehlé & Hutcheon profiles with those of
+    Tremblay & Bergeron (2009), which include the non-ideal (Hummer & Mihalas
+    critical field) cut and are computed 0.5–1.5 dex beyond Stehlé's last
+    tabulated density (the Inglis–Teller limit). Off by default; requires
+    SMElib >= 6.13.23 and the TB09 table (`h_tb09_file`). Meant to be
+    used with `h_occupation`:
+
+    ```python
+    sme.h_occupation = True
+    sme.h_tb09 = True
+    sme.h_tb09_file = "/path/to/synspec/data/tremblay.dat"
+    ```
+:h_tb09_window:
+    `(dlo, dhi)` in dex below each line's last tabulated Stehlé density: the
+    TB09 weight rises smoothly (3t² − 2t³) from 0 at `dlo` to 1 at `dhi`.
+    Default `(2.0, 1.5)`, the values that fitted H10–H22 in metal-poor dwarfs
+    and DESI turnoff stars best.
+:h_tb09_file:
+    Path of the TB09 table as distributed with SYNSPEC (`data/tremblay.dat`,
+    used unchanged), or `None` for `tremblay.dat` in the SMElib data
+    directory. The table is not distributed with PySME: it is `data/tremblay.dat`
+    in the [TLUSTY 208 / SYNSPEC 54 package](https://www.as.arizona.edu/~hubeny/tlusty208-package/tl208-s54.tar.gz)
+    (12 MB archive), also available from P.-E. Tremblay's
+    [model grids](https://warwick.ac.uk/fac/sci/physics/research/astro/people/tremblay/modelgrids/).
+    Cite Tremblay & Bergeron (2009, ApJ 696, 1755) when using it.
 :h_stark_convolution:
     Deprecated, no effect. SMElib >= 6.13.22 convolves the Stark profiles of
     all lines computed with HLINOP; use `h_line_profile = "legacy"` for the

@@ -132,6 +132,9 @@ def _hydrogen_line_state(sme):
     if getattr(sme, "h_occupation", False):
         scale = float(getattr(sme, "h_occupation_neutral_scale", 0.0))
         state += f";occupation=on;neutral={scale:g}"
+    if getattr(sme, "h_tb09", False):
+        dlo, dhi = getattr(sme, "h_tb09_window", (2.0, 1.5))
+        state += f";tb09={float(dlo):g},{float(dhi):g}"
     return state
 
 
@@ -152,6 +155,11 @@ def _hydrogen_line_settings(sme, dll):
         getattr(sme, "h_occupation_neutral_scale", 0.0),
     )
     dll.SetWavelengthMedium(_wavelength_medium(sme))
+    if getattr(sme, "h_tb09", False):
+        dlo, dhi = getattr(sme, "h_tb09_window", (2.0, 1.5))
+        dll.SetHydrogenTB09(1, dlo, dhi, getattr(sme, "h_tb09_file", None) or "")
+    elif hasattr(dll, "SetHydrogenTB09"):
+        dll.SetHydrogenTB09(0)
     yield
 
 

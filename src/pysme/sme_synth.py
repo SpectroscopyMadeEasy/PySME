@@ -246,6 +246,24 @@ class SME_DLL:
             return _smelib.GetHydrogenOccupationMode()
         return None
 
+    def SetHydrogenTB09(self, mode, dlo=2.0, dhi=1.5, path=""):
+        """Balmer H10-H22: blend the Stehle & Hutcheon profiles with those of
+        Tremblay & Bergeron (2009) from ``dlo`` dex below each line's last
+        tabulated Stehle density (weight 0) to ``dhi`` dex below it (weight 1).
+        mode 0 = off (default), 1 = on; ``path``: SYNSPEC's tremblay.dat.
+        Requires SMElib >= 6.13.23 for mode 1."""
+        mode = int(bool(mode))
+        if hasattr(_smelib, "SetHydrogenTB09"):
+            _smelib.SetHydrogenTB09(mode, float(dlo), float(dhi), str(path or ""))
+        elif mode:
+            raise RuntimeError("the TB09 blending (h_tb09) needs SMElib >= 6.13.23")
+
+    def GetHydrogenTB09Mode(self):
+        """0 or 1, or None if not available."""
+        if hasattr(_smelib, "GetHydrogenTB09Mode"):
+            return _smelib.GetHydrogenTB09Mode()
+        return None
+
     def SetWavelengthMedium(self, medium):
         """Medium of the wavelengths given to SMElib: 'air' or 'vac'.  Ignored by
         SMElib versions before 6.13.22 (which take the continuum in vacuum and

@@ -458,6 +458,42 @@ static PyObject *smelib_GetHydrogenOccupationMode(PyObject *self, PyObject *args
     return Py_BuildValue("i", GetHydrogenOccupationMode());
 }
 
+static char smelib_SetHydrogenTB09_docstring[] = "Stehle -> TB09 blending of H10-H22: mode, DLO, DHI, table path";
+static PyObject *smelib_SetHydrogenTB09(PyObject *self, PyObject *args)
+{
+    int mode = 0;
+    double dlo = 2.0, dhi = 1.5;
+    char *path = (char *)"";
+    IDL_STRING idl_path;
+    const char *result = NULL;
+    void *args_c[4];
+
+    if (!PyArg_ParseTuple(args, "i|dds", &mode, &dlo, &dhi, &path))
+        return NULL;
+    idl_path.slen = strlen(path);
+    idl_path.s = path;
+    idl_path.stype = 0;
+    args_c[0] = &mode;
+    args_c[1] = &dlo;
+    args_c[2] = &dhi;
+    args_c[3] = &idl_path;
+    result = SetHydrogenTB09(4, args_c);
+    if (result != NULL && result[0] != OK_response)
+    {
+        PyErr_SetString(PyExc_RuntimeError, result);
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+static char smelib_GetHydrogenTB09Mode_docstring[] = "Stehle -> TB09 blending mode";
+static PyObject *smelib_GetHydrogenTB09Mode(PyObject *self, PyObject *args)
+{
+    (void)self;
+    (void)args;
+    return Py_BuildValue("i", GetHydrogenTB09Mode());
+}
+
 static char smelib_SetWavelengthMedium_docstring[] = "Wavelength medium: air or vac";
 static PyObject *smelib_SetWavelengthMedium(PyObject *self, PyObject *args)
 {
@@ -2049,6 +2085,8 @@ static PyMethodDef module_methods[] = {
     {"GetHydrogenProfileMode", smelib_GetHydrogenProfileMode, METH_NOARGS, smelib_GetHydrogenProfileMode_docstring},
     {"SetHydrogenOccupation", smelib_SetHydrogenOccupation, METH_VARARGS, smelib_SetHydrogenOccupation_docstring},
     {"GetHydrogenOccupationMode", smelib_GetHydrogenOccupationMode, METH_NOARGS, smelib_GetHydrogenOccupationMode_docstring},
+    {"SetHydrogenTB09", smelib_SetHydrogenTB09, METH_VARARGS, smelib_SetHydrogenTB09_docstring},
+    {"GetHydrogenTB09Mode", smelib_GetHydrogenTB09Mode, METH_NOARGS, smelib_GetHydrogenTB09Mode_docstring},
     {"SetWavelengthMedium", smelib_SetWavelengthMedium, METH_VARARGS, smelib_SetWavelengthMedium_docstring},
     {"GetWavelengthMedium", smelib_GetWavelengthMedium, METH_NOARGS, smelib_GetWavelengthMedium_docstring},
     {"GetHlinopWarnings", smelib_GetHlinopWarnings, METH_NOARGS, smelib_GetHlinopWarnings_docstring},
