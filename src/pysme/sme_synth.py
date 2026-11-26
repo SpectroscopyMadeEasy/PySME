@@ -19,6 +19,41 @@ logger = logging.getLogger(__name__)
 _smelib = None
 CURRENT_LIB = None
 _SMELIB_PROCESS_LOCK = RLock()
+_WINDOWS_SHORT_PATH_ENV = "PYSME_SMELIB_WINDOWS_SHORT_PATH"
+
+
+def _windows_short_ascii_path(path):
+    """Return an ASCII 8.3 path when the opt-in Windows workaround is enabled."""
+    enabled = os.environ.get(_WINDOWS_SHORT_PATH_ENV, "").strip().lower()
+    if sys.platform != "win32" or enabled in ("", "0", "false", "no", "off"):
+        return path
+
+    import ctypes
+
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    get_short_path = kernel32.GetShortPathNameW
+    get_short_path.argtypes = (
+        ctypes.c_wchar_p,
+        ctypes.POINTER(ctypes.c_wchar),
+        ctypes.c_ulong,
+    )
+    get_short_path.restype = ctypes.c_ulong
+    required = get_short_path(path, None, 0)
+    if required == 0:
+        raise ctypes.WinError(ctypes.get_last_error())
+    buffer = ctypes.create_unicode_buffer(required)
+    written = get_short_path(path, buffer, len(buffer))
+    if written == 0 or written >= len(buffer):
+        raise ctypes.WinError(ctypes.get_last_error())
+    short_path = buffer.value
+    try:
+        short_path.encode("ascii")
+    except UnicodeEncodeError as exc:
+        raise RuntimeError(
+            f"{_WINDOWS_SHORT_PATH_ENV}=1 could not produce an ASCII path for "
+            f"{path!r}; 8.3 short names may be disabled on this volume"
+        ) from exc
+    return short_path
 
 
 @contextmanager
@@ -162,7 +197,7 @@ class SME_DLL:
         """Set the path to the library"""
         if libpath is None:
             libpath = get_full_datadir()
-        libpath = normpath(libpath) + os.sep
+        libpath = _windows_short_ascii_path(normpath(libpath)) + os.sep
         _smelib.SetLibraryPath(libpath)
 
     def InputWaveRange(self, wfirst, wlast):

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import re
+import sys
 from pathlib import Path
 
 
@@ -28,7 +29,16 @@ def escape(value: object) -> str:
 
 
 def emit(level: str, title: str, message: object) -> None:
-    print(f"::{level} title={escape(title)}::{escape(message)}")
+    line = f"::{level} title={escape(title)}::{escape(message)}\n"
+    stream = getattr(sys.stdout, "buffer", None)
+    if stream is None:
+        # StringIO and similar test streams have no byte interface. A real
+        # console takes the byte path, bypassing its possibly narrow codec.
+        sys.stdout.write(line)
+        sys.stdout.flush()
+    else:
+        stream.write(line.encode("utf-8"))
+        stream.flush()
 
 
 def is_real_error(line: str) -> bool:

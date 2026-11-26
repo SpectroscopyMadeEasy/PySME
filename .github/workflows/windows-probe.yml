@@ -164,7 +164,7 @@ jobs:
         shell: pwsh
         run: python ci/windows_probe/annotations.py pytest-windows.log --title "Windows pytest" --level error
 
-      - name: Probe Chinese and spaced install and data paths
+      - name: Diagnose install and profile path matrix
         id: unicode
         if: steps.reference.outcome == 'success'
         continue-on-error: true
@@ -172,37 +172,43 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           $basePython = (Get-Command python).Source
-          $root = Join-Path $env:RUNNER_TEMP "测试用户 目录"
-          $profile = Join-Path $root "用户 配置"
-          $venv = Join-Path $root "虚拟 环境"
-          New-Item -ItemType Directory -Force -Path $profile | Out-Null
-          if (Test-Path "$HOME\.sme") { Copy-Item "$HOME\.sme" "$profile\.sme" -Recurse -Force }
-          $env:HOME = $profile
-          $env:USERPROFILE = $profile
-          # Only so that this log can print Chinese; it does not change how paths
-          # are passed to SMElib (PYTHONUTF8 would, so it is deliberately unset).
-          $env:PYTHONIOENCODING = "utf-8"
-          $env:PATH = "$venv\Scripts;C:\Windows\System32;C:\Windows"
-          & $basePython -m venv $venv 2>&1 | Tee-Object -FilePath unicode-windows.log
-          if ($LASTEXITCODE -ne 0) { throw "Unicode venv creation failed" }
+          $sourceProfile = $HOME
+          $asciiRoot = Join-Path $env:RUNNER_TEMP "ASCII paths with spaces"
+          $chineseRoot = Join-Path $env:RUNNER_TEMP "测试用户 目录"
+          $asciiProfile = Join-Path $asciiRoot "profile with spaces"
+          $chineseProfile = Join-Path $chineseRoot "用户 配置"
+          $asciiVenv = Join-Path $asciiRoot "venv with spaces"
+          $chineseVenv = Join-Path $chineseRoot "虚拟 环境"
+          New-Item -ItemType Directory -Force -Path $asciiRoot, $chineseRoot | Out-Null
+          & $basePython -m venv $asciiVenv 2>&1 | Tee-Object -FilePath unicode-windows.log
+          if ($LASTEXITCODE -ne 0) { throw "ASCII spaced venv creation failed" }
+          & $basePython -m venv $chineseVenv 2>&1 | Tee-Object -FilePath unicode-windows.log -Append
+          if ($LASTEXITCODE -ne 0) { throw "Chinese venv creation failed" }
           $wheel = (Get-ChildItem wheelhouse\*.whl | Select-Object -First 1).FullName
-          & "$venv\Scripts\python.exe" -m pip install $wheel 2>&1 | Tee-Object -FilePath unicode-windows.log -Append
-          if ($LASTEXITCODE -ne 0) { throw "Unicode wheel install failed" }
+          & "$asciiVenv\Scripts\python.exe" -m pip install $wheel 2>&1 | Tee-Object -FilePath unicode-windows.log -Append
+          if ($LASTEXITCODE -ne 0) { throw "ASCII spaced wheel install failed" }
+          & "$chineseVenv\Scripts\python.exe" -m pip install $wheel 2>&1 | Tee-Object -FilePath unicode-windows.log -Append
+          if ($LASTEXITCODE -ne 0) { throw "Chinese wheel install failed" }
           $codePage = (chcp) -join " "
-          $encoding = & "$venv\Scripts\python.exe" -c "import locale; print(locale.getpreferredencoding(False))"
+          $encoding = & "$asciiVenv\Scripts\python.exe" -c "import locale; print(locale.getpreferredencoding(False))"
           Write-Output "chcp=$codePage preferred_encoding=$encoding" | Tee-Object -FilePath unicode-windows.log -Append
           Write-Output "::notice title=Windows code page::chcp=$codePage preferred_encoding=$encoding"
-          & "$venv\Scripts\python.exe" ci/windows_probe/runtime_probe.py 2>&1 | Tee-Object -FilePath unicode-windows.log -Append
-          if ($LASTEXITCODE -ne 0) { throw "Unicode native load failed" }
-          & "$venv\Scripts\python.exe" ci/windows_probe/reference_calculation.py --output results/windows-unicode.npz --platform windows-unicode --only solar_fixed hydrogen_fixed --skip-fit --annotations 2>&1 | Tee-Object -FilePath unicode-windows.log -Append
-          if ($LASTEXITCODE -ne 0) { throw "Unicode synthesis failed" }
-          & "$venv\Scripts\python.exe" ci/windows_probe/compare_paths.py --ascii results/windows.npz --unicode results/windows-unicode.npz 2>&1 | Tee-Object -FilePath unicode-windows.log -Append
-          if ($LASTEXITCODE -ne 0) { throw "Unicode/ASCII comparison failed" }
+          & "$asciiVenv\Scripts\python.exe" ci/windows_probe/path_matrix.py `
+            --baseline results/windows.npz `
+            --repo . `
+            --work results/path-matrix `
+            --source-profile $sourceProfile `
+            --ascii-profile $asciiProfile `
+            --chinese-profile $chineseProfile `
+            --ascii-python "$asciiVenv\Scripts\python.exe" `
+            --chinese-python "$chineseVenv\Scripts\python.exe" `
+            2>&1 | Tee-Object -FilePath unicode-windows.log -Append
+          if ($LASTEXITCODE -ne 0) { throw "one or more path-matrix rows failed" }
 
       - name: Annotate Unicode path failure
         if: always() && steps.unicode.outcome == 'failure'
         shell: pwsh
-        run: python ci/windows_probe/annotations.py unicode-windows.log --title "Chinese and spaced Windows paths" --level error
+        run: python ci/windows_probe/annotations.py unicode-windows.log --title "Windows path matrix" --level error
 
       - name: Upload Windows probe artifact
         if: always()
@@ -224,7 +230,7 @@ jobs:
           if ("${{ steps.runtime.outcome }}" -ne "success") { $bad += "compiler-free load" }
           if ("${{ steps.data.outcome }}" -ne "success") { $bad += "data" }
           if ("${{ steps.reference.outcome }}" -ne "success") { $bad += "references" }
-          if ("${{ steps.unicode.outcome }}" -ne "success") { $bad += "Unicode paths" }
+          if ("${{ steps.unicode.outcome }}" -ne "success") { $bad += "path matrix (including unswitched row d)" }
           if ($bad.Count) {
             Write-Output "::error title=Windows probe incomplete::$($bad -join ', ')"
             exit 1
