@@ -52,7 +52,10 @@ def ensure_smelib_ready(libfile=None):
         download_smelib()
 
     try:
-        cdll.LoadLibrary(libfile)
+        if sys.platform == "win32":
+            libtools.load_library(libfile)
+        else:
+            cdll.LoadLibrary(libfile)
     except OSError as e:
         msg = str(e)
         if sys.platform == "darwin" and (

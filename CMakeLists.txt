@@ -59,6 +59,9 @@ string(REGEX REPLACE "^v" "" SMELIB_VERSION "${SMELIB_VERSION_ID}")
 target_compile_definitions(sme PRIVATE
     "SMELIB_VERSION=\"${SMELIB_VERSION}\""
 )
+if(WIN32)
+    target_compile_definitions(sme PRIVATE BUILDING_SME_WIN_DLL)
+endif()
 target_include_directories(sme PRIVATE
     ${CMAKE_CURRENT_BINARY_DIR}
     ${SMELIB_DIR}/src/sme
@@ -122,9 +125,15 @@ install(TARGETS sme
     RUNTIME DESTINATION ${SKBUILD_PLATLIB_DIR}/pysme/lib
 )
 
-install(TARGETS _smelib
-    LIBRARY DESTINATION ${SKBUILD_PLATLIB_DIR}/pysme/smelib
-)
+if(WIN32)
+    install(TARGETS _smelib
+        RUNTIME DESTINATION ${SKBUILD_PLATLIB_DIR}/pysme/smelib
+    )
+else()
+    install(TARGETS _smelib
+        LIBRARY DESTINATION ${SKBUILD_PLATLIB_DIR}/pysme/smelib
+    )
+endif()
 
 install(DIRECTORY ${SMELIB_DIR}/src/data/
     DESTINATION ${SKBUILD_PLATLIB_DIR}/pysme/share/libsme

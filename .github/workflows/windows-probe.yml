@@ -1,0 +1,492 @@
+name: Native Windows x64 probe
+
+on:
+  push:
+    branches: [ci/windows-probe]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  PYTHONDONTWRITEBYTECODE: "1"
+  OMP_NUM_THREADS: "1"
+  OPENBLAS_NUM_THREADS: "1"
+  VECLIB_MAXIMUM_THREADS: "1"
+
+jobs:
+  windows:
+    name: Windows x64 wheel, tests, and paths
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+
+      - name: Set up CPython 3.12 x64
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          architecture: x64
+
+      - name: Install UCRT64 build toolchain
+        id: msys2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-gcc-fortran
+            mingw-w64-ucrt-x86_64-ninja
+
+      - name: Build and repair Windows wheel
+        id: build
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          # setup-msys2 installs its own copy outside C:\msys64 by default.
+          $ucrt = Join-Path '${{ steps.msys2.outputs.msys2-location }}' 'ucrt64\bin'
+          $ucrtPosix = $ucrt -replace '\\', '/'
+          $env:CC = "$ucrtPosix/gcc.exe"
+          $env:CXX = "$ucrtPosix/g++.exe"
+          $env:FC = "$ucrtPosix/gfortran.exe"
+          $env:CMAKE_GENERATOR = "Ninja"
+          $env:PATH = "$ucrt;$env:PATH"
+          python -m pip install --upgrade pip build delvewheel 2>&1 | Tee-Object -FilePath build-windows.log
+          if ($LASTEXITCODE -ne 0) { throw "build dependency installation failed" }
+          python -m build --wheel 2>&1 | Tee-Object -FilePath build-windows.log -Append
+          if ($LASTEXITCODE -ne 0) { throw "wheel build failed" }
+          $rawWheel = (Get-ChildItem dist\*.whl | Select-Object -First 1).FullName
+          python -m delvewheel show --add-path $ucrt $rawWheel 2>&1 | Tee-Object -FilePath build-windows.log -Append
+          if ($LASTEXITCODE -ne 0) { throw "delvewheel inspection failed" }
+          python -m delvewheel repair --add-path $ucrt --wheel-dir wheelhouse $rawWheel 2>&1 | Tee-Object -FilePath build-windows.log -Append
+          if ($LASTEXITCODE -ne 0) { throw "delvewheel repair failed" }
+          $wheel = (Get-ChildItem wheelhouse\*.whl | Select-Object -First 1).FullName
+          Write-Output "::notice title=Windows wheel::$(Split-Path $wheel -Leaf) repaired with delvewheel"
+
+      - name: Annotate Windows build failure
+        if: always() && steps.build.outcome == 'failure'
+        shell: pwsh
+        run: python ci/windows_probe/annotations.py build-windows.log --title "Windows wheel build" --level error
+
+      - name: Install repaired wheel without a compiler and load it
+        id: runtime
+        if: steps.build.outcome == 'success'
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $basePython = (Get-Command python).Source
+          $venv = Join-Path $env:RUNNER_TEMP "pysme-ascii-venv"
+          $env:PATH = "$venv\Scripts;C:\Windows\System32;C:\Windows"
+          & $basePython -m venv $venv 2>&1 | Tee-Object -FilePath runtime-windows.log
+          if ($LASTEXITCODE -ne 0) { throw "venv creation failed" }
+          if (Get-Command gcc -ErrorAction SilentlyContinue) { throw "gcc unexpectedly present on clean PATH" }
+          if (Get-Command gfortran -ErrorAction SilentlyContinue) { throw "gfortran unexpectedly present on clean PATH" }
+          if (Get-Command cl -ErrorAction SilentlyContinue) { throw "MSVC cl unexpectedly present on clean PATH" }
+          Write-Output "::notice title=Compiler-free PATH::PATH=$env:PATH; gcc=absent; gfortran=absent; cl=absent"
+          $wheel = (Get-ChildItem wheelhouse\*.whl | Select-Object -First 1).FullName
+          & "$venv\Scripts\python.exe" -m pip install --upgrade pip 2>&1 | Tee-Object -FilePath runtime-windows.log -Append
+          & "$venv\Scripts\python.exe" -m pip install $wheel pytest 2>&1 | Tee-Object -FilePath runtime-windows.log -Append
+          if ($LASTEXITCODE -ne 0) { throw "wheel installation failed" }
+          & "$venv\Scripts\python.exe" ci/windows_probe/runtime_probe.py 2>&1 | Tee-Object -FilePath runtime-windows.log -Append
+          if ($LASTEXITCODE -ne 0) { throw "native load probe failed" }
+
+      - name: Annotate Windows runtime failure
+        if: always() && steps.runtime.outcome == 'failure'
+        shell: pwsh
+        run: python ci/windows_probe/annotations.py runtime-windows.log --title "Compiler-free Windows load" --level error
+
+      - name: Prefetch test data
+        id: data
+        if: steps.runtime.outcome == 'success'
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $venv = Join-Path $env:RUNNER_TEMP "pysme-ascii-venv"
+          @'
+          from pysme.large_file_storage import setup_atmo, setup_nlte
+          atmo = setup_atmo()
+          for name in ("marcs2012.sav", "marcs2012p_t2.0.sav", "marcs2014.sav"):
+              print("atmosphere", name, atmo.get(name))
+          nlte = setup_nlte()
+          for name in ("nlte_H_pysme.grd", "nlte_Na_multi_sun.grd", "marcs2012p_t1.0_Ca.grd"):
+              print("nlte", name, nlte.get(name))
+          '@ | & "$venv\Scripts\python.exe" - 2>&1 | Tee-Object -FilePath data-windows.log
+          if ($LASTEXITCODE -ne 0) { throw "data prefetch failed" }
+
+      - name: Annotate Windows data failure
+        if: always() && steps.data.outcome == 'failure'
+        shell: pwsh
+        run: python ci/windows_probe/annotations.py data-windows.log --title "Windows data prefetch" --level error
+
+      - name: Run Windows reference calculations
+        id: reference
+        if: steps.data.outcome == 'success'
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $venv = Join-Path $env:RUNNER_TEMP "pysme-ascii-venv"
+          & "$venv\Scripts\python.exe" ci/windows_probe/reference_calculation.py --output results/windows.npz --platform windows --annotations 2>&1 | Tee-Object -FilePath reference-windows.log
+          if ($LASTEXITCODE -ne 0) { throw "Windows references failed" }
+
+      - name: Annotate Windows reference failure
+        if: always() && steps.reference.outcome == 'failure'
+        shell: pwsh
+        run: python ci/windows_probe/annotations.py reference-windows.log --title "Windows reference calculations" --level error
+
+      - name: Run Windows pytest selection
+        id: pytest
+        if: steps.data.outcome == 'success'
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $venv = Join-Path $env:RUNNER_TEMP "pysme-ascii-venv"
+          $python = "$venv\Scripts\python.exe"
+          $failed = $false
+          $env:PYSME_TEST_OFFICIAL_MARCS = "1"
+          & $python -m pytest -q test/test_official_marcs_abundances.py --junitxml=results/pytest-official-windows.xml 2>&1 | Tee-Object -FilePath pytest-windows.log
+          if ($LASTEXITCODE -ne 0) { $failed = $true }
+          Remove-Item Env:PYSME_TEST_OFFICIAL_MARCS
+          & $python -m pytest --durations=20 --junitxml=results/pytest-full-windows.xml 2>&1 | Tee-Object -FilePath pytest-windows.log -Append
+          if ($LASTEXITCODE -ne 0) { $failed = $true }
+          if ($failed) { throw "one or more Windows pytest runs failed" }
+
+      - name: Summarize Windows pytest
+        if: always()
+        shell: pwsh
+        run: python ci/windows_probe/pytest_report.py --output results/pytest-windows.json --platform windows results/pytest-official-windows.xml results/pytest-full-windows.xml
+
+      - name: Annotate Windows pytest failure
+        if: always() && steps.pytest.outcome == 'failure'
+        shell: pwsh
+        run: python ci/windows_probe/annotations.py pytest-windows.log --title "Windows pytest" --level error
+
+      - name: Probe Chinese and spaced install and data paths
+        id: unicode
+        if: steps.reference.outcome == 'success'
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $basePython = (Get-Command python).Source
+          $root = Join-Path $env:RUNNER_TEMP "测试用户 目录"
+          $profile = Join-Path $root "用户 配置"
+          $venv = Join-Path $root "虚拟 环境"
+          New-Item -ItemType Directory -Force -Path $profile | Out-Null
+          if (Test-Path "$HOME\.sme") { Copy-Item "$HOME\.sme" "$profile\.sme" -Recurse -Force }
+          $env:HOME = $profile
+          $env:USERPROFILE = $profile
+          $env:PATH = "$venv\Scripts;C:\Windows\System32;C:\Windows"
+          & $basePython -m venv $venv 2>&1 | Tee-Object -FilePath unicode-windows.log
+          if ($LASTEXITCODE -ne 0) { throw "Unicode venv creation failed" }
+          $wheel = (Get-ChildItem wheelhouse\*.whl | Select-Object -First 1).FullName
+          & "$venv\Scripts\python.exe" -m pip install $wheel 2>&1 | Tee-Object -FilePath unicode-windows.log -Append
+          if ($LASTEXITCODE -ne 0) { throw "Unicode wheel install failed" }
+          $codePage = (chcp) -join " "
+          $encoding = & "$venv\Scripts\python.exe" -c "import locale; print(locale.getpreferredencoding(False))"
+          Write-Output "chcp=$codePage preferred_encoding=$encoding" | Tee-Object -FilePath unicode-windows.log -Append
+          Write-Output "::notice title=Windows code page::chcp=$codePage preferred_encoding=$encoding"
+          & "$venv\Scripts\python.exe" ci/windows_probe/runtime_probe.py 2>&1 | Tee-Object -FilePath unicode-windows.log -Append
+          if ($LASTEXITCODE -ne 0) { throw "Unicode native load failed" }
+          & "$venv\Scripts\python.exe" ci/windows_probe/reference_calculation.py --output results/windows-unicode.npz --platform windows-unicode --only solar_fixed hydrogen_fixed --skip-fit --annotations 2>&1 | Tee-Object -FilePath unicode-windows.log -Append
+          if ($LASTEXITCODE -ne 0) { throw "Unicode synthesis failed" }
+          & "$venv\Scripts\python.exe" ci/windows_probe/compare_paths.py --ascii results/windows.npz --unicode results/windows-unicode.npz 2>&1 | Tee-Object -FilePath unicode-windows.log -Append
+          if ($LASTEXITCODE -ne 0) { throw "Unicode/ASCII comparison failed" }
+
+      - name: Annotate Unicode path failure
+        if: always() && steps.unicode.outcome == 'failure'
+        shell: pwsh
+        run: python ci/windows_probe/annotations.py unicode-windows.log --title "Chinese and spaced Windows paths" --level error
+
+      - name: Upload Windows probe artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: probe-windows
+          path: |
+            wheelhouse/*.whl
+            results/
+            *-windows.log
+          if-no-files-found: warn
+
+      - name: Fail Windows job for missing core outcomes
+        if: always()
+        shell: pwsh
+        run: |
+          $bad = @()
+          if ("${{ steps.build.outcome }}" -ne "success") { $bad += "build" }
+          if ("${{ steps.runtime.outcome }}" -ne "success") { $bad += "compiler-free load" }
+          if ("${{ steps.data.outcome }}" -ne "success") { $bad += "data" }
+          if ("${{ steps.reference.outcome }}" -ne "success") { $bad += "references" }
+          if ("${{ steps.unicode.outcome }}" -ne "success") { $bad += "Unicode paths" }
+          if ($bad.Count) {
+            Write-Output "::error title=Windows probe incomplete::$($bad -join ', ')"
+            exit 1
+          }
+
+  linux:
+    name: Linux x64 wheel, tests, and references
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          architecture: x64
+
+      - name: Build and repair Linux wheel
+        id: build
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          exec > >(tee build-linux.log) 2>&1
+          sudo apt-get update
+          sudo apt-get install -y gfortran
+          python -m pip install --upgrade pip build auditwheel
+          python -m build --wheel
+          python -m auditwheel repair --wheel-dir wheelhouse dist/*.whl
+          echo "::notice title=Linux wheel::$(basename wheelhouse/*.whl) repaired with auditwheel"
+
+      - name: Annotate Linux build failure
+        if: always() && steps.build.outcome == 'failure'
+        run: python ci/windows_probe/annotations.py build-linux.log --title "Linux wheel build" --level error
+
+      - name: Install Linux wheel and prefetch data
+        id: runtime
+        if: steps.build.outcome == 'success'
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          exec > >(tee runtime-linux.log) 2>&1
+          python -m venv "$RUNNER_TEMP/pysme-linux-venv"
+          PY="$RUNNER_TEMP/pysme-linux-venv/bin/python"
+          "$PY" -m pip install --upgrade pip
+          "$PY" -m pip install wheelhouse/*.whl pytest
+          "$PY" ci/windows_probe/runtime_probe.py
+          "$PY" - <<'PY'
+          from pysme.large_file_storage import setup_atmo, setup_nlte
+          atmo = setup_atmo()
+          for name in ("marcs2012.sav", "marcs2012p_t2.0.sav", "marcs2014.sav"):
+              print("atmosphere", name, atmo.get(name))
+          nlte = setup_nlte()
+          for name in ("nlte_H_pysme.grd", "nlte_Na_multi_sun.grd", "marcs2012p_t1.0_Ca.grd"):
+              print("nlte", name, nlte.get(name))
+          PY
+
+      - name: Annotate Linux runtime failure
+        if: always() && steps.runtime.outcome == 'failure'
+        run: python ci/windows_probe/annotations.py runtime-linux.log --title "Linux wheel runtime/data" --level error
+
+      - name: Run Linux reference calculations
+        id: reference
+        if: steps.runtime.outcome == 'success'
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          "$RUNNER_TEMP/pysme-linux-venv/bin/python" ci/windows_probe/reference_calculation.py --output results/linux.npz --platform linux --annotations 2>&1 | tee reference-linux.log
+
+      - name: Annotate Linux reference failure
+        if: always() && steps.reference.outcome == 'failure'
+        run: python ci/windows_probe/annotations.py reference-linux.log --title "Linux reference calculations" --level error
+
+      - name: Run Linux pytest selection
+        id: pytest
+        if: steps.runtime.outcome == 'success'
+        continue-on-error: true
+        shell: bash
+        run: |
+          set +e
+          set -o pipefail
+          PY="$RUNNER_TEMP/pysme-linux-venv/bin/python"
+          PYSME_TEST_OFFICIAL_MARCS=1 "$PY" -m pytest -q test/test_official_marcs_abundances.py --junitxml=results/pytest-official-linux.xml 2>&1 | tee pytest-linux.log
+          official_rc=$?
+          "$PY" -m pytest --durations=20 --junitxml=results/pytest-full-linux.xml 2>&1 | tee -a pytest-linux.log
+          full_rc=$?
+          test "$official_rc" -eq 0 -a "$full_rc" -eq 0
+
+      - name: Summarize Linux pytest
+        if: always()
+        run: python ci/windows_probe/pytest_report.py --output results/pytest-linux.json --platform linux results/pytest-official-linux.xml results/pytest-full-linux.xml
+
+      - name: Annotate Linux pytest failure
+        if: always() && steps.pytest.outcome == 'failure'
+        run: python ci/windows_probe/annotations.py pytest-linux.log --title "Linux pytest" --level error
+
+      - name: Upload Linux probe artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: probe-linux
+          path: |
+            wheelhouse/*.whl
+            results/
+            *-linux.log
+          if-no-files-found: warn
+
+      - name: Fail Linux job for missing core outcomes
+        if: always()
+        shell: bash
+        run: |
+          bad=""
+          test "${{ steps.build.outcome }}" = success || bad="$bad build"
+          test "${{ steps.runtime.outcome }}" = success || bad="$bad runtime/data"
+          test "${{ steps.reference.outcome }}" = success || bad="$bad references"
+          if test -n "$bad"; then
+            echo "::error title=Linux probe incomplete::$bad"
+            exit 1
+          fi
+
+  macos:
+    name: macOS 15 arm64 wheel and references
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          architecture: arm64
+
+      - name: Build and repair macOS arm64 wheel
+        id: build
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          exec > >(tee build-macos.log) 2>&1
+          test "$(uname -m)" = arm64
+          brew install gcc
+          BREW_PREFIX="$(brew --prefix)"
+          FC_PATH="$(find "$BREW_PREFIX/bin" -maxdepth 1 -name 'gfortran-*' -type l | sort -V | tail -1)"
+          test -x "$FC_PATH"
+          export FC="$FC_PATH"
+          export CC=/usr/bin/clang
+          export CXX=/usr/bin/clang++
+          python -m pip install --upgrade pip build delocate
+          python -m build --wheel
+          python -m delocate.cmd.delocate_wheel --require-archs arm64 -w wheelhouse dist/*.whl
+          echo "::notice title=macOS wheel::$(basename wheelhouse/*.whl) arm64 repaired with delocate"
+
+      - name: Annotate macOS build failure
+        if: always() && steps.build.outcome == 'failure'
+        run: python ci/windows_probe/annotations.py build-macos.log --title "macOS arm64 wheel build" --level error
+
+      - name: Install macOS wheel and prefetch MARCS
+        id: runtime
+        if: steps.build.outcome == 'success'
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          exec > >(tee runtime-macos.log) 2>&1
+          python -m venv "$RUNNER_TEMP/pysme-macos-venv"
+          PY="$RUNNER_TEMP/pysme-macos-venv/bin/python"
+          "$PY" -m pip install --upgrade pip
+          "$PY" -m pip install wheelhouse/*.whl
+          "$PY" ci/windows_probe/runtime_probe.py
+          "$PY" - <<'PY'
+          from pysme.large_file_storage import setup_atmo
+          print(setup_atmo().get("marcs2012.sav"))
+          PY
+
+      - name: Annotate macOS runtime failure
+        if: always() && steps.runtime.outcome == 'failure'
+        run: python ci/windows_probe/annotations.py runtime-macos.log --title "macOS wheel runtime/data" --level error
+
+      - name: Run macOS reference calculations
+        id: reference
+        if: steps.runtime.outcome == 'success'
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          "$RUNNER_TEMP/pysme-macos-venv/bin/python" ci/windows_probe/reference_calculation.py --output results/macos.npz --platform macos --annotations 2>&1 | tee reference-macos.log
+
+      - name: Annotate macOS reference failure
+        if: always() && steps.reference.outcome == 'failure'
+        run: python ci/windows_probe/annotations.py reference-macos.log --title "macOS reference calculations" --level error
+
+      - name: Upload macOS probe artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: probe-macos
+          path: |
+            wheelhouse/*.whl
+            results/
+            *-macos.log
+          if-no-files-found: warn
+
+      - name: Fail macOS job for missing core outcomes
+        if: always()
+        shell: bash
+        run: |
+          bad=""
+          test "${{ steps.build.outcome }}" = success || bad="$bad build"
+          test "${{ steps.runtime.outcome }}" = success || bad="$bad runtime/data"
+          test "${{ steps.reference.outcome }}" = success || bad="$bad references"
+          if test -n "$bad"; then
+            echo "::error title=macOS probe incomplete::$bad"
+            exit 1
+          fi
+
+  compare:
+    name: Compare spectra, fits, and tests
+    if: always()
+    needs: [windows, linux, macos]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Download Windows artifact
+        continue-on-error: true
+        uses: actions/download-artifact@v5
+        with:
+          name: probe-windows
+          path: artifacts/windows
+
+      - name: Download Linux artifact
+        continue-on-error: true
+        uses: actions/download-artifact@v5
+        with:
+          name: probe-linux
+          path: artifacts/linux
+
+      - name: Download macOS artifact
+        continue-on-error: true
+        uses: actions/download-artifact@v5
+        with:
+          name: probe-macos
+          path: artifacts/macos
+
+      - name: Compare all results
+        shell: bash
+        run: |
+          set -euo pipefail
+          exec > >(tee compare.log) 2>&1
+          python -m pip install numpy
+          python ci/windows_probe/compare_results.py \
+            --windows artifacts/windows/results/windows.npz \
+            --linux artifacts/linux/results/linux.npz \
+            --macos artifacts/macos/results/macos.npz \
+            --windows-tests artifacts/windows/results/pytest-windows.json \
+            --linux-tests artifacts/linux/results/pytest-linux.json
+
+      - name: Annotate comparison failure
+        if: failure()
+        run: python ci/windows_probe/annotations.py compare.log --title "Cross-platform comparison" --level error
