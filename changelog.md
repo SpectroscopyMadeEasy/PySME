@@ -4,6 +4,11 @@
 
 ### Changed
 
+- `sme.citation()` now lists the code papers first, newest first, followed by
+  the atmosphere, abundance, line list, and NLTE references. The formatted
+  output is no longer sorted by author. Loading a saved structure that holds the
+  old default code references replaces them with the new ones; edited
+  `citation_info` text is kept.
 - Updated the bundled SMElib to v6.13.21. The corrected Stehlé NALPHA table
   padding changes affected rows of the default H8--H30 profiles and removes
   narrow spurious spikes in H22, H26, H27, and H30. The STARK1 cache key now
@@ -22,6 +27,12 @@
 
 ### Added
 
+- Native Windows x64 wheels (Python 3.12), built and tested in CI and attached
+  to GitHub releases. They are not published to PyPI. On Windows, PySME sets the
+  C runtime's `LC_CTYPE` to UTF-8 before SMElib opens files, so paths with
+  non-ASCII characters work; `PYSME_SMELIB_WINDOWS_UTF8_LOCALE=0` turns this off.
+- Added the two PySME papers, Jian et al. (2026) and Wehrhahn et al. (2023), to
+  `sme.citation()`.
 - Added `continuum_scattering_mode` with values `0` (Planck source), `1`
   (deprecated continuum-only scattering), and `2` (line-inclusive scattering).
 - Added a manually dispatched wheel-build path that uploads artifacts for
@@ -35,6 +46,27 @@
 
 ### Fixed
 
+- Fix `sme.citation()` failing with `FieldIsMissing` when a line list cites
+  `FTa`, `FTb`, `Wcor` or `OBK`. Repaired the damaged `OBK` entry. The other
+  three are reports with unknown titles and are now `@misc` entries. Citation
+  text already saved with a line list is not updated; read the list again from
+  the VALD file.
+- Read VALD reference keys that contain a hyphen, such as `BA-J`. They were
+  skipped, so `linelist.citation_info` and `sme.citation()` left out the
+  corresponding references. Line lists saved with the old citation text keep
+  it until they are read again from the VALD file.
+- Read VALD reference keys whatever column they start in. PySME skipped the
+  first 45 (long format) or 90 (short format) characters of a reference
+  string, which dropped leading references, often the `wl:` and `gf:` ones, in
+  extracts with energies in eV. Entries separated by single spaces, preceded
+  by several spaces, or listing several keys (`gf:BWL,BK`) are now read too.
+- Fix the table of atomic weights in `pysme.abund`: a surplus value shifted the
+  entries from Ru to Bi by one element, Po had no entry of its own, and Au was
+  truncated. Synthetic spectra do not change, because SMElib uses its own
+  atomic masses.
+- Abundance citations no longer list Loss (2003), the source of that table,
+  since the calculation does not use it. Files saved earlier keep the citation
+  text stored in them.
 - Fix NLTE grid interpolation at and near grid edges (#39). Below the lowest
   node the coefficients were taken from the highest node; above the highest
   node they were held at the edge value instead of extrapolated; on

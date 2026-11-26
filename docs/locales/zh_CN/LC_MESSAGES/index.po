@@ -80,11 +80,11 @@ msgstr "引用"
 #: ../../index.rst:48
 msgid ""
 "`Jian et al. (2026) "
-"<https://ui.adsabs.harvard.edu/abs/2026arXiv260504007J/abstract>`_ "
+"<https://ui.adsabs.harvard.edu/abs/2026A&A...711A.168J/abstract>`_ "
 "(`v0.4.168` onward)"
 msgstr ""
 "`Jian et al. (2026) "
-"<https://ui.adsabs.harvard.edu/abs/2026arXiv260504007J/abstract>`_ "
+"<https://ui.adsabs.harvard.edu/abs/2026A&A...711A.168J/abstract>`_ "
 "(`v0.4.168` onward)"
 
 #: ../../index.rst:49

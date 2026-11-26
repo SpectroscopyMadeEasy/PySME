@@ -19,6 +19,78 @@ logger = logging.getLogger(__name__)
 _smelib = None
 CURRENT_LIB = None
 _SMELIB_PROCESS_LOCK = RLock()
+_WINDOWS_UTF8_LOCALE_ENV = "PYSME_SMELIB_WINDOWS_UTF8_LOCALE"
+_WINDOWS_UTF8_LOCALE_WARNING_EMITTED = False
+
+
+def _env_switch_disabled(name):
+    return os.environ.get(name, "").strip().lower() in ("0", "false", "no", "off")
+
+
+def _set_windows_ucrt_ctype_utf8():
+    import ctypes
+    import locale
+
+    # SMElib and libgfortran are built against the UCRT, so change that runtime
+    # directly rather than relying on Python's locale wrapper implementation.
+    ucrt = ctypes.CDLL("ucrtbase.dll")
+    setlocale = ucrt.setlocale
+    setlocale.argtypes = (ctypes.c_int, ctypes.c_char_p)
+    setlocale.restype = ctypes.c_char_p
+    return setlocale(locale.LC_CTYPE, b".UTF-8") is not None
+
+
+def _warn_windows_utf8_locale_failure_once():
+    global _WINDOWS_UTF8_LOCALE_WARNING_EMITTED
+
+    with _SMELIB_PROCESS_LOCK:
+        if _WINDOWS_UTF8_LOCALE_WARNING_EMITTED:
+            return
+        logger.warning(
+            'PySME could not set the Windows UCRT LC_CTYPE locale to ".UTF-8". '
+            "The SMElib data path contains only ASCII characters, so PySME will "
+            "continue; non-ASCII SMElib data paths may fail on this system."
+        )
+        _WINDOWS_UTF8_LOCALE_WARNING_EMITTED = True
+
+
+def _windows_enable_utf8_locale(libpath):
+    """Enable UTF-8 narrow filenames in the shared Windows UCRT."""
+    if sys.platform != "win32" or _env_switch_disabled(_WINDOWS_UTF8_LOCALE_ENV):
+        return
+
+    # The locale is process-global and another library can change it. Reapplying
+    # the same locale before each SMElib path is harmless (setlocale is
+    # idempotent) and restores the condition required by SMElib's narrow opens.
+    try:
+        locale_enabled = _set_windows_ucrt_ctype_utf8()
+    except Exception as exc:
+        locale_enabled = False
+        failure = f"{type(exc).__name__}: {exc}"
+        cause = exc
+    else:
+        failure = "setlocale returned NULL"
+        cause = None
+
+    if locale_enabled:
+        return
+
+    try:
+        os.fsdecode(libpath).encode("ascii")
+    except UnicodeEncodeError:
+        message = (
+            'PySME could not set the Windows UCRT LC_CTYPE locale to ".UTF-8" '
+            f"({failure}), and the SMElib data path contains non-ASCII characters: "
+            f"{libpath!r}. Native SMElib file opens cannot reliably use this path. "
+            "Upgrade to Windows 10 version 1803 or newer, or install PySME in an "
+            "ASCII-only path. PYSME_SMELIB_WINDOWS_UTF8_LOCALE=0 disables the "
+            "locale attempt but is safe only when the SMElib data path is ASCII."
+        )
+        if cause is None:
+            raise RuntimeError(message)
+        raise RuntimeError(message) from cause
+
+    _warn_windows_utf8_locale_failure_once()
 
 
 @contextmanager
@@ -52,7 +124,10 @@ def ensure_smelib_ready(libfile=None):
         download_smelib()
 
     try:
-        cdll.LoadLibrary(libfile)
+        if sys.platform == "win32":
+            libtools.load_library(libfile)
+        else:
+            cdll.LoadLibrary(libfile)
     except OSError as e:
         msg = str(e)
         if sys.platform == "darwin" and (
@@ -159,7 +234,9 @@ class SME_DLL:
         """Set the path to the library"""
         if libpath is None:
             libpath = get_full_datadir()
-        libpath = normpath(libpath) + os.sep
+        libpath = normpath(libpath)
+        _windows_enable_utf8_locale(libpath)
+        libpath += os.sep
         _smelib.SetLibraryPath(libpath)
 
     def InputWaveRange(self, wfirst, wlast):

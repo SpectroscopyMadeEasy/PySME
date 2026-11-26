@@ -65,7 +65,7 @@ PySME is its modern Python front-end: a wrapper around the original C++/Fortran 
 Citation
 ~~~~~~~~
 
-- `Jian et al. (2026) <https://ui.adsabs.harvard.edu/abs/2026arXiv260504007J/abstract>`_
+- `Jian et al. (2026) <https://ui.adsabs.harvard.edu/abs/2026A&A...711A.168J/abstract>`_
   (`v0.4.168` onward)
 - `Wehrhahn et al. (2023) <https://ui.adsabs.harvard.edu/abs/2023A&A...671A.171W>`_
 

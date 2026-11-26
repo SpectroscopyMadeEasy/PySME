@@ -1,0 +1,176 @@
+name: Windows wheel
+
+# The Windows package is built apart from the other platforms: it can never hold
+# up their release, and it is not published to PyPI. For a release tag it is
+# added to the GitHub release that the "Python application" workflow creates.
+
+on:
+  push:
+    branches: ["release/**"]
+    tags: ["v*"]
+  pull_request:
+    branches: [develop, master]
+    paths-ignore: ["docs/**", "*.md", ".readthedocs.yaml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  PYTHONDONTWRITEBYTECODE: "1"
+  OMP_NUM_THREADS: "1"
+  OPENBLAS_NUM_THREADS: "1"
+
+jobs:
+  gate:
+    name: Gate release tags to master only
+    runs-on: ubuntu-latest
+    outputs:
+      allow: ${{ steps.gate.outputs.allow }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - id: gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${GITHUB_REF}" != refs/tags/v* ]]; then
+            echo "allow=true" >> "$GITHUB_OUTPUT"
+          else
+            git fetch --no-tags origin master
+            if git merge-base --is-ancestor "${GITHUB_SHA}" "origin/master"; then
+              echo "allow=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "allow=false" >> "$GITHUB_OUTPUT"
+              echo "::notice::Skipping: ${GITHUB_REF} is not on origin/master."
+            fi
+          fi
+
+  build:
+    name: Build and test on Windows x64
+    needs: [gate]
+    if: needs.gate.outputs.allow == 'true'
+    runs-on: windows-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+          fetch-depth: 0          # the version number comes from the tags
+
+      # One Python for now: the one PySME-GUI installs.
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          architecture: x64
+
+      - name: Install the UCRT64 compilers
+        id: msys2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-gcc-fortran
+            mingw-w64-ucrt-x86_64-ninja
+
+      - name: Build the wheel and bundle its libraries
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $true
+          # setup-msys2 installs its own copy outside C:\msys64.
+          $ucrt = Join-Path '${{ steps.msys2.outputs.msys2-location }}' 'ucrt64\bin'
+          $ucrtPosix = $ucrt -replace '\\', '/'
+          $env:CC = "$ucrtPosix/gcc.exe"
+          $env:CXX = "$ucrtPosix/g++.exe"
+          $env:FC = "$ucrtPosix/gfortran.exe"
+          $env:CMAKE_GENERATOR = "Ninja"
+          $env:PATH = "$ucrt;$env:PATH"
+          python -m pip install --upgrade pip build "delvewheel==1.13.3"
+          python -m build --wheel
+          $raw = (Get-ChildItem dist\*.whl | Select-Object -First 1).FullName
+          python -m delvewheel repair --add-path $ucrt --ignore-existing --wheel-dir wheelhouse $raw
+
+      - name: Install without any compiler and load SMElib
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $true
+          $base = (Get-Command python).Source
+          $venv = Join-Path $env:RUNNER_TEMP "pysme-venv"
+          # As on a user's computer: nothing of the build tools on the path.
+          $env:PATH = "$venv\Scripts;C:\Windows\System32;C:\Windows"
+          foreach ($tool in "gcc", "gfortran", "cl") {
+            if (Get-Command $tool -ErrorAction SilentlyContinue) { throw "$tool is on the clean path" }
+          }
+          & $base -m venv $venv
+          & "$venv\Scripts\python.exe" -m pip install --upgrade pip
+          $wheel = (Get-ChildItem wheelhouse\*.whl | Select-Object -First 1).FullName
+          & "$venv\Scripts\python.exe" -m pip install "$wheel" pytest
+          Set-Location $env:RUNNER_TEMP
+          & "$venv\Scripts\python.exe" -c "from pysme.sme_synth import SME_DLL; print(SME_DLL().SMELibraryVersion())"
+
+      - name: Download the grids the tests need
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $true
+          @'
+          from pysme.large_file_storage import setup_atmo, setup_nlte
+          atmo = setup_atmo()
+          for name in ("marcs2012.sav", "marcs2012p_t2.0.sav", "marcs2014.sav"):
+              atmo.get(name)
+          nlte = setup_nlte()
+          for name in ("nlte_H_pysme.grd", "nlte_Na_multi_sun.grd", "marcs2012p_t1.0_Ca.grd"):
+              nlte.get(name)
+          '@ | & "$env:RUNNER_TEMP\pysme-venv\Scripts\python.exe" -
+
+      - name: Test the installed package
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $true
+          $python = "$env:RUNNER_TEMP\pysme-venv\Scripts\python.exe"
+          $env:PYSME_TEST_OFFICIAL_MARCS = "1"
+          & $python -m pytest -q test/test_official_marcs_abundances.py
+          Remove-Item Env:PYSME_TEST_OFFICIAL_MARCS
+          & $python -m pytest --durations=20
+
+      # Not named "wheels-*": nothing that publishes to PyPI takes it.
+      - uses: actions/upload-artifact@v6
+        with:
+          name: windows-wheel
+          path: wheelhouse/*.whl
+          if-no-files-found: error
+
+  attach:
+    name: Add the wheel to the GitHub release
+    needs: [gate, build]
+    if: needs.gate.outputs.allow == 'true' && github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 100
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: windows-wheel
+          path: dist
+      - name: Wait for the release, then upload
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 180); do
+            if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+              gh release upload "$GITHUB_REF_NAME" dist/*.whl --repo "$GITHUB_REPOSITORY" --clobber
+              exit 0
+            fi
+            echo "Waiting for the release ($attempt/180)"
+            sleep 30
+          done
+          echo "::error::The release did not appear. Upload the windows-wheel artifact by hand."
+          exit 1
