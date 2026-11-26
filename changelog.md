@@ -4,10 +4,10 @@
 
 ### Changed
 
-- Updated the bundled SMElib to v6.13.22 (via v6.13.21). Hydrogen lines now
-  come from Paul Barklem's HLINOP/HLINPROF code (SMElib submodule
-  `smelib/external/hlinop`; clone PySME with `--recursive`), with the
-  broadening mechanisms convolved instead of added. Default spectra change
+- Updated the bundled SMElib to v6.13.23 (via v6.13.21 and v6.13.22).
+  Hydrogen lines now come from Paul Barklem's HLINOP/HLINPROF code (SMElib
+  submodule `smelib/external/hlinop`; clone PySME with `--recursive`), with
+  the broadening mechanisms convolved instead of added. Default spectra change
   for hydrogen lines: in the solar and Arcturus test models H alpha changes by
   0.4-0.5% in normalized flux on average and by at most 2.4%; lines without
   Stehlé tables (Brackett, Balmer n_up > 30) change much more (the equivalent
@@ -17,8 +17,9 @@
   NALPHA table padding (narrow spurious spikes in H22, H26, H27 and H30) and
   the STARK1 cache key; v6.13.22 also computes hydrogen lines as far from the
   line centre as the other lines (the line-range scan used the deepest layer
-  only; default spectra change by at most 7e-4). Continuum-scattering mode 1
-  is deprecated in SMElib.
+  only; default spectra change by at most 7e-4); v6.13.23 adds the optional
+  TB09 blending (`h_tb09`, off by default). Continuum-scattering mode 1 is
+  deprecated in SMElib.
 - PySME passes the wavelength medium of the line list (`sme.linelist.medium`)
   to SMElib, so that the hydrogen lines and the continuous opacities use the
   same medium; line lists without a medium are taken as air, as for VALD. The
@@ -27,7 +28,7 @@
 - The line-information caches (CDR/ALMAX) include the hydrogen-line settings
   in their key; caches written by earlier versions are recomputed.
 - The fallback download of SMElib (used only when the bundled library is
-  missing) takes the release that matches the `smelib` submodule (v6.13.22)
+  missing) takes the release that matches the `smelib` submodule (v6.13.23)
   from the SpectroscopyMadeEasy/SMElib repository, instead of the latest
   release.
 - Test references: the H alpha regression data and the solar and Arcturus

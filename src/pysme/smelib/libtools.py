@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 # SMElib release built into this PySME version (the tag of the smelib
 # submodule); also downloaded when the bundled library is missing.
-SMELIB_RELEASE = "v6.13.22"
+SMELIB_RELEASE = "v6.13.23"
 
 smelib_releases = {
     "default":  f"download/{SMELIB_RELEASE}",
