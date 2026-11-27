@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+PySME 1.3 is the last release series that supports Python 3.10.
+
 ### Changed
 
 - `sme.citation()` now lists the code papers first, newest first, followed by
