@@ -4,6 +4,17 @@
 
 PySME 1.3 is the last release series that supports Python 3.10.
 
+### SME files
+
+- PySME now reads `.sme` files with its own reader, which supports a fixed set of
+  data types.
+- `.npy`, `.npz` and old `.sme` files with a Feather line list are loaded only
+  with `SME_Structure.load(filename, allow_pickle=True)`. Use this only for files
+  you trust. Feather also needs a final release of `pyarrow` 14.0.1 or newer.
+- Some values that a user may have stored in a file, for example in `meta`, are
+  no longer read back, among them astropy `Time`, `SpectralCoord` and objects of
+  other custom types. Such a file is refused with a message naming the type.
+
 ### Changed
 
 - `sme.citation()` now lists the code papers first, newest first, followed by

@@ -13,6 +13,11 @@ Detailed per-release changes are maintained on GitHub Releases:
 - Use the Git tags list for older historical versions.
 - Keep this page concise, focused on major milestones and migration notes.
 
+## v1.2.1 and v1.3.0rc3
+
+- `.sme` files are read by PySME's own reader.
+- `.npy`, `.npz` and old Feather line lists now need `allow_pickle=True`.
+
 ## v1.2.0
 
 - Reworked adaptive synthesis with continuum-opacity caching and

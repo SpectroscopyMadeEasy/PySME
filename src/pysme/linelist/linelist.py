@@ -15,6 +15,7 @@ from flex.extensions.tabledata import JSONTableExtension
 from scipy import constants
 
 from ..persistence import IPersist
+from ..sme_reader import require_safe_feather
 from ..util import air2vac, vac2air
 
 logger = logging.getLogger(__name__)
@@ -670,6 +671,7 @@ class LineList(IPersist):
                 medium = info.get("medium")
                 citation_info = info.get("citation_info", "")
             elif name.endswith("data.feather"):
+                require_safe_feather()
                 b = io.BytesIO(file.read(name))
                 linedata = pd.read_feather(b)
             elif name.endswith("data.json"):
