@@ -1,5 +1,27 @@
 # Changelog
 
+## v1.2.1
+
+A maintenance release: 1.2.0 with the changes below. Synthesis and fitting code is
+unchanged.
+
+### Changes
+
+- PySME now reads `.sme` files with its own reader, which supports a fixed set of
+  data types.
+- `.npy`, `.npz` and old `.sme` files with a Feather line list are loaded only
+  with `SME_Structure.load(filename, allow_pickle=True)`. Use this only for files
+  you trust. Feather also needs a final release of `pyarrow` 14.0.1 or newer.
+- Some values that a user may have stored in a file, for example in `meta`, are
+  no longer read back, among them astropy `Time`, `SpectralCoord` and objects of
+  other custom types. Such a file is refused with a message naming the type.
+
+### Packaging
+
+- Pre-built macOS wheels now require macOS 15 or later, because GitHub has
+  retired the macOS 14 build machines. 1.2.0 was the last release with wheels
+  for macOS 14; there, installing 1.2.1 builds it from source.
+
 ## v1.2.0 - 2026-09-24
 
 ### Performance

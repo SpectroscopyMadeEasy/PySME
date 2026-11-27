@@ -36,8 +36,10 @@ pip install pysme-astro
 ```
 
 On macOS arm64, `pip` will use a pre-built wheel when one matches your Python
-and macOS version. If no compatible wheel is available, `pip` falls back to a
-source build. In that case, install the local build toolchain first:
+and macOS version. PySME 1.2.1 provides pre-built wheels for macOS 15 or later;
+1.2.0 was the last release with wheels for macOS 14. If no compatible wheel is
+available, `pip` falls back to a source build. In that case, install the local
+build toolchain first:
 
 ```bash
 brew install gcc cmake ninja
