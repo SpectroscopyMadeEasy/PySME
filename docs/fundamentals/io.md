@@ -9,12 +9,12 @@ or saved with
 sme.save("out.sme")
 ```
 
-PySME reads `.sme` files with its own reader, which supports a fixed set of data
-types. A file holding any other type is refused with
-`pysme.persistence.UnsafeFileError`.
+`.sme` files are read as data: loading one builds only a fixed set of types, and
+a file that asks for anything else is refused with `pysme.persistence.UnsafeFileError`.
 
 `.npy` and `.npz` files, and old `.sme` files that keep their line list in the
-Feather format, are loaded only if you say that you trust the file:
+Feather format, can run code when they are loaded. They are loaded only if you
+say that you trust the file:
 
 ```py
 sme = SME_Structure.load("old_file.npy", allow_pickle=True)

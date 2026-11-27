@@ -15,8 +15,8 @@ Detailed per-release changes are maintained on GitHub Releases:
 
 ## v1.2.1 and v1.3.0rc3
 
-- `.sme` files are read by PySME's own reader.
-- `.npy`, `.npz` and old Feather line lists now need `allow_pickle=True`.
+- Security: loading a `.sme` file no longer runs code named in the file.
+  `.npy`, `.npz` and old Feather line lists now need `allow_pickle=True`.
 
 ## v1.2.0
 

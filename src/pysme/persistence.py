@@ -120,7 +120,7 @@ def load(fname, sme, trusted=False):
     # opened here, whatever happens to its name meanwhile.
     with sme_reader.trusting(trusted), open(fname, "rb") as handle:
         try:
-            # PySME's own reader, not FlexFile.read.
+            # Not FlexFile.read: it runs whatever code a file names.
             return from_flex(sme_reader.read(handle), sme)
         except UnsafeFileError:
             raise
