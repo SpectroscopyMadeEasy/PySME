@@ -59,6 +59,8 @@ def synthesize_from_metadata(metadata: dict) -> tuple[np.ndarray, np.ndarray]:
         sme.iptype = "gauss"
         sme.ipres = 47000.0
     sme.atmo.method = "grid"
+    # templates written before SMElib 6.13.22 have no h_line_profile: legacy profiles
+    sme.h_line_profile = metadata.get("h_line_profile", "legacy")
     sme.linelist = load_linelist(metadata)
     sme.wave = [wave]
     sme.normalize_by_continuum = True
@@ -106,3 +108,13 @@ def test_regression_sun_na6154_6160():
 
 def test_regression_arcturus_halpha():
     assert_template("arcturus_halpha_ref.npz")
+
+
+def test_regression_sun_halpha_legacy_profiles():
+    """The template from before SMElib 6.13.22, with h_line_profile='legacy'."""
+    assert_template("sun_halpha_legacy_ref.npz")
+
+
+def test_regression_arcturus_halpha_legacy_profiles():
+    """The template from before SMElib 6.13.22, with h_line_profile='legacy'."""
+    assert_template("arcturus_halpha_legacy_ref.npz")
