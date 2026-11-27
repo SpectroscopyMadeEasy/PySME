@@ -1189,7 +1189,7 @@ class SME_Structure(Parameters):
         persistence.save(filename, self, format=format, _async=_async)
 
     @staticmethod
-    def load(filename):
+    def load(filename, allow_pickle=False):
         """
         Load SME data from disk
 
@@ -1202,6 +1202,10 @@ class SME_Structure(Parameters):
         ----------
         filename : str, optional
             name of the file to load (default: 'sme.npy')
+        allow_pickle : bool, optional
+            Say that you trust the file. Needed for ".npy" and ".npz" files, and
+            for old ".sme" files that keep their line list in the Feather format.
+            Default False.
 
         Returns
         -------
@@ -1216,9 +1220,15 @@ class SME_Structure(Parameters):
         logger.info("Loading SME file %s", filename)
         ext = os.path.splitext(filename)[1]
         if ext == ".sme":
-            s = persistence.load(filename, SME_Structure())
+            s = persistence.load(filename, SME_Structure(), trusted=allow_pickle)
             s._update_stored_citation_info()
             return s
+        elif ext in (".npy", ".npz") and not allow_pickle:
+            raise persistence.UnsafeFileError(
+                f"{ext} files are NumPy pickle files and are loaded only if you trust "
+                "them. If you made this file yourself, or trust where it comes from, "
+                "load it with SME_Structure.load(filename, allow_pickle=True)."
+            )
         elif ext == ".npy":
             # Numpy Save file
             s = np.load(filename, allow_pickle=True)
