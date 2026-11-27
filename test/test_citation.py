@@ -102,7 +102,8 @@ def test_old_default_citation_is_updated_on_load(tmp_path, extension):
     else:
         np.save(path, np.array([sme], dtype=object))
 
-    loaded = SME_Structure.load(path)
+    # allow_pickle: this test made the file itself (it matters only for .npy).
+    loaded = SME_Structure.load(path, allow_pickle=True)
 
     assert loaded.citation_info == SME_Structure().citation_info
     assert entry_keys(loaded.citation(output="bibtex"))[:4] == CODE_KEYS

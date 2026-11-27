@@ -11,7 +11,8 @@ from zipfile import ZIP_LZMA, ZIP_STORED, ZipFile
 import numpy as np
 from flex.flex import FlexExtension, FlexFile
 
-from . import __version__
+from . import __version__, sme_reader
+from .sme_reader import UnsafeFileError
 
 logger = logging.getLogger(__name__)
 
@@ -96,7 +97,7 @@ def save(filename, sme, format="flex", _async=False):
         )
 
 
-def load(fname, sme):
+def load(fname, sme, trusted=False):
     """
     Load the SME Structure from disk
 
@@ -106,26 +107,33 @@ def load(fname, sme):
         file to load
     sme : SME_Structure
         empty sme structure with default values set
+    trusted : bool, optional
+        the caller trusts the file; only then is a Feather line list of an old
+        file read. Default False.
 
     Returns
     -------
     sme :  SME_Structure
         loaded sme structure
     """
-    try:
-        ff = FlexFile.read(fname)
+    # Opened once for both formats, so that what the caller trusts is the one file
+    # opened here, whatever happens to its name meanwhile.
+    with sme_reader.trusting(trusted), open(fname, "rb") as handle:
         try:
-            sme = from_flex(ff, sme)
-        finally:
-            ff.close()
-        return sme
-    except Exception as ex:
-        logger.error(ex)
-        try:
-            sme = load_v1(fname, sme)
-        except:
-            raise ex
-        return sme
+            # PySME's own reader, not FlexFile.read.
+            return from_flex(sme_reader.read(handle), sme)
+        except UnsafeFileError:
+            raise
+        except Exception as ex:
+            logger.error(ex)
+            try:
+                handle.seek(0)
+                sme = load_v1(handle, sme)
+            except UnsafeFileError:
+                raise
+            except:
+                raise ex
+            return sme
 
 
 # Update this if the names in sme change
