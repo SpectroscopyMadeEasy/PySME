@@ -7,6 +7,7 @@ PySME can be installed through PyPI (recommended; stable release) or from GitHub
     - PySME 1.2.1, 1.3.0 and later provide pre-built macOS wheels for macOS 15 or later.
     - PySME 1.2.0 is the last release with pre-built wheels for macOS 14.
     - The x86/Intel platform macOS is not supported anymore, but you can still install v0.6.23, the last supported PySME version, or download [SMElib](https://github.com/SpectroscopyMadeEasy/SMElib) and compile it manually.
+      Note that v0.6.23 can run code when it loads a `.sme` file: use it only with files you trust.
 - Windows: supported via WSL2 (install/run PySME inside the Linux subsystem)
 - Python versions: 
     - 3.10–3.13.
