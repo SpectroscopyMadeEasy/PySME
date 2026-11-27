@@ -19,6 +19,78 @@ logger = logging.getLogger(__name__)
 _smelib = None
 CURRENT_LIB = None
 _SMELIB_PROCESS_LOCK = RLock()
+_WINDOWS_UTF8_LOCALE_ENV = "PYSME_SMELIB_WINDOWS_UTF8_LOCALE"
+_WINDOWS_UTF8_LOCALE_WARNING_EMITTED = False
+
+
+def _env_switch_disabled(name):
+    return os.environ.get(name, "").strip().lower() in ("0", "false", "no", "off")
+
+
+def _set_windows_ucrt_ctype_utf8():
+    import ctypes
+    import locale
+
+    # SMElib and libgfortran are built against the UCRT, so change that runtime
+    # directly rather than relying on Python's locale wrapper implementation.
+    ucrt = ctypes.CDLL("ucrtbase.dll")
+    setlocale = ucrt.setlocale
+    setlocale.argtypes = (ctypes.c_int, ctypes.c_char_p)
+    setlocale.restype = ctypes.c_char_p
+    return setlocale(locale.LC_CTYPE, b".UTF-8") is not None
+
+
+def _warn_windows_utf8_locale_failure_once():
+    global _WINDOWS_UTF8_LOCALE_WARNING_EMITTED
+
+    with _SMELIB_PROCESS_LOCK:
+        if _WINDOWS_UTF8_LOCALE_WARNING_EMITTED:
+            return
+        logger.warning(
+            'PySME could not set the Windows UCRT LC_CTYPE locale to ".UTF-8". '
+            "The SMElib data path contains only ASCII characters, so PySME will "
+            "continue; non-ASCII SMElib data paths may fail on this system."
+        )
+        _WINDOWS_UTF8_LOCALE_WARNING_EMITTED = True
+
+
+def _windows_enable_utf8_locale(libpath):
+    """Enable UTF-8 narrow filenames in the shared Windows UCRT."""
+    if sys.platform != "win32" or _env_switch_disabled(_WINDOWS_UTF8_LOCALE_ENV):
+        return
+
+    # The locale is process-global and another library can change it. Reapplying
+    # the same locale before each SMElib path is harmless (setlocale is
+    # idempotent) and restores the condition required by SMElib's narrow opens.
+    try:
+        locale_enabled = _set_windows_ucrt_ctype_utf8()
+    except Exception as exc:
+        locale_enabled = False
+        failure = f"{type(exc).__name__}: {exc}"
+        cause = exc
+    else:
+        failure = "setlocale returned NULL"
+        cause = None
+
+    if locale_enabled:
+        return
+
+    try:
+        os.fsdecode(libpath).encode("ascii")
+    except UnicodeEncodeError:
+        message = (
+            'PySME could not set the Windows UCRT LC_CTYPE locale to ".UTF-8" '
+            f"({failure}), and the SMElib data path contains non-ASCII characters: "
+            f"{libpath!r}. Native SMElib file opens cannot reliably use this path. "
+            "Upgrade to Windows 10 version 1803 or newer, or install PySME in an "
+            "ASCII-only path. PYSME_SMELIB_WINDOWS_UTF8_LOCALE=0 disables the "
+            "locale attempt but is safe only when the SMElib data path is ASCII."
+        )
+        if cause is None:
+            raise RuntimeError(message)
+        raise RuntimeError(message) from cause
+
+    _warn_windows_utf8_locale_failure_once()
 
 
 @contextmanager
@@ -52,7 +124,10 @@ def ensure_smelib_ready(libfile=None):
         download_smelib()
 
     try:
-        cdll.LoadLibrary(libfile)
+        if sys.platform == "win32":
+            libtools.load_library(libfile)
+        else:
+            cdll.LoadLibrary(libfile)
     except OSError as e:
         msg = str(e)
         if sys.platform == "darwin" and (
@@ -159,7 +234,9 @@ class SME_DLL:
         """Set the path to the library"""
         if libpath is None:
             libpath = get_full_datadir()
-        libpath = normpath(libpath) + os.sep
+        libpath = normpath(libpath)
+        _windows_enable_utf8_locale(libpath)
+        libpath += os.sep
         _smelib.SetLibraryPath(libpath)
 
     def InputWaveRange(self, wfirst, wlast):
@@ -214,6 +291,71 @@ class SME_DLL:
         msg = self.GetHlinopWarnings()
         if msg:
             logger.warning("%s", msg)
+
+    def SetHydrogenProfileMode(self, profile="convolved"):
+        """Hydrogen line profiles: 'convolved' (default) or 'legacy' (or 1/0)."""
+        modes = {"convolved": 1, "legacy": 0}
+        mode = modes[str(profile).lower()] if isinstance(profile, str) else int(profile)
+        if not hasattr(_smelib, "SetHydrogenProfileMode"):
+            if mode != 1:
+                raise RuntimeError("h_line_profile='legacy' needs SMElib >= 6.13.22")
+            return
+        _smelib.SetHydrogenProfileMode(mode)
+
+    def GetHydrogenProfileMode(self):
+        """Hydrogen line profile mode (1 convolved, 0 legacy), None if not available."""
+        if hasattr(_smelib, "GetHydrogenProfileMode"):
+            return _smelib.GetHydrogenProfileMode()
+        return None
+
+    def SetHydrogenOccupation(self, enabled=False, neutral_scale=0.0):
+        """Occupation probabilities of H I levels (off by default); neutral_scale
+        scales the Hummer & Mihalas neutral-perturber term (0 = off)."""
+        if not hasattr(_smelib, "SetHydrogenOccupation"):
+            if enabled:
+                raise RuntimeError("h_occupation needs SMElib >= 6.13.22")
+            return
+        _smelib.SetHydrogenOccupation(int(bool(enabled)), float(neutral_scale))
+
+    def GetHydrogenOccupationMode(self):
+        """Occupation-probability mode (0 off, 1 on), None if not available."""
+        if hasattr(_smelib, "GetHydrogenOccupationMode"):
+            return _smelib.GetHydrogenOccupationMode()
+        return None
+
+    def SetHydrogenTB09(self, mode, dlo=2.0, dhi=1.5, path=""):
+        """Balmer H10-H22: blend the Stehle & Hutcheon profiles with those of
+        Tremblay & Bergeron (2009) from ``dlo`` dex below each line's last
+        tabulated Stehle density (weight 0) to ``dhi`` dex below it (weight 1).
+        mode 0 = off (default), 1 = on; ``path``: SYNSPEC's tremblay.dat.
+        Requires SMElib >= 6.13.23 for mode 1."""
+        mode = int(bool(mode))
+        if hasattr(_smelib, "SetHydrogenTB09"):
+            _smelib.SetHydrogenTB09(mode, float(dlo), float(dhi), str(path or ""))
+        elif mode:
+            raise RuntimeError("the TB09 blending (h_tb09) needs SMElib >= 6.13.23")
+
+    def GetHydrogenTB09Mode(self):
+        """0 or 1, or None if not available."""
+        if hasattr(_smelib, "GetHydrogenTB09Mode"):
+            return _smelib.GetHydrogenTB09Mode()
+        return None
+
+    def SetWavelengthMedium(self, medium):
+        """Medium of the wavelengths given to SMElib: 'air' or 'vac'.  Ignored by
+        SMElib versions before 6.13.22 (which take the continuum in vacuum and
+        hydrogen lines in air)."""
+        medium = str(medium).lower()
+        if medium not in ("air", "vac"):
+            raise ValueError("wavelength medium must be 'air' or 'vac'")
+        if hasattr(_smelib, "SetWavelengthMedium"):
+            _smelib.SetWavelengthMedium(medium)
+
+    def GetWavelengthMedium(self):
+        """'air', 'vac', 'unset', or None if not available."""
+        if hasattr(_smelib, "GetWavelengthMedium"):
+            return _smelib.GetWavelengthMedium()
+        return None
 
     def SetLineInfoMode(self, mode):
         """Set handling mode for precomputed line info (0=internal, 1=use_if_valid, 2=trust)."""

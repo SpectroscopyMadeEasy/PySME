@@ -50,15 +50,22 @@ set(SMELIB_SOURCES
     ${SMELIB_DIR}/src/eos/eos_eqns.f
     ${SMELIB_DIR}/src/eos/eos_math_special.f
     ${SMELIB_DIR}/src/eos/kp_q_spln.f
-    ${SMELIB_DIR}/src/sme/hlinop.f
-    ${SMELIB_DIR}/src/sme/hlinprof.f
+    ${SMELIB_DIR}/external/hlinop/hlinop.f
+    ${SMELIB_DIR}/external/hlinop/hlinprof.f
+    ${SMELIB_DIR}/external/hlinop/hbop.f
 )
+if(NOT EXISTS "${SMELIB_DIR}/external/hlinop/hlinop.f")
+    message(FATAL_ERROR "SMElib's submodule external/hlinop is missing: run git submodule update --init --recursive")
+endif()
 
 add_library(sme SHARED ${SMELIB_SOURCES})
 string(REGEX REPLACE "^v" "" SMELIB_VERSION "${SMELIB_VERSION_ID}")
 target_compile_definitions(sme PRIVATE
     "SMELIB_VERSION=\"${SMELIB_VERSION}\""
 )
+if(WIN32)
+    target_compile_definitions(sme PRIVATE BUILDING_SME_WIN_DLL)
+endif()
 target_include_directories(sme PRIVATE
     ${CMAKE_CURRENT_BINARY_DIR}
     ${SMELIB_DIR}/src/sme
@@ -126,7 +133,13 @@ install(TARGETS _smelib
     LIBRARY DESTINATION ${SKBUILD_PLATLIB_DIR}/pysme/smelib
 )
 
+# src/data/stehle_long.dat is a symbolic link into SMElib's submodule;
+# install the file it points to (wheels cannot hold symbolic links).
 install(DIRECTORY ${SMELIB_DIR}/src/data/
+    DESTINATION ${SKBUILD_PLATLIB_DIR}/pysme/share/libsme
+    PATTERN "stehle_long.dat" EXCLUDE
+)
+install(FILES ${SMELIB_DIR}/external/hlinop/stehle_long.dat
     DESTINATION ${SKBUILD_PLATLIB_DIR}/pysme/share/libsme
 )
 

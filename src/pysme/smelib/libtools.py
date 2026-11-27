@@ -23,8 +23,16 @@ import wget
 
 logger = logging.getLogger(__name__)
 
+# SMElib release built into this PySME version (the tag of the smelib
+# submodule); also downloaded when the bundled library is missing.
+SMELIB_RELEASE = "v6.13.23"
+
+# Python 3.8+ removes a DLL search directory when the returned handle is
+# destroyed.  Retain Windows handles for the lifetime of this module.
+_dll_directory_handles = []
+
 smelib_releases = {
-    "default":  "latest/download",
+    "default":  f"download/{SMELIB_RELEASE}",
     "0.6.23":   "download/v6.13.12",
     "0.4.198":  "download/v6.0.6",
     "0.4.199":  "download/v6.0.6",          
@@ -112,9 +120,9 @@ def download_smelib(loc=None, pysme_version='default', force_arch=None):
 
     # Download compiled library from github releases
     github_releases_url = (
-        f"https://github.com/MingjieJian/SMElib/releases/{release_subpath}"
+        f"https://github.com/SpectroscopyMadeEasy/SMElib/releases/{release_subpath}"
     )
-    print("Downloading and installing the latest libsme version for this system")
+    print(f"Downloading and installing libsme ({release_subpath}) for this system")
     aliases = {
         "Linux": "manylinux2014-x86_64",
         "Windows": "windows",
@@ -347,13 +355,13 @@ def get_lib_name():
 
 def get_lib_directory():
     """
-    Get the directory name of the library. I.e. 'lib' on all systems
-    execpt windows, and 'bin' on windows
+    Get the package directory containing the SME shared library.
     """
-    if platform.system() in ["Windows"]:
-        dirpath = "bin"
+    if platform.system() == "Windows":
+        # CMake installs the Windows DLL into pysme/lib.
+        dirpath = "lib"
     else:
-        # For Linux/MacOS
+        # Preserve the existing Linux/macOS location.
         dirpath = "lib"
     return dirpath
 
@@ -399,7 +407,8 @@ def load_library(libfile=None):
     if libfile is None:
         libfile = get_full_libfile()
     try:
-        os.add_dll_directory(dirname(libfile))
+        handle = os.add_dll_directory(dirname(libfile))
+        _dll_directory_handles.append(handle)
     except AttributeError:
         newpath = dirname(libfile)
         if "PATH" in os.environ:

@@ -10,6 +10,7 @@ PySME can be installed through PyPI (recommended; stable release) or from GitHub
 - Windows: supported via WSL2 (install/run PySME inside the Linux subsystem)
 - Python versions: 
     - 3.10–3.13.
+    - PySME 1.3 is the last release series that supports Python 3.10.
 ```
 
 ## Set up virtual environment

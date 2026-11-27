@@ -22,6 +22,78 @@ from .nlte import NLTE
 
 logger = logging.getLogger(__name__)
 
+# BibTeX for the SME and PySME papers, newest first.
+_PYSME_CITATION_INFO = r"""
+@ARTICLE{2026A&A...711A.168J,
+    author = {{Jian}, Mingjie and {Piskunov}, Nikolai and {Valenti}, Jeff and {Xi Wang}, Ella and {Thorsbro}, Brian and {J{\"o}nsson}, Henrik and {Wehrhahn}, Ansgar},
+    title = "{PySME v1.0: Improved modelling of stellar spectra for survey-scale applications}",
+    journal = {\aap},
+    keywords = {line: formation, radiative transfer, methods: numerical, techniques: spectroscopic, stars: abundances, stars: atmospheres, Instrumentation and Methods for Astrophysics, Astrophysics of Galaxies, Solar and Stellar Astrophysics},
+    year = 2026,
+    month = jul,
+    volume = {711},
+    eid = {A168},
+    pages = {A168},
+    doi = {10.1051/0004-6361/202659986},
+    archivePrefix = {arXiv},
+    eprint = {2605.04007},
+    primaryClass = {astro-ph.IM},
+    adsurl = {https://ui.adsabs.harvard.edu/abs/2026A&A...711A.168J},
+    adsnote = {Provided by the SAO/NASA Astrophysics Data System}
+}
+@ARTICLE{2023A&A...671A.171W,
+    author = {{Wehrhahn}, A. and {Piskunov}, N. and {Ryabchikova}, T.},
+    title = "{PySME. Spectroscopy Made Easier}",
+    journal = {\aap},
+    keywords = {techniques: spectroscopic, methods: data analysis, methods: numerical, stars: fundamental parameters, stars: solar-type, Astrophysics - Solar and Stellar Astrophysics, Astrophysics - Earth and Planetary Astrophysics, Astrophysics - Instrumentation and Methods for Astrophysics},
+    year = 2023,
+    month = mar,
+    volume = {671},
+    eid = {A171},
+    pages = {A171},
+    doi = {10.1051/0004-6361/202244482},
+    archivePrefix = {arXiv},
+    eprint = {2210.04755},
+    primaryClass = {astro-ph.SR},
+    adsurl = {https://ui.adsabs.harvard.edu/abs/2023A&A...671A.171W},
+    adsnote = {Provided by the SAO/NASA Astrophysics Data System}
+}
+"""
+
+_SME_CITATION_INFO = r"""
+@ARTICLE{2017A&A...597A..16P,
+    author = {{Piskunov}, Nikolai and {Valenti}, Jeff A.},
+    title = "{Spectroscopy Made Easy: Evolution}",
+    journal = {\aap},
+    keywords = {stars: abundances, radiative transfer, stars: fundamental parameters, stars: atmospheres, techniques: spectroscopic, Astrophysics - Instrumentation and Methods for Astrophysics, Astrophysics - Solar and Stellar Astrophysics},
+    year = "2017",
+    month = "Jan",
+    volume = {597},
+    eid = {A16},
+    pages = {A16},
+    doi = {10.1051/0004-6361/201629124},
+    archivePrefix = {arXiv},
+    eprint = {1606.06073},
+    primaryClass = {astro-ph.IM},
+    adsurl = {https://ui.adsabs.harvard.edu/abs/2017A&A...597A..16P},
+    adsnote = {Provided by the SAO/NASA Astrophysics Data System}
+}
+@ARTICLE{1996A&AS..118..595V,
+    author = {{Valenti}, J.~A. and {Piskunov}, N.},
+    title = "{Spectroscopy made easy: A new tool for fitting observations with synthetic spectra.}",
+    journal = {\aaps},
+    keywords = {RADIATIVE TRANSFER, METHODS: NUMERICAL, TECHNIQUES: SPECTROSCOPIC, STARS: FUNDAMENTAL PARAMETERS, SUN: FUNDAMENTAL PARAMETERS, ATOMIC DATA},
+    year = "1996",
+    month = "Sep",
+    volume = {118},
+    pages = {595-603},
+    adsurl = {https://ui.adsabs.harvard.edu/abs/1996A&AS..118..595V},
+    adsnote = {Provided by the SAO/NASA Astrophysics Data System}
+}
+"""
+
+_CODE_CITATION_INFO = _PYSME_CITATION_INFO + _SME_CITATION_INFO
+
 
 def _as_continuum_scattering_mode(self, value):
     if (
@@ -33,6 +105,20 @@ def _as_continuum_scattering_mode(self, value):
             "continuum_scattering_mode must be an integer with value 0, 1, or 2"
         )
     return int(value)
+
+
+def _as_tb09_window(self, value):
+    try:
+        dlo, dhi = (float(v) for v in value)
+    except (TypeError, ValueError):
+        raise ValueError("h_tb09_window must be a pair (dlo, dhi) in dex")
+    if not (dlo > dhi >= 0):
+        raise ValueError("h_tb09_window needs dlo > dhi >= 0")
+    return (dlo, dhi)
+
+
+def _as_optional_path(self, value):
+    return None if value is None or str(value) == "" else str(value)
 
 
 class MASK_VALUES(IntFlag):
@@ -310,10 +396,35 @@ class SME_Structure(Parameters):
             "bool: Whether to keep the specific intensities or integrate them together"),
         ("gam6", 1, asfloat, this, "float: van der Waals scaling factor"),
         ("h2broad", True, asbool, this, "bool: Whether to use H2 broadening or not"),
+        ("h_line_profile", "convolved", lowercase(oneof("convolved", "legacy")), this,
+            "str: hydrogen line profiles; 'convolved' (default) convolves the "
+            "broadening mechanisms (SMElib >= 6.13.22), 'legacy' adds them as "
+            "in earlier versions"),
+        ("h_occupation", False, asbool, this,
+            "bool: occupation probabilities of H I levels (Hummer & Mihalas "
+            "1988): hydrogen lines weakened by w(n_up), cut at the series limit, "
+            "and the dissolved-level (pseudo-continuum) absorption added; off by "
+            "default"),
+        ("h_occupation_neutral_scale", 0.0, asfloat, this,
+            "float: scale of the neutral-perturber (Hummer & Mihalas hard-sphere) "
+            "term of the occupation probabilities; 0 (default) = off, 1 = Hummer "
+            "& Mihalas"),
+        ("h_tb09", False, asbool, this,
+            "bool: Balmer lines H10-H22: blend the Stehle & Hutcheon profiles with "
+            "those of Tremblay & Bergeron (2009) near and beyond Stehle's last "
+            "tabulated density (SMElib >= 6.13.23; needs SYNSPEC's tremblay.dat, "
+            "h_tb09_file); meant to be used with h_occupation; off by default"),
+        ("h_tb09_window", (2.0, 1.5), _as_tb09_window, this,
+            "tuple(float, float): (dlo, dhi) in dex below each line's last tabulated "
+            "Stehle density where the TB09 weight rises from 0 to 1; default "
+            "(2.0, 1.5), the values that fitted metal-poor dwarfs best"),
+        ("h_tb09_file", None, _as_optional_path, this,
+            "str or None: TB09 table, SYNSPEC's data/tremblay.dat (used unchanged); "
+            "None = tremblay.dat in the SMElib data directory (not distributed; "
+            "TLUSTY 208/SYNSPEC 54 package, see the documentation)"),
         ("h_stark_convolution", "legacy", lowercase(oneof(None, "legacy", "convolution")), this,
-            "str or None: Brackett Stark profile construction; 'legacy' keeps "
-            "the additive profile and 'convolution' enables the shared-support "
-            "convolution for Brackett lines with upper level m >= 10"),
+            "str or None: deprecated, no effect: SMElib >= 6.13.22 convolves the "
+            "Stark profiles of all lines computed with HLINOP (see h_line_profile)"),
         ("accwi", 3e-3, asfloat, this,
             "float: adaptive wavelength-grid refinement threshold; ignored when "
             "a fixed wavelength grid is supplied and not a global error bound."),
@@ -486,37 +597,7 @@ class SME_Structure(Parameters):
         self.atmo = Atmosphere(**atmo, abund=atmo_abund, monh=atmo_monh)
         self.nlte = NLTE(**nlte)
 
-        self.citation_info = r"""
-            @ARTICLE{2017A&A...597A..16P,
-                author = {{Piskunov}, Nikolai and {Valenti}, Jeff A.},
-                title = "{Spectroscopy Made Easy: Evolution}",
-                journal = {\aap},
-                keywords = {stars: abundances, radiative transfer, stars: fundamental parameters, stars: atmospheres, techniques: spectroscopic, Astrophysics - Instrumentation and Methods for Astrophysics, Astrophysics - Solar and Stellar Astrophysics},
-                year = "2017",
-                month = "Jan",
-                volume = {597},
-                eid = {A16},
-                pages = {A16},
-                doi = {10.1051/0004-6361/201629124},
-                archivePrefix = {arXiv},
-                eprint = {1606.06073},
-                primaryClass = {astro-ph.IM},
-                adsurl = {https://ui.adsabs.harvard.edu/abs/2017A&A...597A..16P},
-                adsnote = {Provided by the SAO/NASA Astrophysics Data System}
-            }
-            @ARTICLE{1996A&AS..118..595V,
-                author = {{Valenti}, J.~A. and {Piskunov}, N.},
-                title = "{Spectroscopy made easy: A new tool for fitting observations with synthetic spectra.}",
-                journal = {\aaps},
-                keywords = {RADIATIVE TRANSFER, METHODS: NUMERICAL, TECHNIQUES: SPECTROSCOPIC, STARS: FUNDAMENTAL PARAMETERS, SUN: FUNDAMENTAL PARAMETERS, ATOMIC DATA},
-                year = "1996",
-                month = "Sep",
-                volume = {118},
-                pages = {595-603},
-                adsurl = {https://ui.adsabs.harvard.edu/abs/1996A&AS..118..595V},
-                adsnote = {Provided by the SAO/NASA Astrophysics Data System}
-            }
-            """
+        self.citation_info = _CODE_CITATION_INFO
 
         # Apply final conversions from IDL to Python version
         if "wave" in self:
@@ -1077,7 +1158,18 @@ class SME_Structure(Parameters):
         citation += [self.nlte.citation_info]
         citation = "\n".join(citation)
 
-        return self.create_citation(citation, output=output)
+        # Keep the order given above; the default style would sort by author.
+        return self.create_citation(citation, output=output, sorting_style="none")
+
+    def _update_stored_citation_info(self):
+        """Replace the old default citation text restored from a saved file.
+
+        Saved structures store ``citation_info``. Files written before the
+        PySME papers were added hold the two SME papers only. Text that
+        differs from that default (other than in whitespace) is kept.
+        """
+        if self.citation_info.split() == _SME_CITATION_INFO.split():
+            self.citation_info = _CODE_CITATION_INFO
 
     def save(self, filename, format="flex", _async=False):
         """Save the whole SME structure to disk.
@@ -1124,15 +1216,20 @@ class SME_Structure(Parameters):
         logger.info("Loading SME file %s", filename)
         ext = os.path.splitext(filename)[1]
         if ext == ".sme":
-            s = SME_Structure()
-            return persistence.load(filename, s)
+            s = persistence.load(filename, SME_Structure())
+            s._update_stored_citation_info()
+            return s
         elif ext == ".npy":
             # Numpy Save file
             s = np.load(filename, allow_pickle=True)
-            return np.atleast_1d(s)[0]
+            s = np.atleast_1d(s)[0]
+            s._update_stored_citation_info()
+            return s
         elif ext == ".npz":
             s = np.load(filename, allow_pickle=True)
-            return s["sme"][()]
+            s = s["sme"][()]
+            s._update_stored_citation_info()
+            return s
         elif ext in [".sav", ".out", ".inp"]:
             # IDL save file (from SME)
             s = readsav(filename)["sme"]

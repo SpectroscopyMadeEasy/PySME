@@ -66,6 +66,8 @@ wheel.packages = ["src/pysme"]
 sdist.include = [
   "smelib/src/*",
   "smelib/pymodule/*",
+  "smelib/external/hlinop/*.f",
+  "smelib/external/hlinop/stehle_long.dat",
   "cmake/*",
   "src/pysme/*.json",
   "src/pysme/*.gz",

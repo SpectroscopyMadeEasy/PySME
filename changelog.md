@@ -2,14 +2,47 @@
 
 ## Unreleased
 
+PySME 1.3 is the last release series that supports Python 3.10.
+
 ### Changed
 
-- Updated the bundled SMElib to v6.13.21. The corrected Stehlé NALPHA table
-  padding changes affected rows of the default H8--H30 profiles and removes
-  narrow spurious spikes in H22, H26, H27, and H30. The STARK1 cache key now
-  includes the line-center wavelength, so results no longer depend on the
-  order of calls for lines with the same lower/upper levels. Continuum-
-  scattering mode 1 is deprecated in SMElib.
+- `sme.citation()` now lists the code papers first, newest first, followed by
+  the atmosphere, abundance, line list, and NLTE references. The formatted
+  output is no longer sorted by author. Loading a saved structure that holds the
+  old default code references replaces them with the new ones; edited
+  `citation_info` text is kept.
+- Updated the bundled SMElib to v6.13.23 (via v6.13.21 and v6.13.22).
+  Hydrogen lines now come from Paul Barklem's HLINOP/HLINPROF code (SMElib
+  submodule `smelib/external/hlinop`; clone PySME with `--recursive`), with
+  the broadening mechanisms convolved instead of added. Default spectra change
+  for hydrogen lines: in the solar and Arcturus test models H alpha changes by
+  0.4-0.5% in normalized flux on average and by at most 2.4%; lines without
+  Stehlé tables (Brackett, Balmer n_up > 30) change much more (the equivalent
+  width of Br11 in the solar test model goes from 0.93 to 0.44 A, as the
+  earlier profiles had areas of 1.7-2.1). `sme.h_line_profile = "legacy"`
+  restores the earlier construction. SMElib v6.13.21 corrected the Stehlé
+  NALPHA table padding (narrow spurious spikes in H22, H26, H27 and H30) and
+  the STARK1 cache key; v6.13.22 also computes hydrogen lines as far from the
+  line centre as the other lines (the line-range scan used the deepest layer
+  only; default spectra change by at most 7e-4); v6.13.23 adds the optional
+  TB09 blending (`h_tb09`, off by default). Continuum-scattering mode 1 is
+  deprecated in SMElib.
+- PySME passes the wavelength medium of the line list (`sme.linelist.medium`)
+  to SMElib, so that the hydrogen lines and the continuous opacities use the
+  same medium; line lists without a medium are taken as air, as for VALD. The
+  bound-free edges of the continuum move to their air wavelengths (the Balmer
+  edge from 3647.05 to 3645.96 A).
+- The line-information caches (CDR/ALMAX) include the hydrogen-line settings
+  in their key; caches written by earlier versions are recomputed.
+- The fallback download of SMElib (used only when the bundled library is
+  missing) takes the release that matches the `smelib` submodule (v6.13.23)
+  from the SpectroscopyMadeEasy/SMElib repository, instead of the latest
+  release.
+- Test references: the H alpha regression data and the solar and Arcturus
+  H alpha templates were regenerated with the new profiles; the previous files
+  are kept (`*_legacy*`) and tested with `h_line_profile = "legacy"`. The
+  Brackett test reference equivalent widths are 0.444 A (Br11) and 0.650 A
+  (Br10), and 0.926 and 1.213 A with the legacy profiles.
 - Changed the minimum supported version for pre-built macOS arm64 wheels from
   macOS 14 to macOS 15. PySME 1.2.x remains available for macOS 14 users.
 - Strengthened wheel validation with a native SMElib radiative-transfer smoke
@@ -22,6 +55,27 @@
 
 ### Added
 
+- Native Windows x64 wheels (Python 3.12), built and tested in CI and attached
+  to GitHub releases. They are not published to PyPI. On Windows, PySME sets the
+  C runtime's `LC_CTYPE` to UTF-8 before SMElib opens files, so paths with
+  non-ASCII characters work; `PYSME_SMELIB_WINDOWS_UTF8_LOCALE=0` turns this off.
+- Added the two PySME papers, Jian et al. (2026) and Wehrhahn et al. (2023), to
+  `sme.citation()`.
+- Added `h_tb09`, `h_tb09_window` and `h_tb09_file` (off by default; needs
+  SMElib >= 6.13.23 and SYNSPEC's `tremblay.dat`, which is not distributed;
+  see `h_tb09_file` in the documentation for where to get it):
+  the Balmer profiles H10–H22 are blended from Stehlé & Hutcheon to Tremblay
+  & Bergeron (2009) between `dlo` and `dhi` dex below each line's last
+  tabulated Stehlé density (default 2.0–1.5). The setting is part of the
+  line-information cache key.
+- Added `h_line_profile` (`"convolved"`, default, or `"legacy"`) for the
+  hydrogen line profiles.
+- Added `h_occupation` (off by default) for the occupation probabilities of
+  H I levels (Hummer & Mihalas 1988): hydrogen lines weakened by the
+  occupation probability of the upper level, cut at the series limit, and the
+  dissolved-level (pseudo-continuum) absorption added to the continuum; and
+  `h_occupation_neutral_scale` (default 0, i.e. charged perturbers only) for
+  the neutral-perturber term.
 - Added `continuum_scattering_mode` with values `0` (Planck source), `1`
   (deprecated continuum-only scattering), and `2` (line-inclusive scattering).
 - Added a manually dispatched wheel-build path that uploads artifacts for
@@ -29,12 +83,36 @@
 
 ### Deprecated
 
+- Deprecated `h_stark_convolution`; it has no effect, since SMElib v6.13.22
+  convolves the Stark profiles of all hydrogen lines computed with HLINOP.
+  Setting it to `"convolution"` logs a warning.
 - Deprecated `continuum_scattering_source` in favor of
   `continuum_scattering_mode`, and deprecated continuum-scattering mode `1` in
   favor of mode `2`.
 
 ### Fixed
 
+- Fix `sme.citation()` failing with `FieldIsMissing` when a line list cites
+  `FTa`, `FTb`, `Wcor` or `OBK`. Repaired the damaged `OBK` entry. The other
+  three are reports with unknown titles and are now `@misc` entries. Citation
+  text already saved with a line list is not updated; read the list again from
+  the VALD file.
+- Read VALD reference keys that contain a hyphen, such as `BA-J`. They were
+  skipped, so `linelist.citation_info` and `sme.citation()` left out the
+  corresponding references. Line lists saved with the old citation text keep
+  it until they are read again from the VALD file.
+- Read VALD reference keys whatever column they start in. PySME skipped the
+  first 45 (long format) or 90 (short format) characters of a reference
+  string, which dropped leading references, often the `wl:` and `gf:` ones, in
+  extracts with energies in eV. Entries separated by single spaces, preceded
+  by several spaces, or listing several keys (`gf:BWL,BK`) are now read too.
+- Fix the table of atomic weights in `pysme.abund`: a surplus value shifted the
+  entries from Ru to Bi by one element, Po had no entry of its own, and Au was
+  truncated. Synthetic spectra do not change, because SMElib uses its own
+  atomic masses.
+- Abundance citations no longer list Loss (2003), the source of that table,
+  since the calculation does not use it. Files saved earlier keep the citation
+  text stored in them.
 - Fix NLTE grid interpolation at and near grid edges (#39). Below the lowest
   node the coefficients were taken from the highest node; above the highest
   node they were held at the edge value instead of extrapolated; on

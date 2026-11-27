@@ -173,16 +173,61 @@ For more information see [system_info](../concepts/system_info.md).
 
 :gam6: van der Waals scaling factor (usually 1)
 :h2broad: flag determing whether to use H2 broadening or not (usually True)
-:h_stark_convolution:
-    Brackett Stark-profile construction.
-    The default `legacy` mode preserves previous results.
-    Enable the convolution for Br10 and higher with:
+:h_line_profile:
+    Hydrogen line profiles. The default `convolved` (SMElib >= 6.13.22)
+    convolves the broadening mechanisms (Doppler, Stark, radiative, resonance
+    and van der Waals) instead of adding them. `legacy` gives the earlier
+    construction of the profiles:
 
     ```python
-    sme.h_stark_convolution = "convolution"
+    sme.h_line_profile = "legacy"
     ```
 
-    See the [SMElib v6.13.18 Brackett documentation](https://github.com/SpectroscopyMadeEasy/SMElib/blob/v6.13.18/docs/brackett_stark_convolution.md) for its scope and validation.
+    The other corrections in SMElib 6.13.22 (for example the scaling of the
+    Stehlé profiles above their last tabulated density) apply in both modes.
+    The wavelength medium of the hydrogen lines and the hydrogen continuum is
+    taken from `sme.linelist.medium` (`"air"` or `"vac"`); line lists without
+    a medium are taken as air (above 2000 Å), as for VALD.
+:h_occupation:
+    Occupation probabilities of the H I levels (Hummer & Mihalas 1988), off by
+    default. When on, each hydrogen line is weakened by the occupation
+    probability of its upper level, the tabulated profiles are cut at the
+    series limit, and the absorption from dissolved levels (pseudo-continuum
+    below the Balmer, Paschen, ... edges) is added to the continuum.
+:h_occupation_neutral_scale:
+    Scale of the neutral-perturber (hard-sphere) term of the occupation
+    probabilities when `h_occupation` is on. `0` (default) keeps only the
+    charged-perturber term; `1` is the Hummer & Mihalas (1988) value.
+:h_tb09:
+    Balmer lines H10–H22: blend the Stehlé & Hutcheon profiles with those of
+    Tremblay & Bergeron (2009), which include the non-ideal (Hummer & Mihalas
+    critical field) cut and are computed 0.5–1.5 dex beyond Stehlé's last
+    tabulated density (the Inglis–Teller limit). Off by default; requires
+    SMElib >= 6.13.23 and the TB09 table (`h_tb09_file`). Meant to be
+    used with `h_occupation`:
+
+    ```python
+    sme.h_occupation = True
+    sme.h_tb09 = True
+    sme.h_tb09_file = "/path/to/synspec/data/tremblay.dat"
+    ```
+:h_tb09_window:
+    `(dlo, dhi)` in dex below each line's last tabulated Stehlé density: the
+    TB09 weight rises smoothly (3t² − 2t³) from 0 at `dlo` to 1 at `dhi`.
+    Default `(2.0, 1.5)`, the values that fitted H10–H22 in metal-poor dwarfs
+    and DESI turnoff stars best.
+:h_tb09_file:
+    Path of the TB09 table as distributed with SYNSPEC (`data/tremblay.dat`,
+    used unchanged), or `None` for `tremblay.dat` in the SMElib data
+    directory. The table is not distributed with PySME: it is `data/tremblay.dat`
+    in the [TLUSTY 208 / SYNSPEC 54 package](https://www.as.arizona.edu/~hubeny/tlusty208-package/tl208-s54.tar.gz)
+    (12 MB archive), also available from P.-E. Tremblay's
+    [model grids](https://warwick.ac.uk/fac/sci/physics/research/astro/people/tremblay/modelgrids/).
+    Cite Tremblay & Bergeron (2009, ApJ 696, 1755) when using it.
+:h_stark_convolution:
+    Deprecated, no effect. SMElib >= 6.13.22 convolves the Stark profiles of
+    all lines computed with HLINOP; use `h_line_profile = "legacy"` for the
+    earlier profiles.
 :accrt:
     Default local line-to-continuum opacity-ratio threshold used to determine
     finite physical line-validity ranges.
