@@ -1,17 +1,20 @@
 # -*- coding: utf-8 -*-
 """
-Read SME files
+Read SME files as data.
 
-An SME file is a tar archive written with flex-format. This reader reads the
-members itself and builds the types listed in the tables below; a file that
-holds any other type is refused.
+An SME file is a tar archive written with flex-format. flex-format's own reader
+imports the modules and calls the classes that a file names, so a file from
+someone else could run code. This reader does not use it: it reads the members
+itself and builds only a fixed set of types, from the tables below. Nothing is
+imported or looked up by a name that comes from the file.
 
-So some values that flex-format could save are not read back: among them astropy
-Time (building one can make astropy fetch the IERS tables) and SpectralCoord.
-PySME itself stores neither; they can only come from a user's own entries, for
-example in ``meta``.
+Some values that flex-format could save are therefore not read back, and a file
+holding one is refused: among them astropy Time (building one from a file can
+make astropy fetch the IERS tables) and SpectralCoord. PySME itself stores
+neither; they can only come from a user's own entries, for example in ``meta``.
 
-PySME-GUI carries a copy of this file; keep the two the same.
+PySME-GUI carries a copy of this file, for use with older PySME versions;
+keep the two the same.
 """
 
 import contextvars
@@ -39,24 +42,26 @@ from flex.flex import FlexFile
 
 logger = logging.getLogger(__name__)
 
-# The oldest pyarrow with which Feather line lists are read.
+# Reading Feather data from an unknown source is safe only from this pyarrow on.
 FEATHER_NEEDS_PYARROW = (14, 0, 1)
 
 
 class UnsafeFileError(ValueError):
-    """The file holds something that this reader does not read."""
+    """The file asks for something that cannot be read as plain data."""
 
 
 def _refuse(reason):
     raise UnsafeFileError(
         f"This file was not loaded: {reason}. If you saved this yourself, remove it "
-        "from the file's information and save again."
+        "from the file's information and save again. If you did not, be careful: "
+        "opened with other tools, a file made for it can run programs on your "
+        "computer."
     )
 
 
 def _refuse_type(module, name):
     asked = f"{module}.{name}"[:100]
-    _refuse(f"it asks for the Python type '{asked}', which is not supported")
+    _refuse(f"it asks for the Python type '{asked}', which is not read as data")
 
 
 def _lookup(table, module, name):
@@ -103,7 +108,8 @@ for _module in ("astropy.coordinates.angles", "astropy.coordinates.angles.core")
     for _cls in (coordinates.Angle, coordinates.Longitude, coordinates.Latitude):
         _VALUES[(_module, _cls.__name__)] = (_cls, _QUANTITY)
 
-# The astropy frames with ra and dec that are read, by the name a file gives.
+# astropy's own frames that have ra and dec. A file names one; the class comes
+# from this table, never from astropy's registry, which a program can add to.
 _FRAMES = {
     frame.name: frame
     for frame in (
@@ -143,7 +149,7 @@ def _check_fields(cls, fields, allowed):
 
 def _value(obj):
     """Build a value of a listed type from a JSON object that names one."""
-    # The condition under which flex-format treats an object as a typed value.
+    # The condition under which flex-format builds something from an object.
     if (
         "__class__" not in obj
         or "__module__" not in obj
@@ -273,16 +279,20 @@ def trusting(trusted):
 
 def require_safe_feather():
     """
-    Raise unless Feather data is read: the caller trusts the file, and pyarrow
-    is recent enough.
+    Raise unless Feather data may be read: the caller trusts the file, and
+    pyarrow is recent enough.
+
+    A recent pyarrow alone is not enough for a file from an unknown source: a
+    program can switch the unsafe behaviour back on, or have added decoders of
+    its own, which a file can then choose.
     """
     needed = ".".join(map(str, FEATHER_NEEDS_PYARROW))
     if not _trusted.get():
         raise UnsafeFileError(
             "This file was not loaded: it keeps its line list in the Feather format, "
-            "as some old SME files do. Such a file is loaded only if you trust it. "
-            "If you made it yourself, or trust where it comes from, load it with "
-            "SME_Structure.load(filename, allow_pickle=True); "
+            "as some old SME files do, and reading that format can run code hidden "
+            "in a file. If you made the file yourself, or trust where it comes "
+            "from, load it with SME_Structure.load(filename, allow_pickle=True); "
             f"this needs pyarrow {needed} or newer."
         )
     try:

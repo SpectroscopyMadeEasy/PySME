@@ -1,17 +1,21 @@
 # Changelog
 
-## v1.2.1
+## v1.2.1 - 2026-11-27
 
-A maintenance release: 1.2.0 with the changes below. Synthesis and fitting code is
+A security release: 1.2.0 with the fix below. Synthesis and fitting code is
 unchanged.
 
-### Changes
+### Security
 
-- PySME now reads `.sme` files with its own reader, which supports a fixed set of
-  data types.
+- Loading a `.sme` file no longer runs code named in the file. PySME now reads
+  `.sme` files with its own reader, which builds only a fixed set of data types.
+  Do not load `.sme` files from sources you do not trust with earlier versions.
+  Details: security advisory GHSA-2fvj-gf2r-jv85,
+  https://github.com/SpectroscopyMadeEasy/PySME/security/advisories/GHSA-2fvj-gf2r-jv85
 - `.npy`, `.npz` and old `.sme` files with a Feather line list are loaded only
-  with `SME_Structure.load(filename, allow_pickle=True)`. Use this only for files
-  you trust. Feather also needs a final release of `pyarrow` 14.0.1 or newer.
+  with `SME_Structure.load(filename, allow_pickle=True)`. Loading them can run
+  code, so use this only for files you trust. Feather also needs a final release
+  of `pyarrow` 14.0.1 or newer.
 - Some values that a user may have stored in a file, for example in `meta`, are
   no longer read back, among them astropy `Time`, `SpectralCoord` and objects of
   other custom types. Such a file is refused with a message naming the type.

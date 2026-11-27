@@ -1,4 +1,4 @@
-"""Reading SME files with PySME's own reader."""
+"""Loading an SME file must not import or call anything the file names."""
 
 import io
 import json
@@ -25,8 +25,11 @@ from astropy.coordinates import (
 from astropy.utils import data as astropy_data
 from astropy.utils import iers
 
+# PySME first: it restores two numpy functions that flex-format imports.
+from pysme.sme import SME_Structure  # isort: skip
+from flex.flex import FlexFile  # isort: skip
+from flex.json_encoder import FlexJSONDecoder  # isort: skip
 from pysme import sme_reader
-from pysme.sme import SME_Structure
 
 load = SME_Structure.load
 
@@ -62,6 +65,11 @@ def saved(tmp_path):
     return path
 
 
+def asks_for_a_call(marker):
+    # Harmless: all that loading this could do is make an empty folder.
+    return {"__module__": "os", "__class__": "mkdir", "value": str(marker)}
+
+
 def refused(path, saying):
     """Load a file that must be refused; return only after checking why."""
     try:
@@ -70,9 +78,87 @@ def refused(path, saying):
         error = exc
     else:
         error = None
+    # What matters most is checked by the caller: that nothing was done.
     return lambda: (
         type(error).__name__ == "UnsafeFileError" and saying in str(error)
     ) or pytest.fail(f"not refused as expected: {error!r}")
+
+
+@pytest.mark.parametrize(
+    "member, put",
+    [
+        ("header.json", lambda tree, value: tree.update(note=value)),
+        ("abund/header.json", lambda tree, value: tree.update(note=value)),
+        (
+            "system_info/header.json",
+            lambda tree, value: tree.update(deeper={"a": [{"b": value}]}),
+        ),
+    ],
+)
+def test_a_value_naming_a_function_does_not_call_it(tmp_path, saved, member, put):
+    marker, changed = tmp_path / "called", str(tmp_path / "changed.sme")
+    value = asks_for_a_call(marker)
+    rewrite(saved, changed, change={member: lambda tree: put(tree, value)})
+    check = refused(changed, "os.mkdir")
+    assert not marker.exists()
+    check()
+
+
+def test_a_value_inside_a_plain_json_part_does_not_call_it(tmp_path, saved):
+    marker, changed = tmp_path / "called", str(tmp_path / "changed.sme")
+    header = {
+        "__module__": "flex.extensions.jsondata",
+        "__class__": "JsonDataExtension",
+        "__header__": True,
+    }
+    rewrite(
+        saved,
+        changed,
+        add={
+            "extra/header.json": json.dumps(header).encode(),
+            "extra/data.json": json.dumps({"x": [asks_for_a_call(marker)]}).encode(),
+        },
+    )
+    check = refused(changed, "os.mkdir")
+    assert not marker.exists()
+    check()
+
+
+def test_a_part_naming_another_module_does_not_get_it_imported(
+    tmp_path, saved, monkeypatch
+):
+    marker = tmp_path / "imported"
+    (tmp_path / "planted_module.py").write_text(
+        f"import os\nos.mkdir({str(marker)!r})\nclass Thing:\n    pass\n"
+    )
+    monkeypatch.syspath_prepend(str(tmp_path))
+    changed = str(tmp_path / "changed.sme")
+    rename = lambda tree: tree.update(__module__="planted_module", __class__="Thing")
+    rewrite(saved, changed, change={"abund/header.json": rename})
+    check = refused(changed, "planted_module.Thing")
+    assert not marker.exists() and "planted_module" not in sys.modules
+    check()
+
+
+@pytest.mark.parametrize(
+    "module, name",
+    [(["os"], "mkdir"), ("flex.extensions.tabledata", "TableExtension")],
+)
+def test_other_names_and_other_flex_parts_are_refused(tmp_path, saved, module, name):
+    changed = str(tmp_path / "changed.sme")
+    rename = lambda tree: tree.update(__module__=module, __class__=name)
+    rewrite(saved, changed, change={"abund/header.json": rename})
+    refused(changed, "asks for the Python type")()
+
+
+def test_flex_formats_own_reader_takes_no_part(saved, monkeypatch):
+    def used(*args, **kwargs):
+        raise AssertionError("flex-format's reader was used")
+
+    monkeypatch.setattr(FlexFile, "read", used)
+    monkeypatch.setattr(FlexFile, "_read_ext_class", used)
+    monkeypatch.setattr(FlexJSONDecoder, "_object_hook", used)
+    assert load(saved).teff == 5700
 
 
 def test_what_pysme_and_astropy_store_comes_back(tmp_path):
